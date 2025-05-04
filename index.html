@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#141414"> <title>Prompt-Templates</title>
+
+    <link rel="manifest" href="manifest.json">
+
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+    <header id="top-bar" class="top-bar">
+      <button id="topbar-back-button" class="button topbar-back" aria-label="Zurück">
+        <svg class="icon icon-arrow-left" width="32" height="32" viewBox="0 0 64 64">
+          <polyline points="40,16 24,32 40,48"></polyline>
+        </svg>
+      </button>
+      <nav id="breadcrumb" class="breadcrumb"></nav>
+      <button id="fullscreen-button" class="button fullscreen-toggle" aria-label="Vollbildmodus aktivieren">
+         <svg class="icon icon-fullscreen-enter" width="32" height="32" viewBox="0 0 64 64">
+            <path d="M24 16 L16 16 L16 24 M40 16 L48 16 L48 24 M24 48 L16 48 L16 40 M40 48 L48 48 L48 40"></path>
+         </svg>
+         <svg class="icon icon-fullscreen-exit hidden" width="32" height="32" viewBox="0 0 64 64">
+             <path d="M16 24 L24 24 L24 16 M48 24 L40 24 L40 16 M16 40 L24 40 L24 48 M48 40 L40 40 L40 48"></path>
+         </svg>
+      </button>
+      <svg id="app-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="32" height="32">
+        <defs>
+          <style>
+            #app-logo-svg .icon-line {
+              fill: none;
+              stroke: #e8e8e8;
+              stroke-width: 5;
+              stroke-linecap: round;
+              stroke-linejoin: round;
+            }
+            #app-logo-svg .icon-accent {
+              fill: none;
+              stroke: #ffca7a;
+              stroke-width: 5;
+              stroke-linecap: round;
+              stroke-linejoin: round;
+            }
+          </style>
+        </defs>
+        <g>
+          <path class="icon-line FlliOsVc_0" d="M32,4 A16,16 0 0,1 48,20 C48,29 40,32 40,38 H24 C24,32 16,29 16,20 A16,16 0 0,1 32,4 Z"></path>
+          <path class="icon-line FlliOsVc_1" width="16" height="8" d="M 26,38 L 38,38 A 2,2,0,0,1,40,40 L 40,44 A 2,2,0,0,1,38,46 L 26,46 A 2,2,0,0,1,24,44 L 24,40 A 2,2,0,0,1,26,38"></path>
+          <path class="icon-accent FlliOsVc_2" d="M32,46L32,56"></path>
+          <path class="icon-accent FlliOsVc_3" d="M24,52L40,52"></path>
+        </g>
+        <style data-made-with="vivus-instant">.FlliOsVc_0{stroke-dasharray:107 109;stroke-dashoffset:108;animation:FlliOsVc_draw 1333ms ease 0ms forwards;}.FlliOsVc_1{stroke-dasharray:45 47;stroke-dashoffset:46;animation:FlliOsVc_draw 1333ms ease 222ms forwards;}.FlliOsVc_2{stroke-dasharray:10 12;stroke-dashoffset:11;animation:FlliOsVc_draw 1333ms ease 444ms forwards;}.FlliOsVc_3{stroke-dasharray:16 18;stroke-dashoffset:17;animation:FlliOsVc_draw 1333ms ease 666ms forwards;}@keyframes FlliOsVc_draw{100%{stroke-dashoffset:0;}}@keyframes FlliOsVc_fade{0%{stroke-opacity:1;}93.54838709677419%{stroke-opacity:1;}100%{stroke-opacity:0;}}</style>
+      </svg>
+    </header>
+
+    <main id="cards-container" class="cards-container"></main>
+
+    <div id="prompt-modal" class="modal hidden">
+       <div class="modal-content">
+        <div id="prompt-fulltext" class="prompt-fulltext"></div>
+        <div class="modal-buttons">
+          <button id="modal-close-button" class="button modal-close" aria-label="Modal schließen">
+            <svg class="icon icon-minimize" width="32" height="32" viewBox="0 0 64 64">
+                <polyline points="44,40 32,28 20,40"></polyline>
+            </svg>
+          </button>
+          <button id="copy-prompt-modal-button" class="button copy-button" aria-label="Prompt kopieren">
+            <svg class="icon icon-copy" width="32" height="32" viewBox="0 0 64 64">
+                <rect class="copy-rect" x="14" y="10" width="36" height="44" rx="3"></rect>
+                <line class="copy-line line1" x1="18" y1="20" x2="46" y2="20"></line>
+                <line class="copy-line line2" x1="18" y1="28" x2="46" y2="28"></line>
+                <line class="copy-line line3" x1="18" y1="36" x2="46" y2="36"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <nav id="mobile-nav" class="mobile-nav hidden">
+      <button id="mobile-home" class="button mobile-button" aria-label="Home">
+        <svg class="icon" width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M32 12 L12 32 H20 V52 H44 V32 H52 Z"></path>
+        </svg>
+      </button>
+      <button id="mobile-back" class="button mobile-button" aria-label="Zurück">
+        <svg class="icon" width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="40,16 24,32 40,48"></polyline>
+        </svg>
+      </button>
+    </nav>
+
+    <button id="fixed-back" class="fixed-back hidden" aria-label="Zurück zur Home">
+       <svg class="icon" width="24" height="24" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+         <polyline points="40,16 24,32 40,48"></polyline>
+       </svg>
+    </button>
+
+    <div id="notification-area"></div>
+
+    <svg style="display: none;">
+        <defs>
+            <svg id="svg-template-folder" class="icon folder-icon" viewBox="0 0 100 90">
+                 <path d="M5 25 H95 V80 H5 Z"></path>
+                 <path d="M5 25 Q25 5, 45 25 T85 25"></path>
+            </svg>
+            <svg id="svg-template-expand" class="icon icon-expand" width="32" height="32" viewBox="0 0 64 64">
+                <polyline points="20,24 32,36 44,24"></polyline>
+            </svg>
+            <svg id="svg-template-copy" class="icon icon-copy" width="32" height="32" viewBox="0 0 64 64">
+                <rect class="copy-rect" x="14" y="10" width="36" height="44" rx="3"></rect>
+                <line class="copy-line line1" x1="18" y1="20" x2="46" y2="20"></line>
+                <line class="copy-line line2" x1="18" y1="28" x2="46" y2="28"></line>
+                <line class="copy-line line3" x1="18" y1="36" x2="46" y2="36"></line>
+            </svg>
+        </defs>
+    </svg>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vivus/0.4.6/vivus.min.js"></script>
+    <script src="script.js"></script>
+
+  </body>
+</html>
