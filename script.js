@@ -6,7 +6,7 @@ let pathStack = [];
 const currentXmlFile = "Templates.xml";
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton;
 let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark;
@@ -17,7 +17,8 @@ let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 const swipeThreshold = 50;
 const swipeFeedbackThreshold = 5;
 
-const MAX_ROTATION = 10;
+const MAX_ROTATION = 8;
+let currentTransitionDurationMediumMs = 250; // Default, will be updated from CSS
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -29,6 +30,8 @@ function initApp() {
     topbarBackBtn = document.getElementById('topbar-back-button');
     fixedBackBtn = document.getElementById('fixed-back');
     fullscreenBtn = document.getElementById('fullscreen-button');
+    themeToggleButton = document.getElementById('theme-toggle-button');
+
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
         fullscreenExitIcon = fullscreenBtn.querySelector('.icon-fullscreen-exit');
@@ -40,6 +43,8 @@ function initApp() {
     svgTemplateCopy = document.getElementById('svg-template-copy');
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
 
+    updateDynamicDurations();
+    setupTheme();
     setupIntersectionObserver();
     setupEventListeners();
     checkFullscreenSupport();
@@ -50,6 +55,47 @@ function initApp() {
 
     loadXmlDocument(currentXmlFile);
 }
+
+function updateDynamicDurations() {
+    const rootStyle = getComputedStyle(document.documentElement);
+    const mediumDuration = rootStyle.getPropertyValue('--transition-duration-medium').trim();
+    if (mediumDuration.endsWith('ms')) {
+        currentTransitionDurationMediumMs = parseFloat(mediumDuration);
+    } else if (mediumDuration.endsWith('s')) {
+        currentTransitionDurationMediumMs = parseFloat(mediumDuration) * 1000;
+    }
+}
+
+function setupTheme() {
+    const preferredTheme = localStorage.getItem('preferredTheme') || 'dark';
+    applyTheme(preferredTheme);
+    if (themeToggleButton) { // Ensure button exists
+        themeToggleButton.addEventListener('click', toggleTheme);
+    }
+}
+
+function applyTheme(themeName) {
+    document.body.classList.remove('light-mode', 'dark-mode');
+    document.body.classList.add(themeName + '-mode');
+    if (themeToggleButton) {
+        themeToggleButton.setAttribute('aria-label', themeName === 'dark' ? 'Light Theme aktivieren' : 'Dark Theme aktivieren');
+    }
+    const metaThemeColor = document.querySelector("meta[name=theme-color]");
+    if (metaThemeColor) {
+        const rootStyle = getComputedStyle(document.documentElement);
+        // Use CSS variables for theme colors if possible, or fallback to hardcoded if simpler
+        const newThemeColor = themeName === 'dark' ? rootStyle.getPropertyValue('--bg-base').trim() || '#050505' : rootStyle.getPropertyValue('--bg-base').trim() || '#f0f0f0';
+        metaThemeColor.setAttribute("content", newThemeColor);
+    }
+}
+
+function toggleTheme() {
+    const currentThemeIsLight = document.body.classList.contains('light-mode');
+    const newTheme = currentThemeIsLight ? 'dark' : 'light';
+    applyTheme(newTheme);
+    localStorage.setItem('preferredTheme', newTheme);
+}
+
 
 function setupEventListeners() {
     topbarBackBtn.addEventListener('click', () => {
@@ -86,9 +132,11 @@ function setupEventListeners() {
     }
 
     document.getElementById('modal-close-button').addEventListener('click', closeModal);
-    document.getElementById('copy-prompt-modal-button').addEventListener('click', copyPromptText);
+    document.getElementById('copy-prompt-modal-button').addEventListener('click', () => copyPromptText(document.getElementById('copy-prompt-modal-button')));
+    
     modalEl.addEventListener('click', (e) => {
         if (e.target === modalEl) {
+            e.stopPropagation(); 
             closeModal();
         }
     });
@@ -102,28 +150,32 @@ function setupMobileSpecificFeatures() {
     mobileHomeBtn = document.getElementById('mobile-home');
     mobileBackBtn = document.getElementById('mobile-back');
 
-    mobileHomeBtn?.addEventListener('click', () => {
-        if (modalEl.classList.contains('visible')) {
-            closeModal();
-        }
-        if (pathStack.length > 0) {
-            performViewTransition(() => {
-                currentNode = xmlData.documentElement;
-                pathStack = [];
-                renderView(currentNode);
-                updateBreadcrumb();
-            }, 'backward');
-            window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
-        }
-    });
+    if (mobileHomeBtn) {
+        mobileHomeBtn.addEventListener('click', () => {
+            if (modalEl.classList.contains('visible')) {
+                closeModal();
+            }
+            if (pathStack.length > 0) {
+                performViewTransition(() => {
+                    currentNode = xmlData.documentElement;
+                    pathStack = [];
+                    renderView(currentNode);
+                    updateBreadcrumb();
+                }, 'backward');
+                window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
+            }
+        });
+    }
 
-    mobileBackBtn?.addEventListener('click', () => {
-        if (modalEl.classList.contains('visible')) {
-            closeModal();
-        } else if (pathStack.length > 0) {
-            navigateHistory('backward');
-        }
-    });
+    if (mobileBackBtn) {
+        mobileBackBtn.addEventListener('click', () => {
+            if (modalEl.classList.contains('visible')) {
+                closeModal();
+            } else if (pathStack.length > 0) {
+                navigateHistory('backward');
+            }
+        });
+    }
 
     containerEl.addEventListener('touchstart', handleTouchStart, { passive: true });
     containerEl.addEventListener('touchmove', handleTouchMove, { passive: true });
@@ -134,6 +186,17 @@ function setupMobileSpecificFeatures() {
 }
 
 function handleCardContainerClick(e) {
+    if (modalEl.classList.contains('visible')) {
+        // Check if the click is inside the modal content, if so, do nothing here.
+        // The modal's own background click handler will deal with closing it.
+        if (e.target.closest('.modal-content')) {
+            return;
+        }
+        // If click is on the modal backdrop (e.target === modalEl), it's handled by modal's listener.
+        // This return should prevent actions if modal is visible and click is not on a card.
+        return; 
+    }
+
     const card = e.target.closest('.card');
     const button = e.target.closest('button[data-action]');
 
@@ -175,7 +238,7 @@ function handleTouchMove(e) {
 
     if (Math.abs(diffX) > Math.abs(touchEndY - touchStartY) && diffX > swipeFeedbackThreshold) {
         containerEl.classList.add('swiping-right');
-        let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.2);
+        let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.15);
         containerEl.style.transform = `translateX(${moveX}px)`;
     } else {
         containerEl.classList.remove('swiping-right');
@@ -204,10 +267,12 @@ function navigateHistory(direction) {
         window.history.back();
     } else if (!isMobile() && pathStack.length > 0) {
         performViewTransition(() => {
-            const parentNode = pathStack.pop();
-            currentNode = parentNode;
-            renderView(currentNode);
-            updateBreadcrumb();
+            if (pathStack.length > 0) {
+                const parentNode = pathStack.pop();
+                currentNode = parentNode;
+                renderView(currentNode);
+                updateBreadcrumb();
+            }
         }, direction);
     }
 }
@@ -218,14 +283,19 @@ function handlePopState(event) {
     const direction = state.path.length < pathStack.length ? 'backward' : 'forward';
 
     if (currentlyModalOpen && !state.modalOpen) {
-        closeModal(true);
+        closeModal(true); // true for calledFromPopstate
     } else if (!currentlyModalOpen && state.modalOpen) {
-        const expectedPathGuid = state.path.length > 0 ? state.path[state.path.length - 1] : null;
-        const nodeToOpen = expectedPathGuid ? findNodeByGuid(xmlData.documentElement, expectedPathGuid) : null;
-        const currentStackGuids = pathStack.map(n => n.getAttribute('guid'));
-        const expectedParentPathGuids = state.path.slice(0, -1);
-        if (nodeToOpen && nodeToOpen.getAttribute('beschreibung') && currentStackGuids.join(',') === expectedParentPathGuids.join(',')) {
-             openModal(nodeToOpen, true);
+        const promptGuidForModal = state.promptGuid;
+        const nodeToOpen = promptGuidForModal ? findNodeByGuid(xmlData.documentElement, promptGuidForModal) : null;
+        
+        if (nodeToOpen && nodeToOpen.getAttribute('beschreibung')) {
+            pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
+             // If promptGuid was part of state.path, remove it for pathStack context
+            if (state.path.length > 0 && state.path[state.path.length -1] === promptGuidForModal) {
+                pathStack = state.path.slice(0, -1).map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
+            }
+            currentNode = pathStack.length > 0 ? pathStack[pathStack.length-1] : xmlData.documentElement;
+            openModal(nodeToOpen, true); // true for calledFromPopstate
         } else {
              handleNavigationFromState(state, direction);
         }
@@ -238,7 +308,7 @@ function handleNavigationFromState(state, direction) {
      const targetPathLength = state.path.length;
      const updateDOM = () => {
         pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
-        if(pathStack.length !== targetPathLength && targetPathLength > 0 && state.path.length > 0) { // Check state.path.length before reset
+        if(pathStack.length !== targetPathLength && state.path.length > 0) {
              pathStack = [];
         } else if (targetPathLength === 0) {
             pathStack = [];
@@ -274,10 +344,10 @@ function setupIntersectionObserver() {
                 opacity: 1,
                 y: 0,
                 scale: 1,
-                duration: 0.7,
-                ease: "elastic.out(1, 0.6)",
+                duration: 0.5, 
+                ease: "expo.out", 
                 stagger: {
-                    each: 0.07,
+                    each: 0.05, 
                     from: "start"
                 },
                 onComplete: function() {
@@ -327,11 +397,16 @@ function updateFullscreenButton() {
 
 function findNodeByGuid(startNode, targetGuid) {
     if (!startNode || !targetGuid) return null;
+    if (startNode.nodeType !== 1) return null; 
     if (startNode.getAttribute('guid') === targetGuid) return startNode;
-    const children = Array.from(startNode.children).filter(node => node.tagName === 'TreeViewNode');
-    for (const child of children) {
-        const found = findNodeByGuid(child, targetGuid);
-        if (found) return found;
+    
+    const children = startNode.children;
+    for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        if (child.tagName === 'TreeViewNode') {
+            const found = findNodeByGuid(child, targetGuid);
+            if (found) return found;
+        }
     }
     return null;
 }
@@ -348,7 +423,7 @@ function setupVivusAnimation(parentElement, svgId) {
     const svgElement = document.getElementById(svgId);
     if (!svgElement || !parentElement.classList.contains('folder-card')) return;
 
-    const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 150, start: 'manual' });
+    const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 120, start: 'manual' }); // Faster Vivus
     vivusInstance.finish();
     svgElement.style.opacity = '1';
 
@@ -389,8 +464,10 @@ function loadXmlDocument(filename) {
             const parserError = xmlDoc.getElementsByTagName("parsererror");
             if (parserError.length > 0) {
                 let errorMessage = "XML Parse Error.";
-                if (parserError[0] && parserError[0].textContent) {
-                    errorMessage = parserError[0].textContent.trim().split('\n')[0]; // Get first line of error
+                if (parserError[0] && parserError[0].childNodes.length > 0 && parserError[0].childNodes[0].textContent) {
+                     errorMessage = parserError[0].childNodes[0].textContent.trim().split('\n')[0];
+                } else if (parserError[0] && parserError[0].textContent) {
+                     errorMessage = parserError[0].textContent.trim().split('\n')[0];
                 }
                 throw new Error(errorMessage);
             }
@@ -400,7 +477,7 @@ function loadXmlDocument(filename) {
             performViewTransition(() => {
                 renderView(currentNode);
                 updateBreadcrumb();
-            }, 'initial'); // Use 'initial' or 'forward' for first load
+            }, 'initial');
             if (isMobile()) { window.history.replaceState({ path: [], modalOpen: false }, '', window.location.href); }
         })
         .catch(error => {
@@ -426,10 +503,10 @@ function renderView(xmlNode) {
     childNodes.forEach(node => {
         const card = document.createElement('div');
         card.classList.add('card');
-        const isFolder = node.children.length > 0 && Array.from(node.children).some(child => child.tagName === 'TreeViewNode');
+        const isFolder = Array.from(node.children).some(child => child.tagName === 'TreeViewNode');
         let nodeGuid = node.getAttribute('guid');
         if (!nodeGuid) {
-            nodeGuid = `genid-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`; // More unique fallback
+            nodeGuid = `genid-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
             node.setAttribute('guid', nodeGuid);
         }
         card.setAttribute('data-guid', nodeGuid);
@@ -467,8 +544,10 @@ function renderView(xmlNode) {
     });
 
     vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
-    cardsToObserve.forEach(c => cardObserver.observe(c));
-    if(childNodes.length > 0) containerEl.scrollTop = currentScroll; // Only restore if there's content
+    if (cardsToObserve.length > 0) {
+        cardsToObserve.forEach(c => cardObserver.observe(c));
+    }
+    if(childNodes.length > 0) containerEl.scrollTop = currentScroll;
 }
 
 function addCard3DHoverEffect(card) {
@@ -504,7 +583,7 @@ function addCard3DHoverEffect(card) {
 
 function navigateToNode(node) {
     performViewTransition(() => {
-        if (currentNode !== node) { // Avoid pushing same node if already current
+        if (currentNode !== node) {
             pathStack.push(currentNode);
         }
         currentNode = node;
@@ -513,9 +592,8 @@ function navigateToNode(node) {
     }, 'forward');
 
     if (isMobile() && !modalEl.classList.contains('visible')) {
-         // pathStack for history should reflect the state *after* navigation
          const currentPathGuids = pathStack.map(n => n.getAttribute('guid'));
-         if (currentNode !== xmlData.documentElement) { // Don't push root if already there after clearing pathStack
+         if (currentNode && currentNode !== xmlData.documentElement) {
              currentPathGuids.push(currentNode.getAttribute('guid'));
          }
          window.history.pushState({ path: currentPathGuids, modalOpen: false }, '', window.location.href);
@@ -528,13 +606,19 @@ function updateBreadcrumb() {
 
     const homeLink = document.createElement('span');
     homeLink.textContent = 'Home';
+    
+    const clearActiveClasses = () => {
+        const currentActive = breadcrumbEl.querySelector('.current-level-active');
+        if(currentActive) currentActive.classList.remove('current-level-active');
+         // Ensure homeLink is a link if it's not the active one
+        if (homeLink !== currentActive) homeLink.classList.add('breadcrumb-link');
+    };
+    clearActiveClasses(); // Clear at start
 
-    const allActive = breadcrumbEl.querySelectorAll('.current-level-active');
-    allActive.forEach(el => el.classList.remove('current-level-active'));
-    homeLink.classList.remove('breadcrumb-link'); // Default state for home
 
-    if (pathStack.length === 0) {
+    if (pathStack.length === 0 && currentNode === xmlData.documentElement) {
         homeLink.classList.add('current-level-active');
+        homeLink.classList.remove('breadcrumb-link');
     } else {
         homeLink.classList.add('breadcrumb-link');
         homeLink.addEventListener('click', () => {
@@ -553,14 +637,13 @@ function updateBreadcrumb() {
         if (nodeValue) {
             const separator = document.createElement('span');
             separator.textContent = ' > ';
-            separator.style.opacity = '0.7';
             breadcrumbEl.appendChild(separator);
 
             const link = document.createElement('span');
             link.textContent = nodeValue;
 
-            // If this node in path is the currently displayed node (currentNode)
             if (nodeInPath === currentNode) {
+                clearActiveClasses(); // Clear previous before setting new
                 link.classList.add('current-level-active');
             } else {
                 link.classList.add('breadcrumb-link');
@@ -577,67 +660,68 @@ function updateBreadcrumb() {
             breadcrumbEl.appendChild(link);
         }
     });
-
-    // If currentNode is deeper than the pathStack (e.g. a prompt under a folder in pathStack)
+    
     const isAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
+    // If current node is not in pathStack (e.g., a prompt whose parent is the last in pathStack)
     if (!isAtHome && (pathStack.length === 0 || currentNode !== pathStack[pathStack.length - 1])) {
-         const currentNodeValue = currentNode.getAttribute('value');
-         if (pathStack.length > 0) { // Add separator only if not direct child of Home
-            const separator = document.createElement('span');
-            separator.textContent = ' > ';
-            separator.style.opacity = '0.7';
-            breadcrumbEl.appendChild(separator);
-         }
-         const currentSpan = document.createElement('span');
-         currentSpan.textContent = currentNodeValue;
-         currentSpan.classList.add('current-level-active');
-         breadcrumbEl.appendChild(currentSpan);
+        if (breadcrumbEl.lastChild && !breadcrumbEl.lastChild.classList.contains('current-level-active')) {
+            clearActiveClasses(); // Clear previous before setting new
+            if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement)) {
+                 const separator = document.createElement('span');
+                 separator.textContent = ' > ';
+                 breadcrumbEl.appendChild(separator);
+            }
+            const currentSpan = document.createElement('span');
+            currentSpan.textContent = currentNode.getAttribute('value');
+            currentSpan.classList.add('current-level-active');
+            breadcrumbEl.appendChild(currentSpan);
+        }
     }
 
-
     const isModalVisible = modalEl.classList.contains('visible');
-    fixedBackBtn.classList.toggle('hidden', (pathStack.length === 0 && currentNode === xmlData.documentElement) && !isModalVisible);
-    if(mobileBackBtn) mobileBackBtn.classList.toggle('hidden', (pathStack.length === 0 && currentNode === xmlData.documentElement) && !isModalVisible);
-    topbarBackBtn.style.visibility = ((pathStack.length === 0 && currentNode === xmlData.documentElement) && !isModalVisible) ? 'hidden' : 'visible';
+    const isTrulyAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
+    fixedBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
+    if(mobileBackBtn) mobileBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
+    topbarBackBtn.style.visibility = (isTrulyAtHome && !isModalVisible) ? 'hidden' : 'visible';
 }
+
 
 function openModal(node, calledFromPopstate = false) {
     promptFullTextEl.textContent = node.getAttribute('beschreibung') || '';
-    modalEl.classList.remove('hidden'); // Remove hidden first for transition
+    modalEl.classList.remove('hidden');
     requestAnimationFrame(() => {
-         requestAnimationFrame(() => { // Ensure display:flex is applied before visible
+         requestAnimationFrame(() => {
             modalEl.classList.add('visible');
          });
     });
 
     if (isMobile() && !calledFromPopstate) {
-        const currentState = window.history.state || { path: pathStack.map(n => n.getAttribute('guid')), modalOpen: false };
+        const currentState = window.history.state || { path: [], modalOpen: false };
         if (!currentState.modalOpen) {
             const currentPathGuidsForModal = pathStack.map(n => n.getAttribute('guid'));
-            // For modal, path should represent the folder containing the prompt, and prompt's GUID for identification
             const nodeGuid = node.getAttribute('guid');
-            const modalStatePath = nodeGuid ? [...currentPathGuidsForModal, nodeGuid] : currentPathGuidsForModal;
-
-            window.history.pushState({ path: modalStatePath, modalOpen: true, promptGuid: nodeGuid }, '', window.location.href);
+            window.history.pushState({ path: currentPathGuidsForModal, modalOpen: true, promptGuid: nodeGuid }, '', window.location.href);
         }
     }
-    updateBreadcrumb(); // Update button visibility related to modal state
+    updateBreadcrumb();
 }
 
 function closeModal(calledFromPopstate = false) {
+    if (!modalEl.classList.contains('visible')) return;
+
     modalEl.classList.remove('visible');
-    setTimeout(() => { modalEl.classList.add('hidden'); }, 300);
+    setTimeout(() => {
+        modalEl.classList.add('hidden');
+    }, currentTransitionDurationMediumMs); // Use dynamic duration
 
     if (isMobile() && !calledFromPopstate && window.history.state?.modalOpen) {
-        window.history.back();
-    } else if (!calledFromPopstate) {
-         setTimeout(updateBreadcrumb, 10);
+        window.history.back(); // This will trigger onPopState which then calls updateBreadcrumb
     } else {
-        updateBreadcrumb();
+        updateBreadcrumb(); // Update immediately for desktop or if called from popstate
     }
 }
 
-function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.textContent, document.getElementById('copy-prompt-modal-button')); }
+function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.textContent, buttonElement || document.getElementById('copy-prompt-modal-button')); }
 function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.getAttribute('beschreibung') || '', buttonElement); }
 
 function copyToClipboard(text, buttonElement = null) {
@@ -675,8 +759,7 @@ function showNotification(message, type = 'info', buttonElement = null) {
         icon.classList.add('icon');
         notificationEl.appendChild(icon);
     } else if (type === 'error') {
-        // Future: Add an error icon, e.g., an "X" or "!"
-        // For now, it will be a text-only notification or styled by .error class
+        // Future: Add an error icon
     }
 
     const textNode = document.createElement('span');
@@ -686,8 +769,6 @@ function showNotification(message, type = 'info', buttonElement = null) {
     notificationAreaEl.appendChild(notificationEl);
     
     void notificationEl.offsetWidth;
-    // The 'show' class is not strictly needed if slideInFromRight animation auto-plays on append due to 'opacity:0' initial state
-    // notificationEl.classList.add('show'); 
 
     notificationTimeoutId = setTimeout(() => {
         notificationEl.classList.add('fade-out');
@@ -697,5 +778,5 @@ function showNotification(message, type = 'info', buttonElement = null) {
             }
         }, { once: true });
         notificationTimeoutId = null;
-    }, 2800);
+    }, 2500); // Slightly reduced duration for notification display itself
 }
