@@ -217,6 +217,7 @@ body.light-mode #app-logo-svg .icon-accent {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   min-height: 180px;
+  max-height: 220px;
   cursor: pointer;
   will-change: transform, box-shadow, opacity;
   width: auto;
