@@ -144,10 +144,10 @@ function setupEventListeners() {
     if (copyModalButton) {
       copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
     }
-    
+
     modalEl.addEventListener('click', (e) => {
         if (e.target === modalEl) {
-            e.stopPropagation(); 
+            e.stopPropagation();
             closeModal({ fromBackdrop: true });
         }
     });
@@ -198,7 +198,7 @@ function setupMobileSpecificFeatures() {
 
 function handleCardContainerClick(e) {
     if (modalEl.classList.contains('visible') || e.target.closest('.modal-content')) {
-        return; 
+        return;
     }
 
     const card = e.target.closest('.card');
@@ -291,11 +291,11 @@ function handlePopState(event) {
     } else if (!currentlyModalOpen && state.modalOpen) {
         const promptGuidForModal = state.promptGuid;
         const nodeToOpen = promptGuidForModal ? findNodeByGuid(xmlData.documentElement, promptGuidForModal) : null;
-        
+
         if (nodeToOpen && nodeToOpen.getAttribute('beschreibung')) {
             pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
             if (state.path.length > 0 && pathStack.length > 0 && pathStack[pathStack.length-1].getAttribute('guid') === promptGuidForModal) {
-                 pathStack.pop(); 
+                 pathStack.pop();
             }
             currentNode = pathStack.length > 0 ? pathStack[pathStack.length-1] : xmlData.documentElement;
             openModal(nodeToOpen, true);
@@ -347,10 +347,10 @@ function setupIntersectionObserver() {
                 opacity: 1,
                 y: 0,
                 scale: 1,
-                duration: 0.5, 
-                ease: "expo.out", 
+                duration: 0.5,
+                ease: "expo.out",
                 stagger: {
-                    each: 0.05, 
+                    each: 0.05,
                     from: "start"
                 },
                 onComplete: function() {
@@ -400,9 +400,9 @@ function updateFullscreenButton() {
 
 function findNodeByGuid(startNode, targetGuid) {
     if (!startNode || !targetGuid) return null;
-    if (startNode.nodeType !== 1) return null; 
+    if (startNode.nodeType !== 1) return null;
     if (startNode.getAttribute('guid') === targetGuid) return startNode;
-    
+
     const children = startNode.children;
     for (let i = 0; i < children.length; i++) {
         const child = children[i];
@@ -516,7 +516,7 @@ function renderView(xmlNode) {
 
         const titleElem = document.createElement('h3');
         titleElem.textContent = node.getAttribute('value') || 'Unbenannt';
-        
+
         const contentWrapper = document.createElement('div');
         contentWrapper.classList.add('card-content-wrapper');
         contentWrapper.appendChild(titleElem);
@@ -527,8 +527,8 @@ function renderView(xmlNode) {
             if (svgTemplateFolder) {
                 const folderIconSvg = svgTemplateFolder.cloneNode(true);
                 const folderIconId = `icon-folder-${nodeGuid}`;
-                folderIconSvg.id = folderIconId; 
-                contentWrapper.appendChild(folderIconSvg); 
+                folderIconSvg.id = folderIconId;
+                contentWrapper.appendChild(folderIconSvg);
                 vivusSetups.push({ parent: card, svgId: folderIconId });
             }
         } else {
@@ -624,7 +624,7 @@ function addCard3DHoverEffect(card) {
 
 function navigateToNode(node) {
     performViewTransition(() => {
-        if (currentNode !== node) { 
+        if (currentNode !== node) {
             pathStack.push(currentNode);
         }
         currentNode = node;
@@ -634,7 +634,7 @@ function navigateToNode(node) {
 
     if (isMobile() && !modalEl.classList.contains('visible')) {
          let historyPath = pathStack.map(n => n.getAttribute('guid'));
-         if (currentNode && currentNode !== xmlData.documentElement) { 
+         if (currentNode && currentNode !== xmlData.documentElement) {
              historyPath.push(currentNode.getAttribute('guid'));
          }
          window.history.pushState({ path: historyPath, modalOpen: false }, '', window.location.href);
@@ -647,7 +647,7 @@ function updateBreadcrumb() {
 
     const homeLink = document.createElement('span');
     homeLink.textContent = 'Home';
-    
+
     const clearAllActiveBreadcrumbs = () => {
         const allActive = breadcrumbEl.querySelectorAll('.current-level-active');
         allActive.forEach(el => {
@@ -662,7 +662,7 @@ function updateBreadcrumb() {
 
     if (pathStack.length === 0 && currentNode === xmlData.documentElement) {
         homeLink.classList.add('current-level-active');
-        homeLink.classList.remove('breadcrumb-link'); 
+        homeLink.classList.remove('breadcrumb-link');
     } else {
         homeLink.classList.add('breadcrumb-link');
         homeLink.addEventListener('click', () => {
@@ -686,7 +686,7 @@ function updateBreadcrumb() {
             const link = document.createElement('span');
             link.textContent = nodeValue;
 
-            if (nodeInPath === currentNode) { 
+            if (nodeInPath === currentNode) {
                 clearAllActiveBreadcrumbs();
                 link.classList.add('current-level-active');
             } else {
@@ -704,13 +704,13 @@ function updateBreadcrumb() {
             breadcrumbEl.appendChild(link);
         }
     });
-    
+
     const isAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
     const parentOfCurrentNode = pathStack.length > 0 ? pathStack[pathStack.length - 1] : null;
 
     if (!isAtHome && currentNode !== parentOfCurrentNode && currentNode !== xmlData.documentElement) {
-        clearAllActiveBreadcrumbs(); 
-        if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement )) { 
+        clearAllActiveBreadcrumbs();
+        if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement )) {
             const separator = document.createElement('span');
             separator.textContent = ' > ';
             breadcrumbEl.appendChild(separator);
@@ -733,7 +733,7 @@ function openModal(node, calledFromPopstate = false) {
     promptFullTextEl.textContent = node.getAttribute('beschreibung') || '';
     modalEl.classList.remove('hidden');
     requestAnimationFrame(() => {
-         requestAnimationFrame(() => { 
+         requestAnimationFrame(() => {
             modalEl.classList.add('visible');
          });
     });
@@ -770,9 +770,9 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
     if (fromBackdrop) {
         if (isMobile() && window.history.state?.modalOpen && !calledFromPopstate) {
             const LrpmtGuid = window.history.state.promptGuid;
-            window.history.replaceState({ 
-                path: window.history.state.path, 
-                modalOpen: false, 
+            window.history.replaceState({
+                path: window.history.state.path,
+                modalOpen: false,
                 promptGuid: LrpmtGuid
             }, '', window.location.href);
         }
@@ -804,7 +804,7 @@ function copyToClipboard(text, buttonElement = null) {
 }
 
 let notificationTimeoutId = null;
-function showNotification(message, type = 'info', buttonElement = null) { 
+function showNotification(message, type = 'info', buttonElement = null) {
     if (notificationTimeoutId) {
         const existingNotification = notificationAreaEl.querySelector('.notification');
         if(existingNotification) existingNotification.remove();
@@ -829,16 +829,16 @@ function showNotification(message, type = 'info', buttonElement = null) {
     notificationEl.appendChild(textNode);
 
     notificationAreaEl.appendChild(notificationEl);
-    
-    void notificationEl.offsetWidth; 
+
+    void notificationEl.offsetWidth;
 
     notificationTimeoutId = setTimeout(() => {
         notificationEl.classList.add('fade-out');
         notificationEl.addEventListener('animationend', () => {
-            if (notificationEl.parentNode === notificationAreaEl) { 
+            if (notificationEl.parentNode === notificationAreaEl) {
                 notificationEl.remove();
             }
         }, { once: true });
         notificationTimeoutId = null;
-    }, 2500); 
+    }, 2500);
 }
