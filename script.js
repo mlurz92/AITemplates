@@ -222,8 +222,20 @@ function handleCardContainerClick(e) {
                 openModal(node);
             }
         }
-    } else if (e.target === containerEl && pathStack.length > 0 ) {
-         navigateHistory('backward');
+    } else if (e.target === containerEl && pathStack.length > 0) {
+        performViewTransition(() => {
+            if (pathStack.length > 0) {
+                const parentNode = pathStack.pop();
+                currentNode = parentNode;
+                renderView(currentNode);
+                updateBreadcrumb();
+
+                if (isMobile()) {
+                    let historyPath = pathStack.map(n => n.getAttribute('guid'));
+                    window.history.pushState({ path: historyPath, modalOpen: false }, '', window.location.href);
+                }
+            }
+        }, 'backward');
     }
 }
 
