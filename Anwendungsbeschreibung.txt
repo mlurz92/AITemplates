@@ -4,196 +4,162 @@
 
 **Zweck:** Die Anwendung dient als **hochspezialisierter, interaktiver Browser und Viewer für eine Sammlung von Textbausteinen (Prompts)**, die hierarchisch in einer lokalen XML-Datei (`Templates.xml`) strukturiert sind. Der primäre Anwendungsfall ist das schnelle Finden, Anzeigen und Kopieren vordefinierter Textvorlagen zur Verwendung in anderen Kontexten. Sie fungiert als persönliche, lokal laufende Wissens- und Vorlagenbasis.
 
-**Kernidee:** Bereitstellung einer **visuell ansprechenden, modernen und intuitiven Oberfläche** zur Navigation durch eine Ordnerstruktur von Text-Snippets. Der Fokus liegt auf **Effizienz, Zugänglichkeit und einer hochwertigen Benutzererfahrung** auf Desktop-Geräten sowie Smartphones, mit direktem Zugriff auf die benötigten Textinhalte über eine Kartenansicht, eine Detailansicht (Modal) und eine schnelle Kopierfunktion. Besonderer Wert wird auf flüssige Animationen und Übergänge gelegt.
+**Kernidee:** Bereitstellung einer **visuell ansprechenden, modernen und intuitiven Benutzeroberfläche** zur Navigation durch eine Ordnerstruktur von Text-Snippets. Der Fokus liegt auf **Effizienz, Zugänglichkeit und einer hochwertigen Benutzererfahrung** auf Desktop-Geräten sowie Smartphones. Besonderer Wert wird auf **flüssige, performante Animationen und Übergänge** sowie eine klare Informationsdarstellung gelegt. Die Anwendung bietet direkten Zugriff auf die benötigten Textinhalte über eine Kartenansicht, eine Detailansicht (Modal) und eine schnelle Kopierfunktion. Ein umschaltbares Light- und Dark-Theme passt sich den Nutzerpräferenzen an.
 
 ## 2. Technologien
 
 * **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES6+)
 * **Datenquelle:** Lokale XML-Datei (`Templates.xml`)
-* **Layout:** CSS Grid (Desktop), CSS Flexbox (Mobile), Responsive Design Media Queries
-* **Styling:** CSS Variablen, Glassmorphism-Effekte (`backdrop-filter`), Animationen (`@keyframes`), Transitions
-* **Animationen:** CSS Transitions/Animations, Vivus.js (für Ordner-Icons via CDN), Intersection Observer API (für Scroll-Animationen)
-* **APIs:** Fetch API (XML laden), DOMParser (XML parsen), Clipboard API (Kopieren), Fullscreen API, History API (Mobile Navigation)
-* **PWA:** Web App Manifest (`manifest.json`) für "Zum Startbildschirm hinzufügen"-Funktionalität und verbessertes App-Gefühl.
+* **Layout:**
+    * CSS Grid: Für die responsive Kartenansicht auf Desktop-Geräten (`grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))`).
+    * CSS Flexbox: Für das zweispaltige Layout der Karten auf mobilen Geräten und für diverse UI-Komponenten.
+    * Responsive Design: Media Queries für die Anpassung an verschiedene Bildschirmgrößen.
+* **Styling:**
+    * CSS Variablen: Exzessive Nutzung für Farben, Abstände, Schriftgrößen und Animationsdauern, was ein globales Theming (Dark/Light Mode) und schnelle Anpassungen ermöglicht.
+    * Glassmorphism: Durchgängiges Designelement mit halbtransparenten Hintergründen und `backdrop-filter: blur()` für einen "Milchglas"-Effekt auf Karten, Modals und Navigationsleisten.
+* **Animationen & Übergänge:**
+    * CSS Transitions: Für sanfte Zustandsänderungen bei Hover-Effekten, Theme-Wechsel und UI-Elementen. Gesteuert über dynamisch gesetzte CSS-Variablen für Animationsdauern (`--transition-duration-fast`, `--transition-duration-medium`, `--transition-duration-page`).
+    * CSS Animations (`@keyframes`): Für Effekte wie das pulsierende "Glow" auf aktiven Elementen oder Karten beim Hovern.
+    * View Transitions API: Für performante und flüssige Seitenübergänge beim Navigieren zwischen Ordner-Ebenen. Die Animationen (z.B. Slide-Effekte) werden durch JavaScript (`document.documentElement.dataset.pageTransitionDirection`) und entsprechende CSS-Regeln gesteuert.
+    * GSAP (GreenSock Animation Platform): Eingebunden via CDN. Wird für das gestaffelte Einblenden der Karten beim Scrollen (`IntersectionObserver`) mit einer performanten `expo.out`-Ease verwendet, um einen dynamischen und flüssigen Effekt zu erzielen.
+    * Vivus.js: Eingebunden via CDN. Dient zur Animation von SVG-Pfaden (Zeichnen-Effekt) für die Ordner-Icons auf den Karten. Die Animationsdauer ist auf `120ms` optimiert.
+* **Browser-APIs:**
+    * Fetch API: Zum asynchronen Laden der `Templates.xml`.
+    * DOMParser: Zum Verarbeiten (Parsen) der geladenen XML-Daten.
+    * Clipboard API: Für das Kopieren von Prompt-Texten in die Zwischenablage (mit Fallback auf `document.execCommand('copy')`).
+    * Fullscreen API: Ermöglicht das Umschalten der Anwendung in den Vollbildmodus des Browsers.
+    * History API: Intensiv genutzt auf mobilen Geräten für eine native Browser-Vorwärts- und Zurück-Navigation, die den Zustand der App (aktueller Pfad, Modalstatus) korrekt wiederherstellt.
+    * Intersection Observer API: Dient zur performanten Erkennung, wann Karten in den sichtbaren Bereich scrollen, um deren GSAP-Einblendanimation auszulösen.
+* **PWA (Progressive Web App):**
+    * Web App Manifest (`manifest.json`): Definiert App-Name, Icons, Start-URL, Display-Modus (`standalone`), Theme-Farben etc. Ermöglicht "Zum Startbildschirm hinzufügen".
+    * Meta-Tags in HTML: Unterstützen PWA-Verhalten und Theme-Farbanpassung der Browser-UI.
+* **Performance-Optimierungen:**
+    * Gezielter Einsatz von `transform: translateZ(0);` auf animierten Elementen (Karten, Modal) zur Förderung der GPU-Beschleunigung und Vermeidung von Ruckeln.
+    * Throttling von `mousemove`-Events für den 3D-Karten-Hover-Effekt mittels `requestAnimationFrame` zur Reduzierung der Style-Neuberechnungen.
+    * Optimierte Animationsdauern und Easing-Funktionen.
 
 ## 3. Datenstruktur (`Templates.xml`)
 
-Die Anwendung lädt ihre Inhalte aus einer lokalen XML-Datei namens `Templates.xml`. Diese Datei definiert die hierarchische Struktur der Ordner und Prompts.
+Die Anwendung lädt ihre gesamten Inhalte und die hierarchische Struktur aus einer lokalen XML-Datei namens `Templates.xml`.
 
-* **Struktur:** Ein Wurzelknoten `<ROOT>` enthält verschachtelte `<TreeViewNode>`-Elemente.
-* **`<TreeViewNode>`:** Repräsentiert entweder einen Ordner oder einen Prompt.
-    * **Ordner:** Enthalten weitere `<TreeViewNode>`-Elemente als Kinder.
-    * **Prompt:** Enthalten keine weiteren `<TreeViewNode>`-Elemente.
-* **Attribute (genutzt durch die Anwendung):**
-    * `value`: Der Anzeigename des Ordners oder Prompts (Titel).
-    * `beschreibung`: Der vollständige Textinhalt des Prompts. Bei Ordnern ist dieses Attribut leer oder wird ignoriert.
-    * `guid`: Ein einzigartiger Identifikator für den Knoten, der für die Navigation und die Browser-History verwendet wird.
-* **Attribute (ignoriert durch die Anwendung):** `image`, `kuerzel`, `Erstelldatum`, `Aenderdatum`, `expanded`.
+* **Wurzelknoten:** Ein `<ROOT>`-Element umschließt alle anderen Knoten.
+* **`<TreeViewNode>`:** Das zentrale Element, das entweder einen Ordner oder einen Prompt repräsentiert.
+    * **Ordner:** Ein `<TreeViewNode>`, der weitere `<TreeViewNode>`-Elemente als Kinder enthält. Das `beschreibung`-Attribut ist bei Ordnern typischerweise leer oder wird ignoriert.
+    * **Prompt:** Ein `<TreeViewNode>`, der keine weiteren `<TreeViewNode>`-Kinderelemente hat. Der eigentliche Textinhalt des Prompts steht im `beschreibung`-Attribut.
+* **Wichtige Attribute eines `<TreeViewNode>` (von der Anwendung aktiv genutzt):**
+    * `value`: String; der Anzeigename des Ordners oder Prompts. Dieser Text wird als Titel auf der Karte und im Breadcrumb-Pfad dargestellt.
+    * `beschreibung`: String; der vollständige Textinhalt des Prompts. Bei Ordnern ist dieses Attribut in der Regel leer.
+    * `guid`: String; ein global eindeutiger Identifikator für jeden Knoten. Dieses Attribut ist entscheidend für die korrekte Navigation, die Verknüpfung von UI-Elementen mit den XML-Daten und insbesondere für die zuverlässige Funktion der Browser-History API auf Mobilgeräten zur Wiederherstellung des Zustands. Falls ein Knoten kein `guid`-Attribut besitzt, generiert die Anwendung dynamisch eine temporäre ID.
+* **Ignorierte Attribute:** Die Attribute `image`, `kuerzel`, `Erstelldatum`, `Aenderdatum` und `expanded` aus der `Templates.xml` werden von der aktuellen Implementierung nicht ausgewertet oder dargestellt.
 
 ## 4. Benutzeroberfläche (UI) - Detailliert
 
-### 4.1 Gesamtdesign
+### 4.1. Gesamtdesign und Theming
 
-* **Thema:** Modernes, dunkles Design (`--bg-base: #050505`) mit "Glassmorphism"-Effekten. Viele Container-Elemente (`.card`, `#top-bar`, `#mobile-nav`, Modal) nutzen halbtransparente Hintergründe (`rgba`) mit einem Unschärfeeffekt (`backdrop-filter: blur(...)`), was ihnen ein schwebendes Aussehen über dem Basishintergrund verleiht.
-* **Farbpalette:** Dominante dunkle Grau- und Schwarztöne. Heller Text (`--text-color: #e8e8e8`) sorgt für guten Kontrast. Eine warme Akzentfarbe (`--accent: #ffca7a`) wird subtil für Hover-Effekte und Hervorhebungen verwendet.
-* **Typografie:** Verwendet System-Standard-Sans-Serif-Schriftarten für optimale Lesbarkeit und natives Look-and-Feel (`font-family: -apple-system, ...`).
-* **Animationen & Übergänge:** Durchgängiger Einsatz von CSS Transitions für sanfte Zustandsänderungen (Hover, Modal, Seitenwechsel) und CSS Animations (`@keyframes`) für Effekte wie das Glühen von Karten (`glow`) oder Benachrichtigungen.
+* **Dual-Theme (Dark/Light Mode):**
+    * Die Anwendung startet standardmäßig im Dark Mode. Ein Klick auf das App-Logo (`#theme-toggle-button`) in der Top-Bar schaltet zwischen Dark und Light Mode um.
+    * Die aktuelle Theme-Einstellung wird im `localStorage` (`preferredTheme`) gespeichert und beim nächsten Besuch automatisch angewendet.
+    * Das Umschalten erfolgt durch Hinzufügen/Entfernen der Klasse `light-mode` zum `<body>`-Element.
+    * Eine umfangreiche Sammlung von CSS-Variablen (`:root` und überschrieben in `body.light-mode`) steuert alle farblichen Aspekte (Hintergründe, Texte, Akzente, Schatten, Ränder, SVG-Farben).
+    * Der Übergang zwischen den Themes ist durch CSS Transitions auf den relevanten Eigenschaften (z.B. `background-color`, `color`) sanft animiert.
+    * Die `meta[name="theme-color"]` im HTML-Header wird dynamisch an die Basishintergrundfarbe des aktiven Themes angepasst, um die Browser-UI (z.B. Adressleiste auf Mobilgeräten) konsistent einzufärben.
+* **Dark Mode (Standard):**
+    * Hintergrund (`--bg-base`): Sehr dunkles Grau, fast Schwarz (`#050505`).
+    * Text (`--text-color`): Helles Grau/Weiß (`#e8e8e8`).
+    * Akzentfarbe (`--accent`): Warmes Orange-Gelb (`#ffca7a`).
+    * Glassmorphism-Flächen (`--bg-glass`): Halbtransparentes, dunkles Grau (`rgba(40, 40, 40, 0.75)`).
+* **Light Mode:**
+    * Hintergrund (`--bg-base`): Helles Grau (`#f0f0f0`).
+    * Text (`--text-color`): Dunkles Grau/Schwarz (`#1a1a1a`).
+    * Akzentfarbe (`--accent`): Ein dunklerer Orangeton (`#c96e00`) für besseren Kontrast auf hellem Grund.
+    * Glassmorphism-Flächen (`--bg-glass`): Halbtransparentes Weiß (`rgba(255, 255, 255, 0.7)`).
+* **Glassmorphism:** Ein durchgängiges Designelement, das auf Karten, Modals und Navigationsleisten eingesetzt wird. Erreicht durch `background` mit Alpha-Transparenz und `backdrop-filter: blur()`.
+* **Typografie:** Verwendet System-Standard-Sans-Serif-Schriftarten für optimale Lesbarkeit und ein natives Erscheinungsbild.
+* **Animationen & Übergänge:** Alle Animationen und Übergänge sind zeitlich aufeinander abgestimmt und verwenden beschleunigte CSS-Eigenschaften (`transform`, `opacity`) sowie optimierte Easing-Funktionen (`expo.out` für GSAP, `ease-out` für CSS) für eine flüssige Darstellung. Die Animationsdauern sind über CSS-Variablen global steuerbar und wurden für eine schnellere, direktere Wahrnehmung optimiert.
 
-### 4.2 Hauptkomponenten
+### 4.2. Hauptkomponenten der Benutzeroberfläche
 
 * **Top-Bar (`#top-bar`):**
-    * **Positionierung:** Permanent am oberen Bildschirmrand fixiert (`position: fixed`), passt sich an die obere Safe Area an (`top: var(--safe-area-inset-top)`). Überlagert den restlichen Inhalt (`z-index: 999`).
-    * **Aussehen:** Dunkler, halbtransparenter "Milchglas"-Hintergrund mit `backdrop-filter`. Eine feine Linie (`border-bottom`) trennt sie vom Inhalt. Besitzt eine minimale Höhe (`min-height`), um konsistenten Abstand zu gewährleisten.
+    * **Positionierung & Aussehen:** Permanent am oberen Bildschirmrand fixiert, passt sich an Safe Areas an. Nutzt den `bg-dark`-Farbvariablenwert des aktiven Themes für den "Milchglas"-Hintergrund.
     * **Inhalt (von links nach rechts):**
-        1.  **Zurück-Button (`#topbar-back-button`):** Enthält ein SVG-Pfeil-Links-Icon (`.icon-arrow-left`). Das Icon wird bei Hover via CSS animiert (Skalierung, Farbwechsel). Der Button ist initial sichtbar, wird aber ausgeblendet (`visibility: hidden`), wenn man sich auf der obersten Ebene ("Home") befindet und das Modal geschlossen ist.
-        2.  **Breadcrumb-Navigation (`#breadcrumb`):** Zeigt den aktuellen Pfad von "Home" bis zum angezeigten Ordner an. Übergeordnete Ebenen sind als klickbare Links (`.breadcrumb-link`) mit Hover-Effekt (Hintergrund, Textfarbe) gestaltet. Der aktuell angezeigte Ordner wird als nicht-klickbarer Text angezeigt. Bei Platzmangel wird der Pfad mit Ellipsen (`...`) gekürzt.
-        3.  **Fullscreen-Button (`#fullscreen-button`):** Erlaubt das Umschalten in den Browser-Vollbildmodus. Enthält zwei SVG-Icons (`.icon-fullscreen-enter`, `.icon-fullscreen-exit`), von denen je nach Zustand eines sichtbar ist. Icons werden bei Hover via CSS animiert. Der Button wird ausgeblendet, wenn die Fullscreen API vom Browser nicht unterstützt wird (`body:not([data-fullscreen-supported])`). Wird auf sehr kleinen mobilen Bildschirmen nach rechts verschoben, wenn das Logo ausgeblendet wird.
-        4.  **App-Logo (`#app-logo-svg`):** Ein animiertes SVG-Logo (Glühbirne). Wird auf sehr kleinen mobilen Bildschirmen ausgeblendet (`display: none`).
-    * **Verhalten:** Die Top-Bar bleibt immer sichtbar (kein Ausblenden beim Scrollen mehr).
-
+        1.  **Zurück-Button (`#topbar-back-button`):** SVG-Pfeil-Links-Icon. Sichtbarkeit wird dynamisch gesteuert (ausgeblendet auf Home-Ebene, wenn Modal geschlossen). Animiert bei Hover.
+        2.  **Breadcrumb-Navigation (`#breadcrumb`):** Zeigt den Pfad von "Home" zur aktuellen Ordnerebene. Übergeordnete Ebenen sind klickbare Links. Das aktuell letzte, nicht klickbare Element im Breadcrumb (aktuelle Ordnerebene) erhält einen "Ambient Glow"-Effekt (`.current-level-active` Klasse und `glow` CSS-Animation mit `box-shadow`) zur Hervorhebung.
+        3.  **Fullscreen-Button (`#fullscreen-button`):** Zum Aktivieren/Deaktivieren des Browser-Vollbildmodus. Zeigt je nach Zustand ein Enter- oder Exit-Icon. Wird ausgeblendet, wenn die Fullscreen API nicht unterstützt wird.
+        4.  **Theme-Toggle-Button (`#theme-toggle-button`):** Umschließt das App-Logo SVG. Ein Klick schaltet zwischen Dark und Light Mode um. Das Logo selbst (`#app-logo-svg`) ist ein animiertes SVG (Glühbirne). Die Farben der SVG-Pfade (`.icon-line`, `.icon-accent`) werden über CSS-Variablen (`--logo-line-color`, `--logo-accent-color`) gesteuert und passen sich dem aktiven Theme an. Die Vivus-ähnliche Initialanimation des Logos bleibt erhalten.
 * **Karten-Container (`#cards-container`):**
-    * **Positionierung:** Nimmt den Hauptbereich unterhalb der Top-Bar und oberhalb der (auf Mobilgeräten sichtbaren) Mobile-Nav ein. Das `padding-top` und `padding-bottom` wird dynamisch angepasst (`calc`), um den fixierten Leisten und den Safe Areas Rechnung zu tragen und Überlappungen zu vermeiden.
-    * **Layout (Desktop):** Responsives CSS Grid (`grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))`). Die Anzahl der Spalten passt sich der Bildschirmbreite an.
-    * **Layout (Mobile):** Flexbox-Layout (`display: flex; flex-wrap: wrap;`). Zeigt **immer genau zwei Karten nebeneinander** an (`width: calc(50% - ...)`) über alle mobilen Breakpoints hinweg. Karten werden linksbündig ausgerichtet (`justify-content: flex-start`).
-    * **Abstände:** Definierter horizontaler (`column-gap`) und vertikaler (`row-gap`) Abstand zwischen den Karten.
-    * **Animation:** Besitzt Klassen für direktionale Slide-Übergänge (`.slide-out-left`, `.slide-in-right`, etc.), die beim Navigieren per JavaScript gesetzt werden. Enthält eine Klasse (`.swiping-right`), die beim Wischen auf Mobilgeräten kurzzeitig eine horizontale Verschiebung für visuelles Feedback bewirkt.
-
+    * **Positionierung & Layout:** Hauptbereich für die Darstellung der Karten. Nutzt dynamisches Padding, um Überlappungen mit fixierten Leisten und Safe Areas zu vermeiden. Verwendet CSS Grid auf Desktops (responsive Spaltenanzahl) und ein zweispaltiges Flexbox-Layout auf mobilen Geräten.
+    * **3D-Perspektive:** Besitzt eine `perspective`-Eigenschaft, um den 3D-Hover-Effekt der Karten zu ermöglichen.
 * **Karten (`.card`):**
-    * **Aussehen:** Rechteckige Karten mit fester `min-height` und `max-height`. Abgerundete Ecken, feiner Rand (`border`), "Milchglas"-Hintergrund mit `backdrop-filter`. Leichter Schatten (`box-shadow`) für Tiefenwirkung.
+    * **Aussehen:** Rechteckig mit abgerundeten Ecken, "Milchglas"-Hintergrund (`--bg-glass`), feinem Rand (`--border-color`) und Schatten (`--shadow-color-light/heavy`). Alle Farbwerte passen sich dem aktiven Theme an.
+    * **Performance:** `will-change: transform, box-shadow, opacity;` und `transform: translateZ(0);` zur Optimierung der Animationsperformance.
     * **Typen:**
-        1.  **Ordner-Karte (`.folder-card`, `data-type="folder"`):** Zeigt zentriert den Titel (`h3`) und darunter ein großes Ordner-SVG-Icon (`.folder-icon`). Das Icon wird mittels **Vivus.js animiert** (Zeichnen-Effekt), wenn die Karte berührt wird (sofortiger Start) oder der Mauszeiger darüberfährt (mit kurzer Verzögerung).
-        2.  **Prompt-Karte (`data-type="prompt"`):** Zeigt oben den Titel (`h3`, max. 2 Zeilen), darunter eine Textvorschau (`p`, max. 3 Zeilen) des Prompts. Die Textvorschau hat am unteren Ende einen **Fade-Out-Effekt** (`mask-image`), um das abrupte Abschneiden zu kaschieren. Am unteren Rand befinden sich zwei Buttons: "Details anzeigen" (`data-action="expand"`, Icon `.icon-expand`) und "Prompt kopieren" (`data-action="copy"`, Icon `.icon-copy`). Beide Button-Icons werden bei Hover via **CSS animiert**.
-    * **Attribute:** Jede Karte trägt ein `data-guid`-Attribut mit der GUID des zugehörigen XML-Knotens für die Event-Delegation und Navigation.
-    * **Hover-Effekt:** Die Karte hebt sich leicht an und vergrößert sich (`transform: translateY(-6px) scale(1.02)`), der Schatten wird stärker, und eine pulsierende Leuchtanimation (`@keyframes glow`) wird aktiviert.
-    * **Scroll-Animation:** Karten starten unsichtbar (`opacity: 0`) und leicht nach unten verschoben (`transform: translateY(20px)`). Wenn sie in den Viewport scrollen, werden sie über die Klasse `.is-visible` (hinzugefügt durch den Intersection Observer) sanft eingeblendet und an ihre Endposition geschoben.
-
+        1.  **Ordner-Karte (`.folder-card`):** Zeigt Titel und ein großes Ordner-SVG-Icon. Das Icon wird mit Vivus.js animiert (Zeichnen-Effekt, Dauer `120ms`) bei Touchstart oder Mouseenter. Die Strichfarbe des Icons passt sich der Textfarbe des Themes an.
+        2.  **Prompt-Karte:** Zeigt Titel (max. 2 Zeilen), eine Textvorschau (max. 3 Zeilen mit maskiertem Fade-Out-Effekt) und Buttons "Details anzeigen" (Icon `.icon-expand`) und "Prompt kopieren" (Icon `.icon-copy`).
+    * **3D-Hover-Effekt:** Beim Überfahren mit der Maus neigt sich die Karte interaktiv im 3D-Raum basierend auf der Mausposition auf der Karte (Rotation um X- und Y-Achse, gesteuert über CSS-Variablen `--rotateX`, `--rotateY`, die per JavaScript im `mousemove`-Event mit `requestAnimationFrame`-Throttling aktualisiert werden). Zusätzlich leichter Anhebe-Effekt (`translateY`), Skalierung und Aktivierung der `glow`-Animation. Maximale Rotation ist auf `8 Grad` begrenzt.
+    * **Scroll-Animation:** Karten starten unsichtbar und leicht verschoben. Beim Einscrollen in den Viewport (erkannt durch `IntersectionObserver`) werden sie mit einer GSAP-Animation (`expo.out`-Ease, Dauer `0.5s`, Stagger `0.05s`) an ihre Position animiert (Fade-In, Verschiebung nach oben, Skalierung).
 * **Modal (`#prompt-modal`):**
-    * **Aussehen:** Erscheint als Overlay über der gesamten Seite mit einem stark abgedunkelten, unscharfen Hintergrund (`background: rgba(0,0,0,0.7)`, `backdrop-filter`). Der Inhaltscontainer (`.modal-content`) ist zentriert, hat abgerundete Ecken, einen Rand und einen "Milchglas"-Hintergrund. Passt seine Größe an den Viewport und die Safe Areas an (`width`, `max-height`, `calc(...)`). Langer Inhalt ist vertikal scrollbar (Scrollbar ist aber unsichtbar).
-    * **Inhalt:** Zeigt den vollständigen, unbeschnittenen Prompt-Text (`#prompt-fulltext`). Am unteren Rand befinden sich zwei Buttons: "Schließen" (`#modal-close-button`, Icon `.icon-minimize`) und "Kopieren" (`#copy-prompt-modal-button`, Icon `.icon-copy`). Beide Icons werden bei Hover via CSS animiert.
-    * **Animation:** Das Modal und sein Inhalt erscheinen mit einer kombinierten Skalierungs- und Einblendanimation (`transform: scale`, `opacity`) und verschwinden entsprechend.
-
+    * **Aussehen:** Overlay mit abgedunkeltem, unscharfem Hintergrund. Der Inhaltscontainer (`.modal-content`) verwendet den `bg-glass`-Farbvariablenwert des aktiven Themes. Typografie (`font-size: 1.05rem`, `line-height: 1.7`) ist für gute Lesbarkeit optimiert.
+    * **Performance:** `transform: translateZ(0);` auf `.modal-content` zur Optimierung.
+    * **Inhalt:** Zeigt vollständigen Prompt-Text und Buttons "Schließen" und "Kopieren".
+    * **Animation:** Erscheint und verschwindet mit einer kombinierten Skalierungs- und Einblendanimation (Dauer gesteuert durch `--transition-duration-medium`).
 * **Mobile Navigationsleiste (`#mobile-nav`):**
-    * **Sichtbarkeit:** Nur auf mobilen Geräten sichtbar (via JavaScript `.hidden`-Klasse entfernt).
-    * **Positionierung:** Permanent am unteren Bildschirmrand fixiert (`position: fixed`), passt sich an die untere Safe Area an (`bottom: var(--safe-area-inset-bottom)`). Überlagert den Inhalt (`z-index: 1050`). Bleibt **immer sichtbar** (kein Ausblenden beim Scrollen).
-    * **Aussehen:** Dunkler "Milchglas"-Hintergrund mit `backdrop-filter`, obere Trennlinie.
-    * **Inhalt:** Enthält zwei zentrierte Buttons: "Home" (Haus-Icon) und "Zurück" (Pfeil-Links-Icon). Icons sind statische SVGs. Buttons werden ausgeblendet (`.hidden`), wenn die Aktion nicht sinnvoll ist (z.B. "Zurück" auf der Home-Ebene).
-
+    * Nur auf mobilen Geräten sichtbar. Fixiert am unteren Bildschirmrand, passt sich an Safe Areas an. Nutzt den `bg-dark`-Farbvariablenwert des Themes. Enthält "Home"- und "Zurück"-Buttons.
 * **Fixierter "Home"-Button (`#fixed-back`):**
-    * **Positionierung:** Permanent am linken Bildschirmrand, vertikal mittig fixiert (`position: fixed`, `left: calc(1rem + var(...))`, `top: 50%`), passt sich an die linke Safe Area an.
-    * **Aussehen:** Runder Button mit "Milchglas"-Effekt und Pfeil-Links-Icon. Leichte Skalierung bei Hover.
-    * **Sichtbarkeit:** Wird dynamisch ein- und ausgeblendet (`.hidden`). Nur sichtbar, wenn man sich *nicht* auf der "Home"-Ebene befindet *und* das Modal geschlossen ist.
-
+    * Am linken Bildschirmrand, vertikal mittig. Sichtbarkeit dynamisch gesteuert. Nutzt `bg-glass` des Themes.
 * **Benachrichtigungen (`.notification`):**
-    * **Positionierung:** Erscheinen im `#notification-area`-Container oben rechts, unter Berücksichtigung der Safe Areas.
-    * **Aussehen:** Dunkle, halbtransparente Boxen mit abgerundeten Ecken und Textinhalt ("Prompt kopiert!", "Fehler...").
-    * **Animation:** Gleiten von rechts ins Bild (`@keyframes slideInFromRight`) und blenden nach einer Verzögerung sanft wieder aus (`@keyframes fadeOut`).
+    * Erscheinen oben rechts. Nutzen `bg-dark` des Themes. Erfolgsbenachrichtigungen ("Prompt kopiert!") enthalten nun ein Checkmark-SVG-Icon (`.icon-checkmark`), dessen Farbe sich an die Akzentfarbe des Themes anpasst. Die Animationsdauer für Ein- und Ausblenden wurde auf `0.3s` reduziert.
 
-### 4.3 Safe Area Handling
+### 4.4. Safe Area Handling
 
-Die Anwendung berücksichtigt Display-Ausschnitte (Notches etc.) auf modernen Smartphones durch Verwendung von `viewport-fit=cover` im HTML und CSS `env(safe-area-inset-*)`-Variablen. Diese Variablen werden genutzt, um die Positionierung (`top`, `bottom`, `left`, `right`) der fixierten Elemente (`#top-bar`, `#mobile-nav`, `#fixed-back`, `#notification-area`, Modal) und das Innenpadding (`padding-top`, `padding-bottom`) des scrollbaren Inhaltsbereichs (`#cards-container`) anzupassen, sodass keine UI-Elemente oder Inhalte von System-UI verdeckt werden.
+Die Anwendung berücksichtigt Display-Ausschnitte (Notches) auf modernen Geräten durch `viewport-fit=cover` und die CSS `env(safe-area-inset-*)`-Variablen, um sicherzustellen, dass UI-Elemente und Inhalte nicht von System-UI verdeckt werden. Dies betrifft alle fixierten Elemente und das Padding des Hauptinhaltsbereichs.
 
 ## 5. Benutzererfahrung (UX) & Funktionalität - Detailliert
 
-### 5.1 Initialisierung
+### 5.1. Initialisierung
 
-* Beim Laden des DOM (`DOMContentLoaded`) wird `initApp` ausgeführt.
+* Nach `DOMContentLoaded` wird `initApp` ausgeführt.
 * DOM-Elemente werden referenziert.
-* Event Listener werden registriert (Buttons, Container, Modal, Fullscreen, History).
-* Mobilgeräte-Erkennung (`isMobile`) findet statt.
-* Falls mobil: Spezifische mobile Features werden initialisiert (Nav-Leiste anzeigen, Swipe-Listener, History-Setup, *kein* Scroll-Listener zum Ausblenden mehr).
-* Intersection Observer für Karten-Scroll-Animationen wird erstellt.
-* Fullscreen API-Unterstützung wird geprüft.
-* Die `Templates.xml` wird via `Workspace` asynchron geladen und mit `DOMParser` verarbeitet.
-* Nach erfolgreichem Laden wird die oberste Ebene der Hierarchie mit einer "Vorwärts"-Animation (`slide-in-right`) gerendert (`renderView`).
-* Die Breadcrumb-Leiste zeigt "Home" an. Back-Buttons sind initial ausgeblendet.
+* Die Funktion `updateDynamicDurations()` liest den Wert der CSS-Variable `--transition-duration-medium` aus und speichert ihn in Millisekunden für die korrekte Zeitsteuerung von `setTimeout` in `closeModal`.
+* `setupTheme()` lädt die gespeicherte Theme-Präferenz aus `localStorage` (default 'dark') und wendet sie an.
+* Event Listener werden registriert.
+* Mobilgeräte-spezifische Features werden initialisiert (Bottom-Nav, Swipe, History).
+* Intersection Observer und Fullscreen API Support werden eingerichtet.
+* `loadXmlDocument()` lädt die `Templates.xml`. Die erstmalige Anzeige der Inhalte erfolgt mit einer View Transition (Typ 'initial', meist ein Fade-In).
 
-### 5.2 Navigation
+### 5.2. Navigation und Seitenübergänge
 
-* **Ordner öffnen:** Klick/Tap auf eine `.folder-card`.
-    * Der aktuelle `currentNode` wird zum `pathStack` hinzugefügt.
-    * Der geklickte Ordner wird zum neuen `currentNode`.
-    * `renderView` wird mit Richtung 'forward' aufgerufen (alter Inhalt slidet nach links raus, neuer Inhalt slidet von rechts rein).
-    * `updateBreadcrumb` aktualisiert die Pfadanzeige.
-    * Auf Mobilgeräten wird ein neuer Eintrag in der Browser-History erzeugt (`pushState`).
-* **Zurück navigieren (eine Ebene):**
-    * Klick/Tap auf `#topbar-back-button` (wenn nicht Home).
-    * Klick/Tap auf `#mobile-back` (wenn nicht Home).
-    * Wischgeste von links nach rechts auf `#cards-container` (Mobilgeräte).
-    * Browser-Zurück-Button/-Geste (Mobilgeräte).
-    * **Ablauf:** Löst `window.history.back()` aus. Der `onpopstate`-Handler verarbeitet den Zustandswechsel, aktualisiert `pathStack` und `currentNode` basierend auf dem vorherigen State, ruft `renderView` mit Richtung 'backward' auf (alter Inhalt slidet nach rechts raus, neuer Inhalt slidet von links rein) und aktualisiert die Breadcrumbs.
-* **Zu spezifischer Ebene navigieren:** Klick/Tap auf einen Link in der `#breadcrumb`.
-    * `pathStack` wird bis zur geklickten Ebene gekürzt.
-    * Der entsprechende Knoten wird `currentNode`.
-    * `renderView` wird mit Richtung 'backward' aufgerufen.
-    * `updateBreadcrumb` wird aktualisiert.
-    * Auf Mobilgeräten wird ein neuer History-Eintrag erzeugt.
-* **Zur Home-Ebene navigieren:**
-    * Klick/Tap auf den "Home"-Link in `#breadcrumb`.
-    * Klick/Tap auf `#fixed-back`.
-    * Klick/Tap auf `#mobile-home`.
-    * **Ablauf:** `pathStack` wird geleert, `currentNode` wird das Wurzelelement, `renderView` wird mit Richtung 'backward' aufgerufen, Breadcrumb zeigt nur "Home", Back-Buttons werden ausgeblendet. Auf Mobilgeräten wird ein neuer History-Eintrag erzeugt.
+* Die Navigation zwischen Ordner-Ebenen (Ordner öffnen, Zurück, Breadcrumb-Klick, Home-Klick) wird durch die **View Transitions API** gesteuert.
+* Vor dem Aufruf von `document.startViewTransition()` wird `document.documentElement.dataset.pageTransitionDirection` auf `'forward'`, `'backward'` oder `'initial'` gesetzt. Entsprechende CSS-Regeln (`html[data-page-transition-direction="..."]::view-transition-old(root)` etc.) definieren dann spezifische Animationen (Slide-Effekte mit `transform` und `opacity`, Dauer gesteuert durch `--transition-duration-page`). Standardmäßig wird ein Fade-Effekt verwendet.
+* Der JavaScript-Code umschließt die DOM-Aktualisierungen (`renderView`, `updateBreadcrumb`) innerhalb des `startViewTransition`-Callbacks.
 
-### 5.3 Hierarchie-Management
+### 5.3. Hierarchie-Management
 
-* Ein JavaScript-Array `pathStack` speichert die Sequenz der übergeordneten XML-Knoten beim Navigieren durch die Ordner.
-* Die Variable `currentNode` hält eine Referenz auf den aktuell angezeigten XML-Knoten.
-* Die Funktion `findNodeByGuid` wird verwendet, um Knoten anhand ihrer GUID (wichtig für History State Restoration) im XML-Baum zu finden.
+* `pathStack` (Array von XML-Knoten) und `currentNode` (XML-Knoten) verwalten den aktuellen Zustand in der Hierarchie.
+* `findNodeByGuid` dient der robusten Identifizierung von Knoten.
+* `updateBreadcrumb` stellt den Pfad dar und hebt die aktuelle Ebene mit der Klasse `.current-level-active` und einem Glow-Effekt hervor. Die Logik wurde verfeinert, um sicherzustellen, dass nur ein Element aktiv ist.
 
-### 5.4 Prompt-Interaktion
+### 5.4. Prompt-Interaktion und Modal-Verhalten
 
-* **Vorschau:** Prompt-Karten zeigen Titel und gekürzten Text mit Fade-Effekt.
-* **Modal öffnen:** Klick/Tap auf eine `.prompt-card` oder deren "Details anzeigen"-Button (`data-action="expand"`).
-    * Ruft `openModal(node)` auf.
-    * Modal erscheint mit Skalierungs-/Einblendanimation.
-    * Vollständiger Text wird in `#prompt-fulltext` angezeigt.
-    * Auf Mobilgeräten wird ein neuer History-Eintrag mit `modalOpen: true` und dem Pfad inklusive des Prompt-GUIDs erzeugt.
+* **Modal öffnen:** Öffnet die Detailansicht eines Prompts. Auf Mobilgeräten wird der Zustand (inkl. `promptGuid`) in der History API gespeichert.
 * **Modal schließen:**
-    * Klick/Tap auf Schließen-Button (`#modal-close-button`).
-    * Klick/Tap auf den Hintergrund (`#prompt-modal`).
-    * Klick/Tap auf `#topbar-back-button`.
-    * Browser-Zurück-Button/-Geste (Mobilgeräte).
-    * **Ablauf:** Ruft `closeModal()` auf. Modal verschwindet animiert. Bei mobiler Interaktion wird `window.history.back()` aufgerufen, was wiederum via `onpopstate` `closeModal(true)` triggert. Die Breadcrumb/Button-Sichtbarkeit wird nach der Animation aktualisiert.
-* **Prompt kopieren:**
-    * Klick/Tap auf Kopieren-Button auf der Karte (`data-action="copy"`) ruft `copyPromptTextForCard(node)` auf.
-    * Klick/Tap auf Kopieren-Button im Modal (`#copy-prompt-modal-button`) ruft `copyPromptText()` auf.
-    * Beide nutzen die `copyToClipboard`-Funktion.
-    * `copyToClipboard` verwendet `navigator.clipboard.writeText` mit Fallback auf `document.execCommand('copy')`.
-    * Bei Erfolg/Misserfolg wird `showNotification` aufgerufen.
+    * Kann durch Klick auf den "Schließen"-Button im Modal oder durch Klick auf den Modal-Hintergrund (`#modal`) erfolgen.
+    * **Bugfix:** Ein Klick auf den Modal-Hintergrund löst nun `event.stopPropagation()` aus. Dies verhindert, dass der Klick-Event an den `#cards-container` weitergeleitet wird und dort fälschlicherweise eine Navigation (z.B. zur Home-Ansicht oder eine Ebene zurück) auslöst. Das Modal schließt sich, und die Ansicht bleibt auf der Ordnerebene, von der das Modal geöffnet wurde.
+    * Auf Mobilgeräten löst das Schließen via UI (wenn nicht durch popstate) ein `window.history.back()` aus.
+    * Die `setTimeout`-Verzögerung für das Hinzufügen der `.hidden`-Klasse nach der Animation ist an `currentTransitionDurationMediumMs` gekoppelt.
+* **Prompt kopieren:** Verwendet `navigator.clipboard.writeText` (mit Fallback). Zeigt eine Benachrichtigung mit Text und (bei Erfolg) einem Checkmark-Icon an.
 
-### 5.5 Visuelles Feedback
+### 5.5. Theme-Umschaltung
 
-* **Hover:** Alle interaktiven Elemente (Karten, Buttons, Links) zeigen visuelle Änderungen bei Mouseover.
-* **Klick/Tap:** Standard-Browser-Feedback und `:active`-Styles (leichte Skalierung).
-* **Swipe (Mobile):** Während des Wischens nach rechts wird der `.cards-container` leicht horizontal verschoben (`transform: translateX(...)`), um die Geste zu visualisieren.
+* Ein Klick auf den `#theme-toggle-button` (das App-Logo im Header) ruft `toggleTheme()` auf.
+* `toggleTheme()` wechselt die Klasse (`light-mode` / `dark-mode`) auf `document.body`, speichert die Präferenz im `localStorage` und aktualisiert das `aria-label` des Buttons.
+* `applyTheme()` aktualisiert zusätzlich die `meta[name="theme-color"]`-Angabe im HTML-Header, um die Farbe der Browser-UI (z.B. Adressleiste auf Mobilgeräten) an das aktive Theme anzupassen.
 
-### 5.6 Animationen
+### 5.6. Fehlerbehandlung
 
-* **Seitenübergänge:** Beim Navigieren zwischen Ordnern sliden die alten Karten horizontal aus dem Bild, während die neuen Karten von der entgegengesetzten Seite hereinsliden (`slide-out-left`/`slide-in-right` für Vorwärts, umgekehrt für Rückwärts).
-* **Icon-Animationen:**
-    * Ordner-Icons (`.folder-icon`): Vivus "Zeichnen"-Animation bei Touchstart (sofort) und Mouseenter (verzögert).
-    * Andere Icons (Pfeile, Expand, Minimize, Copy, Fullscreen): Einfache CSS-Animationen bei Hover (Skalierung, Farbänderung, leichte Transformation).
-* **Karten-Scroll-Animation:** Karten erscheinen mit Fade-In und Slide-Up-Effekt, wenn sie in den Viewport scrollen.
-* **Modal-Animation:** Skalierungs- und Fade-Effekt beim Öffnen/Schließen.
-* **Notification-Animation:** Slide-In von rechts, Fade-Out mit Skalierung.
-
-### 5.7 Responsivität & Mobile Spezifika
-
-* Layout passt sich an: Grid auf Desktop, 2-spaltiges Flexbox auf Mobile.
-* Fixierte untere Navigationsleiste (`#mobile-nav`) für einfache Bedienung.
-* Wischgeste nach rechts zum Zurücknavigieren.
-* Nahtlose Integration mit der Browser-History API für Zurück/Vorwärts-Navigation auf Mobilgeräten, die den App-Zustand (Pfad und Modalstatus) korrekt wiederherstellt.
-
-### 5.8 Immersive Modi
-
-* **PWA:** Durch das `manifest.json` und die Meta-Tags in HTML kann die Anwendung zum Startbildschirm hinzugefügt werden und startet dann im `standalone`-Modus (ohne Browser-Adressleiste) für ein App-ähnliches Erlebnis.
-* **Fullscreen API:** Ein Button in der Top-Bar (`#fullscreen-button`) ermöglicht das manuelle Aktivieren/Deaktivieren des echten Vollbildmodus des Browsers.
-
-### 5.9 Fehlerbehandlung
-
-* **XML Laden/Parsen:** Bei Fehlern wird eine Fehlermeldung im `.cards-container` angezeigt und Details in der Konsole protokolliert.
-* **Kopieren:** Fehler beim Kopieren werden in der Konsole protokolliert und eine entsprechende Benachrichtigung angezeigt.
-* **Navigation:** Ungültige GUIDs im History State führen zu einer Konsolenwarnung und einem Reset zur Home-Ansicht.
+* Fehler beim Laden oder Parsen der `Templates.xml` werden abgefangen, eine Fehlermeldung im `#cards-container` angezeigt und Details in der Konsole protokolliert. Die Fehlermeldung aus dem XML-Parser wurde präzisiert.
+* Fehler beim Kopieren in die Zwischenablage führen zu einer entsprechenden Nutzerbenachrichtigung.
 
 ## 6. Abhängigkeiten
 
-* **Vivus.js:** Externe JavaScript-Bibliothek, eingebunden über CDN (`https://cdnjs.cloudflare.com/ajax/libs/vivus/0.4.6/vivus.min.js`) zur Animation der SVG-Ordner-Icons.
+* **GSAP (GreenSock Animation Platform):** Version 3.12.5, eingebunden via CDN. Genutzt für die performante Scroll-Animation der Karten.
+* **Vivus.js:** Version 0.4.6, eingebunden via CDN. Genutzt für die SVG-Zeichnen-Animation der Ordner-Icons.
