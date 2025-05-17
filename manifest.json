@@ -4,8 +4,8 @@
     "description": "Ein Browser zum Navigieren und Kopieren von Prompt-Templates.",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#050505",
-    "theme_color": "#141414",
+    "background_color": "#08080a",
+    "theme_color": "#08080a",
     "icons": [
       {
         "src": "icons/icon-192x192.png",
