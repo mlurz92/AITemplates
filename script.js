@@ -17,8 +17,8 @@ let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 const swipeThreshold = 50;
 const swipeFeedbackThreshold = 5;
 
-const MAX_ROTATION = 8;
-let currentTransitionDurationMediumMs = 250;
+const MAX_ROTATION = 6;
+let currentTransitionDurationMediumMs = 300;
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -67,7 +67,7 @@ function updateDynamicDurations() {
         }
     } catch (error) {
         console.warn("Could not read --transition-duration-medium from CSS, using default.", error);
-        currentTransitionDurationMediumMs = 250;
+        currentTransitionDurationMediumMs = 300;
     }
 }
 
@@ -92,7 +92,7 @@ function applyTheme(themeName) {
             const newThemeColor = rootStyle.getPropertyValue('--bg-base').trim();
             metaThemeColor.setAttribute("content", newThemeColor);
         } catch(e) {
-            metaThemeColor.setAttribute("content", themeName === 'dark' ? "#050505" : "#f0f0f0");
+            metaThemeColor.setAttribute("content", themeName === 'dark' ? "#08080a" : "#f8f9fa");
         }
     }
 }
@@ -108,9 +108,9 @@ function toggleTheme() {
 function setupEventListeners() {
     topbarBackBtn.addEventListener('click', () => {
         if (modalEl.classList.contains('visible')) {
-            closeModal();
+            closeModal({ fromBackdrop: true });
         } else if (pathStack.length > 0) {
-            navigateHistory('backward');
+            navigateOneLevelUp(); // Geändert: Exakt wie mobileBackBtn
         }
     });
 
@@ -118,7 +118,7 @@ function setupEventListeners() {
         if (modalEl.classList.contains('visible')) {
             closeModal();
         }
-        if (pathStack.length > 0) {
+        if (pathStack.length > 0 || currentNode !== xmlData.documentElement) {
             performViewTransition(() => {
                 currentNode = xmlData.documentElement;
                 pathStack = [];
@@ -126,7 +126,7 @@ function setupEventListeners() {
                 updateBreadcrumb();
             }, 'backward');
             if (isMobile()) {
-                window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
+                 window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
             }
         }
     });
@@ -165,7 +165,7 @@ function setupMobileSpecificFeatures() {
         mobileHomeBtn.addEventListener('click', () => {
             const modalWasVisible = modalEl.classList.contains('visible');
             if (modalWasVisible) {
-                closeModal({ fromBackdrop: true }); 
+                closeModal({ fromBackdrop: true });
             }
 
             const isCurrentlyAtHome = (currentNode === xmlData.documentElement && pathStack.length === 0);
@@ -176,8 +176,8 @@ function setupMobileSpecificFeatures() {
                     pathStack = [];
                     renderView(currentNode);
                     updateBreadcrumb();
-                }, 'backward'); 
-                
+                }, 'backward');
+
                 window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
             }
         });
@@ -186,7 +186,7 @@ function setupMobileSpecificFeatures() {
     if (mobileBackBtn) {
         mobileBackBtn.addEventListener('click', () => {
             if (modalEl.classList.contains('visible')) {
-                closeModal({ fromBackdrop: true }); 
+                closeModal({ fromBackdrop: true });
             } else if (pathStack.length > 0) {
                 navigateOneLevelUp();
             }
@@ -246,7 +246,7 @@ function handleCardContainerClick(e) {
             }
         }
     } else if (e.target === containerEl && pathStack.length > 0) {
-        navigateOneLevelUp();
+         navigateOneLevelUp();
     }
 }
 
@@ -265,7 +265,7 @@ function handleTouchMove(e) {
 
     if (Math.abs(diffX) > Math.abs(touchEndY - touchStartY) && diffX > swipeFeedbackThreshold) {
         containerEl.classList.add('swiping-right');
-        let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.15);
+        let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.1);
         containerEl.style.transform = `translateX(${moveX}px)`;
     } else {
         containerEl.classList.remove('swiping-right');
@@ -283,16 +283,17 @@ function handleTouchEnd() {
 
     if (Math.abs(diffX) > Math.abs(diffY) && diffX > swipeThreshold) {
         if (pathStack.length > 0) {
-             navigateHistory('backward');
+             navigateHistory('backward'); // Behält window.history.back() für Swipe auf Mobilgeräten
         }
     }
     touchStartX = 0; touchStartY = 0; touchEndX = 0; touchEndY = 0;
 }
 
-function navigateHistory(direction) {
+function navigateHistory(direction) { // Diese Funktion wird jetzt primär vom Swipe aufgerufen
     if (isMobile() && pathStack.length > 0) {
         window.history.back();
     } else if (!isMobile() && pathStack.length > 0) {
+        // Dieser Zweig ist unwahrscheinlicher geworden, da topbarBackBtn nun navigateOneLevelUp verwendet
         performViewTransition(() => {
             if (pathStack.length > 0) {
                 const parentNode = pathStack.pop();
@@ -370,10 +371,10 @@ function setupIntersectionObserver() {
                 opacity: 1,
                 y: 0,
                 scale: 1,
-                duration: 0.5,
+                duration: 0.6,
                 ease: "expo.out",
                 stagger: {
-                    each: 0.05,
+                    each: 0.06,
                     from: "start"
                 },
                 onComplete: function() {
@@ -393,7 +394,7 @@ function checkFullscreenSupport() {
         document.body.setAttribute('data-fullscreen-supported', 'true');
     } else {
         document.body.removeAttribute('data-fullscreen-supported');
-        fullscreenBtn?.remove();
+        if(fullscreenBtn) fullscreenBtn.remove();
     }
 }
 
@@ -418,7 +419,7 @@ function updateFullscreenButton() {
         fullscreenEnterIcon.classList.toggle('hidden', isFullscreen);
         fullscreenExitIcon.classList.toggle('hidden', !isFullscreen);
     }
-    fullscreenBtn?.setAttribute('aria-label', isFullscreen ? 'Vollbildmodus beenden' : 'Vollbildmodus aktivieren');
+    if(fullscreenBtn) fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Vollbildmodus beenden' : 'Vollbildmodus aktivieren');
 }
 
 function findNodeByGuid(startNode, targetGuid) {
@@ -449,7 +450,7 @@ function setupVivusAnimation(parentElement, svgId) {
     const svgElement = document.getElementById(svgId);
     if (!svgElement || !parentElement.classList.contains('folder-card')) return;
 
-    const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 120, start: 'manual' });
+    const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 100, start: 'manual' });
     vivusInstance.finish();
     svgElement.style.opacity = '1';
 
@@ -464,7 +465,7 @@ function setupVivusAnimation(parentElement, svgId) {
             vivusInstance.reset().play();
         };
         if (immediate) startVivus();
-        else timeoutId = setTimeout(startVivus, 50);
+        else timeoutId = setTimeout(startVivus, 60);
     };
 
     const finishAnimation = () => {
@@ -589,11 +590,9 @@ function adjustCardHeights() {
     const allCards = Array.from(containerEl.querySelectorAll('.card'));
     if (allCards.length === 0) return;
 
+    let targetHeight = 190;
+
     const folderCards = allCards.filter(card => card.classList.contains('folder-card'));
-    const promptCards = allCards.filter(card => card.classList.contains('prompt-card'));
-
-    let targetHeight = 180;
-
     if (folderCards.length > 0) {
         let maxFolderHeight = 0;
         folderCards.forEach(card => {
@@ -602,22 +601,23 @@ function adjustCardHeights() {
                 maxFolderHeight = card.offsetHeight;
             }
         });
-        targetHeight = Math.max(180, maxFolderHeight);
-        allCards.forEach(card => {
-            card.style.height = `${targetHeight}px`;
-        });
-    } else if (promptCards.length > 0) {
-        promptCards.forEach(card => {
-            card.style.height = `${targetHeight}px`;
-        });
+        targetHeight = Math.max(targetHeight, maxFolderHeight);
     }
+
+    const promptCards = allCards.filter(card => card.classList.contains('prompt-card'));
+     if (promptCards.length > 0 && folderCards.length === 0) {
+    }
+
+    allCards.forEach(card => {
+        card.style.height = `${targetHeight}px`;
+    });
 }
 
 
 function addCard3DHoverEffect(card) {
     let frameRequested = false;
     card.addEventListener('mousemove', (e) => {
-        if (frameRequested) return;
+        if (frameRequested || isMobile()) return;
         frameRequested = true;
         requestAnimationFrame(() => {
             const rect = card.getBoundingClientRect();
@@ -638,6 +638,7 @@ function addCard3DHoverEffect(card) {
     });
 
     card.addEventListener('mouseleave', () => {
+        if(isMobile()) return;
         requestAnimationFrame(() => {
             card.style.setProperty('--rotateX', '0deg');
             card.style.setProperty('--rotateY', '0deg');
@@ -863,5 +864,5 @@ function showNotification(message, type = 'info', buttonElement = null) {
             }
         }, { once: true });
         notificationTimeoutId = null;
-    }, 2500);
+    }, 2800);
 }
