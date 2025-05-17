@@ -18,7 +18,7 @@ const swipeThreshold = 50;
 const swipeFeedbackThreshold = 5;
 
 const MAX_ROTATION = 8;
-let currentTransitionDurationMediumMs = 250; // Default, will be updated from CSS
+let currentTransitionDurationMediumMs = 250; // Default, updated from CSS
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -57,19 +57,24 @@ function initApp() {
 }
 
 function updateDynamicDurations() {
-    const rootStyle = getComputedStyle(document.documentElement);
-    const mediumDuration = rootStyle.getPropertyValue('--transition-duration-medium').trim();
-    if (mediumDuration.endsWith('ms')) {
-        currentTransitionDurationMediumMs = parseFloat(mediumDuration);
-    } else if (mediumDuration.endsWith('s')) {
-        currentTransitionDurationMediumMs = parseFloat(mediumDuration) * 1000;
+    try {
+        const rootStyle = getComputedStyle(document.documentElement);
+        const mediumDuration = rootStyle.getPropertyValue('--transition-duration-medium').trim();
+        if (mediumDuration.endsWith('ms')) {
+            currentTransitionDurationMediumMs = parseFloat(mediumDuration);
+        } else if (mediumDuration.endsWith('s')) {
+            currentTransitionDurationMediumMs = parseFloat(mediumDuration) * 1000;
+        }
+    } catch (error) {
+        console.warn("Could not read --transition-duration-medium from CSS, using default.", error);
+        currentTransitionDurationMediumMs = 250; // Fallback
     }
 }
 
 function setupTheme() {
     const preferredTheme = localStorage.getItem('preferredTheme') || 'dark';
     applyTheme(preferredTheme);
-    if (themeToggleButton) { // Ensure button exists
+    if (themeToggleButton) {
         themeToggleButton.addEventListener('click', toggleTheme);
     }
 }
@@ -82,10 +87,14 @@ function applyTheme(themeName) {
     }
     const metaThemeColor = document.querySelector("meta[name=theme-color]");
     if (metaThemeColor) {
-        const rootStyle = getComputedStyle(document.documentElement);
-        // Use CSS variables for theme colors if possible, or fallback to hardcoded if simpler
-        const newThemeColor = themeName === 'dark' ? rootStyle.getPropertyValue('--bg-base').trim() || '#050505' : rootStyle.getPropertyValue('--bg-base').trim() || '#f0f0f0';
-        metaThemeColor.setAttribute("content", newThemeColor);
+        try {
+            const rootStyle = getComputedStyle(document.documentElement);
+            const newThemeColor = rootStyle.getPropertyValue('--bg-base').trim();
+            metaThemeColor.setAttribute("content", newThemeColor);
+        } catch(e) {
+            // Fallback if CSS var not ready or accessible
+            metaThemeColor.setAttribute("content", themeName === 'dark' ? "#050505" : "#f0f0f0");
+        }
     }
 }
 
@@ -132,10 +141,13 @@ function setupEventListeners() {
     }
 
     document.getElementById('modal-close-button').addEventListener('click', closeModal);
-    document.getElementById('copy-prompt-modal-button').addEventListener('click', () => copyPromptText(document.getElementById('copy-prompt-modal-button')));
+    const copyModalButton = document.getElementById('copy-prompt-modal-button');
+    if (copyModalButton) {
+      copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
+    }
     
     modalEl.addEventListener('click', (e) => {
-        if (e.target === modalEl) {
+        if (e.target === modalEl) { // Click on backdrop
             e.stopPropagation(); 
             closeModal();
         }
@@ -146,7 +158,7 @@ function setupEventListeners() {
 
 function setupMobileSpecificFeatures() {
     document.body.classList.add('mobile');
-    mobileNavEl?.classList.remove('hidden');
+    if (mobileNavEl) mobileNavEl.classList.remove('hidden');
     mobileHomeBtn = document.getElementById('mobile-home');
     mobileBackBtn = document.getElementById('mobile-back');
 
@@ -186,14 +198,9 @@ function setupMobileSpecificFeatures() {
 }
 
 function handleCardContainerClick(e) {
-    if (modalEl.classList.contains('visible')) {
-        // Check if the click is inside the modal content, if so, do nothing here.
-        // The modal's own background click handler will deal with closing it.
-        if (e.target.closest('.modal-content')) {
-            return;
-        }
-        // If click is on the modal backdrop (e.target === modalEl), it's handled by modal's listener.
-        // This return should prevent actions if modal is visible and click is not on a card.
+    // If modal is visible, or if the click originated from within the modal content area, do nothing here.
+    // The modal's own backdrop click listener (with stopPropagation) and button listeners will handle modal interactions.
+    if (modalEl.classList.contains('visible') || e.target.closest('.modal-content')) {
         return; 
     }
 
@@ -218,7 +225,7 @@ function handleCardContainerClick(e) {
                 openModal(node);
             }
         }
-    } else if (e.target === containerEl && pathStack.length > 0 && !modalEl.classList.contains('visible')) {
+    } else if (e.target === containerEl && pathStack.length > 0 ) { // Removed !modalEl.classList.contains('visible') as it's handled above
          navigateHistory('backward');
     }
 }
@@ -283,19 +290,20 @@ function handlePopState(event) {
     const direction = state.path.length < pathStack.length ? 'backward' : 'forward';
 
     if (currentlyModalOpen && !state.modalOpen) {
-        closeModal(true); // true for calledFromPopstate
+        closeModal(true);
     } else if (!currentlyModalOpen && state.modalOpen) {
         const promptGuidForModal = state.promptGuid;
         const nodeToOpen = promptGuidForModal ? findNodeByGuid(xmlData.documentElement, promptGuidForModal) : null;
         
         if (nodeToOpen && nodeToOpen.getAttribute('beschreibung')) {
             pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
-             // If promptGuid was part of state.path, remove it for pathStack context
-            if (state.path.length > 0 && state.path[state.path.length -1] === promptGuidForModal) {
-                pathStack = state.path.slice(0, -1).map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
+            // If promptGuid was part of state.path (it should be for modalOpen state),
+            // pathStack for the underlying view should not include it.
+            if (state.path.length > 0 && pathStack.length > 0 && pathStack[pathStack.length-1].getAttribute('guid') === promptGuidForModal) {
+                 pathStack.pop(); // Remove prompt from path for background view context
             }
             currentNode = pathStack.length > 0 ? pathStack[pathStack.length-1] : xmlData.documentElement;
-            openModal(nodeToOpen, true); // true for calledFromPopstate
+            openModal(nodeToOpen, true);
         } else {
              handleNavigationFromState(state, direction);
         }
@@ -423,7 +431,7 @@ function setupVivusAnimation(parentElement, svgId) {
     const svgElement = document.getElementById(svgId);
     if (!svgElement || !parentElement.classList.contains('folder-card')) return;
 
-    const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 120, start: 'manual' }); // Faster Vivus
+    const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 120, start: 'manual' });
     vivusInstance.finish();
     svgElement.style.opacity = '1';
 
@@ -583,7 +591,7 @@ function addCard3DHoverEffect(card) {
 
 function navigateToNode(node) {
     performViewTransition(() => {
-        if (currentNode !== node) {
+        if (currentNode !== node) { // Avoid pushing same node if already current by chance
             pathStack.push(currentNode);
         }
         currentNode = node;
@@ -592,11 +600,11 @@ function navigateToNode(node) {
     }, 'forward');
 
     if (isMobile() && !modalEl.classList.contains('visible')) {
-         const currentPathGuids = pathStack.map(n => n.getAttribute('guid'));
-         if (currentNode && currentNode !== xmlData.documentElement) {
-             currentPathGuids.push(currentNode.getAttribute('guid'));
+         let historyPath = pathStack.map(n => n.getAttribute('guid'));
+         if (currentNode && currentNode !== xmlData.documentElement) { // Ensure currentNode is valid and not root
+             historyPath.push(currentNode.getAttribute('guid'));
          }
-         window.history.pushState({ path: currentPathGuids, modalOpen: false }, '', window.location.href);
+         window.history.pushState({ path: historyPath, modalOpen: false }, '', window.location.href);
      }
 }
 
@@ -607,18 +615,23 @@ function updateBreadcrumb() {
     const homeLink = document.createElement('span');
     homeLink.textContent = 'Home';
     
-    const clearActiveClasses = () => {
-        const currentActive = breadcrumbEl.querySelector('.current-level-active');
-        if(currentActive) currentActive.classList.remove('current-level-active');
-         // Ensure homeLink is a link if it's not the active one
-        if (homeLink !== currentActive) homeLink.classList.add('breadcrumb-link');
+    // Function to clear active classes to ensure only one is active
+    const clearAllActiveBreadcrumbs = () => {
+        const allActive = breadcrumbEl.querySelectorAll('.current-level-active');
+        allActive.forEach(el => {
+            el.classList.remove('current-level-active');
+            // If it was 'Home' and now not active, make it a link again
+            if (el === homeLink && !homeLink.classList.contains('breadcrumb-link')) {
+                 homeLink.classList.add('breadcrumb-link');
+            }
+        });
     };
-    clearActiveClasses(); // Clear at start
 
+    clearAllActiveBreadcrumbs();
 
     if (pathStack.length === 0 && currentNode === xmlData.documentElement) {
         homeLink.classList.add('current-level-active');
-        homeLink.classList.remove('breadcrumb-link');
+        homeLink.classList.remove('breadcrumb-link'); // Not a link when active
     } else {
         homeLink.classList.add('breadcrumb-link');
         homeLink.addEventListener('click', () => {
@@ -642,8 +655,8 @@ function updateBreadcrumb() {
             const link = document.createElement('span');
             link.textContent = nodeValue;
 
-            if (nodeInPath === currentNode) {
-                clearActiveClasses(); // Clear previous before setting new
+            if (nodeInPath === currentNode) { // This specific node in path IS the current view
+                clearAllActiveBreadcrumbs();
                 link.classList.add('current-level-active');
             } else {
                 link.classList.add('breadcrumb-link');
@@ -661,22 +674,23 @@ function updateBreadcrumb() {
         }
     });
     
+    // If currentNode is a leaf (prompt) not in pathStack itself, but its parent is the last in pathStack
     const isAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
-    // If current node is not in pathStack (e.g., a prompt whose parent is the last in pathStack)
-    if (!isAtHome && (pathStack.length === 0 || currentNode !== pathStack[pathStack.length - 1])) {
-        if (breadcrumbEl.lastChild && !breadcrumbEl.lastChild.classList.contains('current-level-active')) {
-            clearActiveClasses(); // Clear previous before setting new
-            if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement)) {
-                 const separator = document.createElement('span');
-                 separator.textContent = ' > ';
-                 breadcrumbEl.appendChild(separator);
-            }
-            const currentSpan = document.createElement('span');
-            currentSpan.textContent = currentNode.getAttribute('value');
-            currentSpan.classList.add('current-level-active');
-            breadcrumbEl.appendChild(currentSpan);
+    const parentOfCurrentNode = pathStack.length > 0 ? pathStack[pathStack.length - 1] : null;
+
+    if (!isAtHome && currentNode !== parentOfCurrentNode && currentNode !== xmlData.documentElement) {
+        clearAllActiveBreadcrumbs(); // Clear any active links from pathStack iteration
+        if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement )) { // Add separator if not direct child of Home
+            const separator = document.createElement('span');
+            separator.textContent = ' > ';
+            breadcrumbEl.appendChild(separator);
         }
+         const currentSpan = document.createElement('span');
+         currentSpan.textContent = currentNode.getAttribute('value');
+         currentSpan.classList.add('current-level-active');
+         breadcrumbEl.appendChild(currentSpan);
     }
+
 
     const isModalVisible = modalEl.classList.contains('visible');
     const isTrulyAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
@@ -690,7 +704,7 @@ function openModal(node, calledFromPopstate = false) {
     promptFullTextEl.textContent = node.getAttribute('beschreibung') || '';
     modalEl.classList.remove('hidden');
     requestAnimationFrame(() => {
-         requestAnimationFrame(() => {
+         requestAnimationFrame(() => { // Double RAF for some browser layout timings
             modalEl.classList.add('visible');
          });
     });
@@ -698,9 +712,14 @@ function openModal(node, calledFromPopstate = false) {
     if (isMobile() && !calledFromPopstate) {
         const currentState = window.history.state || { path: [], modalOpen: false };
         if (!currentState.modalOpen) {
-            const currentPathGuidsForModal = pathStack.map(n => n.getAttribute('guid'));
+            // For modal, path should be the current view's path (folders leading to this view)
+            // And promptGuid is the specific prompt being opened.
+            const currentViewPathGuids = pathStack.map(n => n.getAttribute('guid'));
+            // If current node is a folder, its guid is already the last in pathStack
+            // If current node is a prompt, pathStack refers to its parent.
+            // So, currentViewPathGuids is correct as the background view's path.
             const nodeGuid = node.getAttribute('guid');
-            window.history.pushState({ path: currentPathGuidsForModal, modalOpen: true, promptGuid: nodeGuid }, '', window.location.href);
+            window.history.pushState({ path: currentViewPathGuids, modalOpen: true, promptGuid: nodeGuid }, '', window.location.href);
         }
     }
     updateBreadcrumb();
@@ -712,12 +731,12 @@ function closeModal(calledFromPopstate = false) {
     modalEl.classList.remove('visible');
     setTimeout(() => {
         modalEl.classList.add('hidden');
-    }, currentTransitionDurationMediumMs); // Use dynamic duration
+    }, currentTransitionDurationMediumMs);
 
     if (isMobile() && !calledFromPopstate && window.history.state?.modalOpen) {
-        window.history.back(); // This will trigger onPopState which then calls updateBreadcrumb
+        window.history.back();
     } else {
-        updateBreadcrumb(); // Update immediately for desktop or if called from popstate
+        updateBreadcrumb();
     }
 }
 
@@ -741,7 +760,7 @@ function copyToClipboard(text, buttonElement = null) {
 }
 
 let notificationTimeoutId = null;
-function showNotification(message, type = 'info', buttonElement = null) {
+function showNotification(message, type = 'info', buttonElement = null) { // buttonElement is not used yet, but kept for future
     if (notificationTimeoutId) {
         const existingNotification = notificationAreaEl.querySelector('.notification');
         if(existingNotification) existingNotification.remove();
@@ -759,7 +778,7 @@ function showNotification(message, type = 'info', buttonElement = null) {
         icon.classList.add('icon');
         notificationEl.appendChild(icon);
     } else if (type === 'error') {
-        // Future: Add an error icon
+        // Consider adding a specific error icon SVG and appending it
     }
 
     const textNode = document.createElement('span');
@@ -768,15 +787,15 @@ function showNotification(message, type = 'info', buttonElement = null) {
 
     notificationAreaEl.appendChild(notificationEl);
     
-    void notificationEl.offsetWidth;
+    void notificationEl.offsetWidth; // Trigger reflow for CSS animation
 
     notificationTimeoutId = setTimeout(() => {
         notificationEl.classList.add('fade-out');
         notificationEl.addEventListener('animationend', () => {
-            if (notificationEl.parentNode === notificationAreaEl) {
+            if (notificationEl.parentNode === notificationAreaEl) { // Check if still child before removing
                 notificationEl.remove();
             }
         }, { once: true });
         notificationTimeoutId = null;
-    }, 2500); // Slightly reduced duration for notification display itself
+    }, 2500); // Notification display duration
 }
