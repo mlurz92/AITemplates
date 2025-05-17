@@ -18,7 +18,7 @@ const swipeThreshold = 50;
 const swipeFeedbackThreshold = 5;
 
 const MAX_ROTATION = 8;
-let currentTransitionDurationMediumMs = 250; // Default, updated from CSS
+let currentTransitionDurationMediumMs = 250;
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -67,7 +67,7 @@ function updateDynamicDurations() {
         }
     } catch (error) {
         console.warn("Could not read --transition-duration-medium from CSS, using default.", error);
-        currentTransitionDurationMediumMs = 250; // Fallback
+        currentTransitionDurationMediumMs = 250;
     }
 }
 
@@ -92,7 +92,6 @@ function applyTheme(themeName) {
             const newThemeColor = rootStyle.getPropertyValue('--bg-base').trim();
             metaThemeColor.setAttribute("content", newThemeColor);
         } catch(e) {
-            // Fallback if CSS var not ready or accessible
             metaThemeColor.setAttribute("content", themeName === 'dark' ? "#050505" : "#f0f0f0");
         }
     }
@@ -109,7 +108,7 @@ function toggleTheme() {
 function setupEventListeners() {
     topbarBackBtn.addEventListener('click', () => {
         if (modalEl.classList.contains('visible')) {
-            closeModal(); // Default closeModal for UI button interaction
+            closeModal();
         } else if (pathStack.length > 0) {
             navigateHistory('backward');
         }
@@ -117,7 +116,7 @@ function setupEventListeners() {
 
     fixedBackBtn.addEventListener('click', () => {
         if (modalEl.classList.contains('visible')) {
-            closeModal(); // Default closeModal
+            closeModal();
         }
         if (pathStack.length > 0) {
             performViewTransition(() => {
@@ -140,16 +139,16 @@ function setupEventListeners() {
         document.addEventListener('MSFullscreenChange', updateFullscreenButton);
     }
 
-    document.getElementById('modal-close-button').addEventListener('click', () => closeModal()); // Default close
+    document.getElementById('modal-close-button').addEventListener('click', () => closeModal());
     const copyModalButton = document.getElementById('copy-prompt-modal-button');
     if (copyModalButton) {
       copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
     }
     
     modalEl.addEventListener('click', (e) => {
-        if (e.target === modalEl) { // Click on backdrop
+        if (e.target === modalEl) {
             e.stopPropagation(); 
-            closeModal({ fromBackdrop: true }); // **MODIFIED: Pass flag for backdrop click**
+            closeModal({ fromBackdrop: true });
         }
     });
 
@@ -165,7 +164,7 @@ function setupMobileSpecificFeatures() {
     if (mobileHomeBtn) {
         mobileHomeBtn.addEventListener('click', () => {
             if (modalEl.classList.contains('visible')) {
-                closeModal(); // Default closeModal
+                closeModal();
             }
             if (pathStack.length > 0) {
                 performViewTransition(() => {
@@ -182,7 +181,7 @@ function setupMobileSpecificFeatures() {
     if (mobileBackBtn) {
         mobileBackBtn.addEventListener('click', () => {
             if (modalEl.classList.contains('visible')) {
-                closeModal(); // Default closeModal
+                closeModal();
             } else if (pathStack.length > 0) {
                 navigateHistory('backward');
             }
@@ -288,7 +287,7 @@ function handlePopState(event) {
     const direction = state.path.length < pathStack.length ? 'backward' : 'forward';
 
     if (currentlyModalOpen && !state.modalOpen) {
-        closeModal({ fromPopstate: true }); // **MODIFIED: Pass object**
+        closeModal({ fromPopstate: true });
     } else if (!currentlyModalOpen && state.modalOpen) {
         const promptGuidForModal = state.promptGuid;
         const nodeToOpen = promptGuidForModal ? findNodeByGuid(xmlData.documentElement, promptGuidForModal) : null;
@@ -299,7 +298,7 @@ function handlePopState(event) {
                  pathStack.pop(); 
             }
             currentNode = pathStack.length > 0 ? pathStack[pathStack.length-1] : xmlData.documentElement;
-            openModal(nodeToOpen, true); // calledFromPopstate = true for openModal
+            openModal(nodeToOpen, true);
         } else {
              handleNavigationFromState(state, direction);
         }
@@ -517,22 +516,24 @@ function renderView(xmlNode) {
 
         const titleElem = document.createElement('h3');
         titleElem.textContent = node.getAttribute('value') || 'Unbenannt';
-        card.appendChild(titleElem);
+        
         const contentWrapper = document.createElement('div');
         contentWrapper.classList.add('card-content-wrapper');
+        contentWrapper.appendChild(titleElem);
+
 
         if (isFolder) {
             card.classList.add('folder-card'); card.setAttribute('data-type', 'folder');
             if (svgTemplateFolder) {
                 const folderIconSvg = svgTemplateFolder.cloneNode(true);
                 const folderIconId = `icon-folder-${nodeGuid}`;
-                folderIconSvg.id = folderIconId; contentWrapper.appendChild(folderIconSvg); card.appendChild(contentWrapper);
+                folderIconSvg.id = folderIconId; 
+                contentWrapper.appendChild(folderIconSvg); 
                 vivusSetups.push({ parent: card, svgId: folderIconId });
             }
         } else {
             card.setAttribute('data-type', 'prompt');
-            const descElem = document.createElement('p');
-            descElem.textContent = node.getAttribute('beschreibung') || ''; contentWrapper.appendChild(descElem); card.appendChild(contentWrapper);
+            card.classList.add('prompt-card');
             const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
             if (svgTemplateExpand) {
                 const expandBtn = document.createElement('button'); expandBtn.classList.add('button'); expandBtn.setAttribute('aria-label', 'Details anzeigen'); expandBtn.setAttribute('data-action', 'expand'); expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); btnContainer.appendChild(expandBtn);
@@ -540,8 +541,9 @@ function renderView(xmlNode) {
             if (svgTemplateCopy) {
                 const copyBtn = document.createElement('button'); copyBtn.classList.add('button'); copyBtn.setAttribute('aria-label', 'Prompt kopieren'); copyBtn.setAttribute('data-action', 'copy'); copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); btnContainer.appendChild(copyBtn);
             }
-            card.appendChild(btnContainer);
+            contentWrapper.appendChild(btnContainer);
         }
+        card.appendChild(contentWrapper);
         containerEl.appendChild(card);
         cardsToObserve.push(card);
         addCard3DHoverEffect(card);
@@ -551,8 +553,43 @@ function renderView(xmlNode) {
     if (cardsToObserve.length > 0) {
         cardsToObserve.forEach(c => cardObserver.observe(c));
     }
-    if(childNodes.length > 0) containerEl.scrollTop = currentScroll;
+    if(childNodes.length > 0) {
+        containerEl.scrollTop = currentScroll;
+        adjustCardHeights();
+    } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
+        containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
+        gsap.to(containerEl.firstChild, {opacity: 1, duration: 0.5});
+    }
 }
+
+function adjustCardHeights() {
+    const allCards = Array.from(containerEl.querySelectorAll('.card'));
+    if (allCards.length === 0) return;
+
+    const folderCards = allCards.filter(card => card.classList.contains('folder-card'));
+    const promptCards = allCards.filter(card => card.classList.contains('prompt-card'));
+
+    let targetHeight = 180;
+
+    if (folderCards.length > 0) {
+        let maxFolderHeight = 0;
+        folderCards.forEach(card => {
+            card.style.height = '';
+            if (card.offsetHeight > maxFolderHeight) {
+                maxFolderHeight = card.offsetHeight;
+            }
+        });
+        targetHeight = Math.max(180, maxFolderHeight);
+        allCards.forEach(card => {
+            card.style.height = `${targetHeight}px`;
+        });
+    } else if (promptCards.length > 0) {
+        promptCards.forEach(card => {
+            card.style.height = `${targetHeight}px`;
+        });
+    }
+}
+
 
 function addCard3DHoverEffect(card) {
     let frameRequested = false;
@@ -629,7 +666,7 @@ function updateBreadcrumb() {
     } else {
         homeLink.classList.add('breadcrumb-link');
         homeLink.addEventListener('click', () => {
-            if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false }); // **MODIFIED: Use object for consistency if needed, ensure default pathStack is handled**
+            if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
             performViewTransition(() => {
                 currentNode = xmlData.documentElement; pathStack = [];
                 renderView(currentNode); updateBreadcrumb();
@@ -655,7 +692,7 @@ function updateBreadcrumb() {
             } else {
                 link.classList.add('breadcrumb-link');
                 link.addEventListener('click', () => {
-                    if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false }); // **MODIFIED: Use object**
+                    if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
                     performViewTransition(() => {
                         pathStack = pathStack.slice(0, index + 1);
                         currentNode = nodeInPath;
@@ -712,17 +749,15 @@ function openModal(node, calledFromPopstate = false) {
     updateBreadcrumb();
 }
 
-// **MODIFIED closeModal function**
 function closeModal(optionsOrCalledFromPopstate = {}) {
     let calledFromPopstate = false;
     let fromBackdrop = false;
 
-    // Handle flexible argument: either a boolean (old signature for popstate) or an options object
     if (typeof optionsOrCalledFromPopstate === 'boolean') {
         calledFromPopstate = optionsOrCalledFromPopstate;
     } else if (typeof optionsOrCalledFromPopstate === 'object' && optionsOrCalledFromPopstate !== null) {
-        calledFromPopstate = !!optionsOrCalledFromPopstate.fromPopstate; // Ensure boolean
-        fromBackdrop = !!optionsOrCalledFromPopstate.fromBackdrop;     // Ensure boolean
+        calledFromPopstate = !!optionsOrCalledFromPopstate.fromPopstate;
+        fromBackdrop = !!optionsOrCalledFromPopstate.fromBackdrop;
     }
 
     if (!modalEl.classList.contains('visible')) return;
@@ -733,24 +768,18 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
     }, currentTransitionDurationMediumMs);
 
     if (fromBackdrop) {
-        // Specific behavior for backdrop click:
-        // Only close visually, manage history state on mobile without full navigation, then update UI elements.
         if (isMobile() && window.history.state?.modalOpen && !calledFromPopstate) {
-            // Update history state to reflect modal is closed without triggering popstate/navigation.
-            // This keeps the current view and pathStack intact.
-            const LrpmtGuid = window.history.state.promptGuid; // Capture before modifying state
+            const LrpmtGuid = window.history.state.promptGuid;
             window.history.replaceState({ 
                 path: window.history.state.path, 
                 modalOpen: false, 
-                promptGuid: LrpmtGuid // Or null, if preferred when modal is closed
+                promptGuid: LrpmtGuid
             }, '', window.location.href);
         }
-        updateBreadcrumb(); // Update UI elements like back buttons based on the new (modal closed) state.
+        updateBreadcrumb();
     } else if (isMobile() && !calledFromPopstate && window.history.state?.modalOpen) {
-        // Original behavior for other UI-triggered closes on mobile (e.g., modal's own close button)
         window.history.back();
     } else {
-        // Desktop, or mobile where modal wasn't pushed to history, or called by popstate
         updateBreadcrumb();
     }
 }
@@ -793,7 +822,6 @@ function showNotification(message, type = 'info', buttonElement = null) {
         icon.classList.add('icon');
         notificationEl.appendChild(icon);
     } else if (type === 'error') {
-        // Consider adding a specific error icon SVG and appending it
     }
 
     const textNode = document.createElement('span');
