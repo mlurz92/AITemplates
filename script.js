@@ -163,16 +163,21 @@ function setupMobileSpecificFeatures() {
 
     if (mobileHomeBtn) {
         mobileHomeBtn.addEventListener('click', () => {
-            if (modalEl.classList.contains('visible')) {
-                closeModal();
+            const modalWasVisible = modalEl.classList.contains('visible');
+            if (modalWasVisible) {
+                closeModal({ fromBackdrop: true }); 
             }
-            if (pathStack.length > 0) {
+
+            const isCurrentlyAtHome = (currentNode === xmlData.documentElement && pathStack.length === 0);
+
+            if (!isCurrentlyAtHome || modalWasVisible) {
                 performViewTransition(() => {
                     currentNode = xmlData.documentElement;
                     pathStack = [];
                     renderView(currentNode);
                     updateBreadcrumb();
-                }, 'backward');
+                }, 'backward'); 
+                
                 window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
             }
         });
@@ -181,9 +186,9 @@ function setupMobileSpecificFeatures() {
     if (mobileBackBtn) {
         mobileBackBtn.addEventListener('click', () => {
             if (modalEl.classList.contains('visible')) {
-                closeModal();
+                closeModal({ fromBackdrop: true }); 
             } else if (pathStack.length > 0) {
-                navigateHistory('backward');
+                navigateOneLevelUp();
             }
         });
     }
@@ -194,6 +199,24 @@ function setupMobileSpecificFeatures() {
 
     window.history.replaceState({ path: [], modalOpen: false }, '', window.location.href);
     window.onpopstate = handlePopState;
+}
+
+function navigateOneLevelUp() {
+    if (pathStack.length === 0) {
+        return;
+    }
+
+    performViewTransition(() => {
+        const parentNode = pathStack.pop();
+        currentNode = parentNode;
+        renderView(currentNode);
+        updateBreadcrumb();
+
+        if (isMobile()) {
+            let historyPathGuids = pathStack.map(n => n.getAttribute('guid'));
+            window.history.pushState({ path: historyPathGuids, modalOpen: false }, '', window.location.href);
+        }
+    }, 'backward');
 }
 
 function handleCardContainerClick(e) {
@@ -223,19 +246,7 @@ function handleCardContainerClick(e) {
             }
         }
     } else if (e.target === containerEl && pathStack.length > 0) {
-        performViewTransition(() => {
-            if (pathStack.length > 0) {
-                const parentNode = pathStack.pop();
-                currentNode = parentNode;
-                renderView(currentNode);
-                updateBreadcrumb();
-
-                if (isMobile()) {
-                    let historyPath = pathStack.map(n => n.getAttribute('guid'));
-                    window.history.pushState({ path: historyPath, modalOpen: false }, '', window.location.href);
-                }
-            }
-        }, 'backward');
+        navigateOneLevelUp();
     }
 }
 
