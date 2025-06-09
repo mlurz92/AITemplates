@@ -36,6 +36,21 @@ function isMobile() {
     return isMobileDevice;
 }
 
+// Swipe-Indikator Funktionen
+function showSwipeIndicator() {
+    if (swipeIndicatorEl && isMobile()) {
+        swipeIndicatorEl.classList.add('visible');
+        swipeIndicatorEl.classList.remove('hidden');
+    }
+}
+
+function hideSwipeIndicator() {
+    if (swipeIndicatorEl) {
+        swipeIndicatorEl.classList.remove('visible');
+        swipeIndicatorEl.classList.add('hidden');
+    }
+}
+
 // Hauptinitialisierungsfunktion
 function initApp() {
     // DOM-Elemente referenzieren
@@ -607,7 +622,7 @@ function renderView(xmlNode) {
         nodesToRender = Array.from(xmlNode.children).filter(node => node.tagName === 'TreeViewNode');
     }
 
-    const vivusSetups = []; // This array is no longer strictly necessary with updated Vivus setup
+    const vivusSetups = [];
     const cardsToObserve = [];
 
     if (nodesToRender.length === 0) {
@@ -895,28 +910,12 @@ function showNotification(message, type = 'info', buttonElement = null) {
     }, 2800);
 }
 
-// Swipe-Indikator Funktionen
-function showSwipeIndicator() {
-    if (swipeIndicatorEl && isMobile()) {
-        swipeIndicatorEl.classList.add('visible');
-        swipeIndicatorEl.classList.remove('hidden');
-    }
-}
-
-function hideSwipeIndicator() {
-    if (swipeIndicatorEl) {
-        swipeIndicatorEl.classList.remove('visible');
-        swipeIndicatorEl.classList.add('hidden');
-    }
-}
-
 // Suchlogik
 function handleSearchInput(event) {
     currentSearchQuery = event.target.value.trim().toLowerCase();
     searchActive = currentSearchQuery.length > 0;
 
     performViewTransition(() => {
-        // filterNodes ist hier definiert und kann aufgerufen werden.
         filterAndRenderNodes(xmlData.documentElement, currentSearchQuery);
         updateBreadcrumb();
         window.history.pushState({
