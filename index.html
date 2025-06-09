@@ -26,14 +26,17 @@
         </svg>
       </button>
       <nav id="breadcrumb" class="breadcrumb"></nav>
-      <button id="fullscreen-button" class="button fullscreen-toggle" aria-label="Vollbildmodus aktivieren">
-         <svg class="icon icon-fullscreen-enter" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
-         </svg>
-         <svg class="icon icon-fullscreen-exit hidden" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-             <path d="M5 8V5a2 2 0 0 1 2-2h3m11 0h-3a2 2 0 0 1-2 2V8m0 11v-3a2 2 0 0 1 2-2h3m-11 0H8a2 2 0 0 1-2-2v-3"></path>
-         </svg>
-      </button>
+      
+      <!-- Suchleiste hinzugefügt -->
+      <div class="search-container">
+        <input type="text" id="search-input" class="search-input" placeholder="Prompts suchen...">
+        <svg class="icon search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </div>
+
+      <!-- Theme-Toggle-Button bleibt erhalten -->
       <button id="theme-toggle-button" class="button theme-toggle" aria-label="Dark Theme aktivieren">
         <svg id="app-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="30" height="30">
           <defs>
