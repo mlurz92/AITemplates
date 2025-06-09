@@ -1,280 +1,221 @@
-# **Anwendungsbeschreibung: Prompt-Template Browser**
+# Anwendungsbeschreibung: Prompt-Template Browser
 
-## **1\. Einleitung**
+## 1. Einleitung
 
-### **1.1. Zweck der Anwendung**
+### 1.1. Zweck der Anwendung
+Der Prompt-Template Browser ist eine moderne, interaktive Webanwendung, die für die effiziente Verwaltung, Navigation und Nutzung hierarchisch organisierter Textbausteine (Prompts) konzipiert wurde. Die Anwendung lädt diese Daten aus einer lokalen XML-Datei und präsentiert sie in einer ansprechenden, benutzerfreundlichen und visuell hochwertigen Oberfläche.
 
-Der Prompt-Template Browser ist eine moderne, interaktive Webanwendung, die für die **effiziente Verwaltung, Navigation und Nutzung hierarchisch organisierter Textbausteine (Prompts)** konzipiert wurde. Die Anwendung lädt diese Daten aus einer lokalen XML-Datei und präsentiert sie in einer ansprechenden, benutzerfreundlichen und visuell hochwertigen Oberfläche. Sie bietet eine **intuitive Suchfunktion**, um schnell bestimmte Prompts zu finden.
-
-### **1.2. Zielgruppe**
-
+### 1.2. Zielgruppe
 Die Anwendung richtet sich an Nutzer, die regelmäßig mit vordefinierten Textvorlagen oder Prompts arbeiten und eine schnelle, übersichtliche Methode zum Zugriff und zur Übernahme dieser Texte in andere Anwendungen oder Arbeitsabläufe benötigen. Dies umfasst beispielsweise Content-Ersteller, Entwickler, Support-Mitarbeiter oder jeden, der von einer strukturierten Sammlung von Textbausteinen profitiert.
 
-### **1.3. Kernidee und Nutzen**
+### 1.3. Kernidee und Nutzen
+Die Kernidee besteht darin, eine intuitive und ästhetisch ansprechende Plattform für den Zugriff auf eine persönliche Sammlung von Prompt-Templates zu bieten. Der Hauptnutzen liegt in der deutlichen Zeitersparnis und der verbesserten Organisation durch eine klare Ordnerstruktur, schnelle Navigationsmöglichkeiten und direkte Kopierfunktionen. Die Anwendung ist für den lokalen Gebrauch optimiert und legt höchsten Wert auf eine exzellente Benutzererfahrung (UI/UX) sowohl auf Desktop-Computern als auch auf mobilen Endgeräten. Flüssige Animationen, ein responsives Design und durchdachte Interaktionen tragen zu einem angenehmen Nutzungserlebnis bei.
 
-Die Kernidee besteht darin, eine intuitive und ästhetisch ansprechende Plattform für den Zugriff auf eine persönliche Sammlung von Prompt-Templates zu bieten. Der Hauptnutzen liegt in der **deutlichen Zeitersparnis und der verbesserten Organisation** durch eine klare Ordnerstruktur, schnelle Navigationsmöglichkeiten, eine leistungsstarke Suchfunktion und direkte Kopierfunktionen. Die Anwendung ist für den lokalen Gebrauch optimiert und legt höchsten Wert auf eine **exzellente Benutzererfahrung (UI/UX)** sowohl auf Desktop-Computern als auch auf mobilen Endgeräten. Flüssige Animationen, ein responsives Design und durchdachte Interaktionen tragen zu einem angenehmen Nutzungserlebnis bei. Auf mobilen Endgeräten wird eine **kompakte, "widget-ähnliche" Darstellung** priorisiert.
-
-## **2\. Systemanforderungen**
-
-* Ein moderner Webbrowser mit guter Unterstützung für aktuelle Webstandards:  
-  * HTML5  
-  * CSS3 (inklusive Flexbox, Grid, CSS Variablen, backdrop-filter)  
-  * JavaScript (ES6+, Fetch API, DOMParser, Clipboard API, History API, View Transitions API)  
-* **Beispiele für kompatible Browser:** Aktuelle Versionen von Google Chrome, Mozilla Firefox, Microsoft Edge, Apple Safari.  
+## 2. Systemanforderungen
+* Ein moderner Webbrowser mit guter Unterstützung für aktuelle Webstandards:
+    * HTML5
+    * CSS3 (inklusive Flexbox, Grid, CSS Variablen, `backdrop-filter`)
+    * JavaScript (ES6+, Fetch API, DOMParser, Clipboard API, Fullscreen API, History API, View Transitions API)
+* Beispiele für kompatible Browser: Aktuelle Versionen von Google Chrome, Mozilla Firefox, Microsoft Edge, Apple Safari.
 * Für die PWA-Funktionalität (Progressive Web App) ist ein Browser erforderlich, der Web App Manifeste unterstützt (z.B. Chrome auf Android, Safari auf iOS).
 
-## **3\. Datenquelle und \-struktur (Templates.xml)**
+## 3. Datenquelle und -struktur (`Templates.xml`)
 
-### **3.1. XML als Datenbasis**
+### 3.1. XML als Datenbasis
+Die gesamte inhaltliche Struktur der Anwendung, also alle Ordner und die darin enthaltenen Prompts, wird dynamisch aus einer lokalen XML-Datei namens `Templates.xml` geladen. Diese Datei muss sich im selben Verzeichnis wie die Hauptanwendungsdatei (`index.html`) befinden.
 
-Die gesamte inhaltliche Struktur der Anwendung, also alle Ordner und die darin enthaltenen Prompts, wird dynamisch aus einer lokalen XML-Datei namens Templates.xml geladen. Diese Datei muss sich im selben Verzeichnis wie die Hauptanwendungsdatei (index.html) befinden.
+### 3.2. Aufbau der `Templates.xml`
+* **`<ROOT>`-Element:** Das Wurzelelement der XML-Datei.
+* **`<TreeViewNode>`-Elemente:** Jeder Eintrag (sowohl Ordner als auch Prompt) wird durch ein `<TreeViewNode>`-Element repräsentiert. Die hierarchische Verschachtelung dieser Elemente definiert die Ordnerstruktur.
+    * **`value="Name des Eintrags"`:** Dieses Attribut definiert den Titel, der für den Ordner oder das Prompt auf der jeweiligen Karte in der Benutzeroberfläche angezeigt wird.
+    * **`beschreibung="Vollständiger Text des Prompts..."`:** Dieses Attribut enthält den kompletten Text des Prompts. Bei Elementen, die Ordner repräsentieren, ist dieses Attribut typischerweise leer oder wird für die Darstellung ignoriert.
+    * **`guid="EINE-GLOBALE-EINZIGARTIGE-ID"`:** Ein global eindeutiger Identifikator (GUID) muss für jeden `<TreeViewNode>` vergeben werden. Dieses Attribut ist **essenziell** für die korrekte Funktionsweise der Navigation, der Browser-History-Integration, das Öffnen von Detailansichten und die interne Zustandsverwaltung der Anwendung. Es stellt sicher, dass jeder Eintrag eindeutig referenziert werden kann.
 
-### **3.2. Aufbau der Templates.xml**
+### 3.3. Bedeutung der Hierarchie
+* **Ordner:** Ein `<TreeViewNode>`, das ein oder mehrere weitere `<TreeViewNode>`-Elemente als direkte Kinder enthält, wird in der Anwendung als klickbarer Ordner dargestellt.
+* **Prompts:** Ein `<TreeViewNode>`, das keine weiteren `<TreeViewNode>`-Elemente als Kinder besitzt, wird als Prompt-Template mit zugehörigen Aktionen (Details anzeigen, Text kopieren) dargestellt.
 
-* **\<ROOT\>-Element:** Das Wurzelelement der XML-Datei.  
-* **\<TreeViewNode\>-Elemente:** Jeder Eintrag (sowohl Ordner als auch Prompt) wird durch ein \<TreeViewNode\>-Element repräsentiert. Die hierarchische Verschachtelung dieser Elemente definiert die Ordnerstruktur.  
-  * **value="Name des Eintrags":** Dieses Attribut definiert den Titel, der für den Ordner oder das Prompt auf der jeweiligen Karte in der Benutzeroberfläche angezeigt wird.  
-  * **beschreibung="Vollständiger Text des Prompts...":** Dieses Attribut enthält den kompletten Text des Prompts. Bei Elementen, die Ordner repräsentieren, ist dieses Attribut typischerweise leer oder wird für die Darstellung ignoriert.  
-  * **guid="EINE-GLOBALE-EINZIGARTIGE-ID":** Ein global eindeutiger Identifikator (GUID) muss für jeden \<TreeViewNode\> vergeben werden. Dieses Attribut ist **essenziell** für die korrekte Funktionsweise der Navigation, der Browser-History-Integration, das Öffnen von Detailansichten, die Suchfunktion und die interne Zustandsverwaltung der Anwendung. Es stellt sicher, dass jeder Eintrag eindeutig referenziert werden kann.  
-  * **image="Zahlenwert":** Dieses Attribut ist für zukünftige Erweiterungen vorgesehen. Es kann genutzt werden, um **dynamisch unterschiedliche Icons** für Ordner oder Prompts basierend auf dem zugewiesenen Zahlenwert zu laden und visuell darzustellen. Aktuell werden image="1" für Prompts (Dokument-Icon) und image="2" für Ordner (alternatives Ordner-Icon) unterstützt.
+## 4. Globale UI-Konzepte und Design
 
-### **3.3. Bedeutung der Hierarchie**
-
-* **Ordner:** Ein \<TreeViewNode\>, das ein oder mehrere weitere \<TreeViewNode\>-Elemente als direkte Kinder enthält, wird in der Anwendung als klickbarer Ordner dargestellt.  
-* **Prompts:** Ein \<TreeViewNode\>, das keine weiteren \<TreeViewNode\>-Elemente als Kinder besitzt, wird als Prompt-Template mit zugehörigen Aktionen (Details anzeigen, Text kopieren) dargestellt.
-
-## **4\. Globale UI-Konzepte und Design**
-
-### **4.1. Allgemeines Erscheinungsbild**
-
+### 4.1. Allgemeines Erscheinungsbild
 Die Anwendung zeichnet sich durch ein modernes, klares und dunkles Grunddesign aus ("Dark Mode" als Standard). Sie nutzt intensiv "Glassmorphism"-Effekte (Milchglasoptik mit unscharfem, transluzentem Hintergrund) für zentrale UI-Elemente wie Karten, die obere Navigationsleiste (Top-Bar) und das Detail-Modal. Dies erzeugt einen Eindruck von Tiefe, hierarchischer Staffelung und visueller Eleganz. Die Akzentfarbe ist ein lebhaftes Blau, das für Hervorhebungen und interaktive Elemente genutzt wird.
 
-### **4.2. Farbgebung und Theme-Wechsel**
+### 4.2. Farbgebung und Theme-Wechsel
+* **Dual-Theme (Dark/Light Mode):** Die Anwendung bietet einen dunklen (Standard) und einen hellen Modus, um unterschiedlichen Nutzerpräferenzen und Umgebungslichtbedingungen gerecht zu werden.
+    * **Dark Mode (Standard):** Verwendet eine Palette aus sehr dunklen Grau- und Schwarztönen für Hintergründe (z.B. `--bg-base: #08080a`), hellgraue bis weiße Textfarben (`--text-color: #f0f0f5`) und ein leuchtendes Blau als Akzentfarbe (`--accent: #00aaff`).
+    * **Light Mode:** Setzt auf helle Grau- und Weißtöne für Hintergründe (z.B. `--bg-base: #f8f9fa`), dunkelgraue Textfarben (`--text-color: #181c20`) und ein satteres Blau als Akzentfarbe (`--accent: #0077cc`).
+* **Theme-Umschaltung:** Der Wechsel zwischen den Themes erfolgt über einen dedizierten Button (App-Logo) in der oberen Navigationsleiste. Der Übergang zwischen den Themes ist sanft animiert.
+* **Persistenz der Theme-Wahl:** Die vom Nutzer gewählte Theme-Präferenz wird im lokalen Speicher des Browsers (`localStorage`) gespeichert und bei zukünftigen Besuchen automatisch angewendet.
+* **Dynamische `theme-color`:** Die `theme-color` für die Browser-UI (z.B. Adressleiste auf Mobilgeräten, Titelleiste bei PWAs) passt sich dynamisch an das aktive Theme an, um ein konsistentes Erscheinungsbild zu gewährleisten.
 
-* **Dual-Theme (Dark/Light Mode):** Die Anwendung bietet einen dunklen (Standard) und einen hellen Modus, um unterschiedlichen Nutzerpräferenzen und Umgebungslichtbedingungen gerecht zu werden.  
-  * **Dark Mode (Standard):** Verwendet eine Palette aus sehr dunklen Grau- und Schwarztönen für Hintergründe (z.B. \--bg-base: \#08080a), hellgraue bis weiße Textfarben (--text-color: \#f0f0f5) und ein leuchtendes Blau als Akzentfarbe (--accent: \#00aaff).  
-  * **Light Mode:** Setzt auf helle Grau- und Weißtöne für Hintergründe (z.B. \--bg-base: \#f8f9fa), dunkelgraue Textfarben (--text-color: \#181c20) und ein satteres Blau als Akzentfarbe (--accent: \#0077cc).  
-* **Theme-Umschaltung:** Der Wechsel zwischen den Themes erfolgt über einen dedizierten Button (App-Logo) in der oberen Navigationsleiste. Der Übergang zwischen den Themes ist sanft animiert.  
-* **Persistenz der Theme-Wahl:** Die vom Nutzer gewählte Theme-Präferenz wird im lokalen Speicher des Browsers (localStorage) gespeichert und bei zukünftigen Besuchen automatisch angewendet.  
-* **Dynamische theme-color:** Die theme-color für die Browser-UI (z.B. Adressleiste auf Mobilgeräten, Titelleiste bei PWAs) passt sich dynamisch an das aktive Theme an, um ein konsistentes Erscheinungsbild zu gewährleisten.
+### 4.3. Typografie und Lesbarkeit
+Es werden System-Standard-Sans-Serif-Schriftarten genutzt, um eine optimale Lesbarkeit und ein natives Erscheinungsbild auf verschiedenen Betriebssystemen und Geräten zu gewährleisten. Schriftgrößen, Zeilenhöhen (generell `line-height: 1.6`) und Kontraste sind sorgfältig gewählt, um eine gute Lesbarkeit sicherzustellen, insbesondere für die längeren Texte im Prompt-Detail-Modal. Besondere Aufmerksamkeit wurde der Lesbarkeit von Kartenüberschriften und Breadcrumbs auch auf schmalen Bildschirmen gewidmet, indem Schriftgrößen angepasst und bei Bedarf Umbrüche (`word-break: break-word`) ermöglicht werden.
 
-### **4.3. Typografie und Lesbarkeit**
-
-Es werden System-Standard-Sans-Serif-Schriftarten genutzt, um eine optimale Lesbarkeit und ein natives Erscheinungsbild auf verschiedenen Betriebssystemen und Geräten zu gewährleisten. Schriftgrößen, Zeilenhöhen (generell line-height: 1.6) und Kontraste sind sorgfältig gewählt, um eine gute Lesbarkeit sicherzustellen, insbesondere für die längeren Texte im Prompt-Detail-Modal. Besondere Aufmerksamkeit wurde der Lesbarkeit von Kartenüberschriften und Breadcrumbs auch auf schmalen Bildschirmen gewidmet, indem Schriftgrößen angepasst und bei Bedarf Umbrüche (word-break: break-word) ermöglicht werden.
-
-### **4.4. Responsive Anpassung und "Widget"-Konzept**
-
+### 4.4. Responsive Anpassung
 Das Layout und alle interaktiven Elemente sind vollständig responsiv gestaltet. Die Darstellung passt sich fließend an verschiedene Bildschirmgrößen an, von großen Desktop-Monitoren bis hin zu kleinen Smartphone-Displays.
+* **Karten-Layout:** Auf breiteren Bildschirmen werden Karten in einem mehrspaltigen Grid (`repeat(auto-fit, minmax(220px, 1fr))`) angezeigt. Auf kleineren mobilen Geräten (unter 600px Breite) wechselt das Layout zu einem zweispaltigen Grid, und auf sehr schmalen Geräten (unter 360px Breite) zu einem einspaltigen Grid, um optimale Lesbarkeit und Bedienbarkeit zu gewährleisten.
+* **Safe Areas:** Die Anwendung berücksichtigt "Safe Areas" (z.B. Notches oder abgerundete Displayecken bei Smartphones) für die obere und untere Navigationsleiste, indem entsprechende `env(safe-area-inset-*)` CSS-Variablen genutzt werden.
 
-* **Karten-Layout:** Auf breiteren Bildschirmen werden Karten in einem mehrspaltigen Grid (repeat(auto-fit, minmax(220px, 1fr))) angezeigt. Auf kleineren mobilen Geräten (unter 768px Breite) wechselt das Layout zu einem **einspaltigen Grid**, um eine **kompakte, listenartige "Widget"-Ansicht** zu ermöglichen. Dies verbessert die Lesbarkeit und das Tippen auf kleinen Bildschirmen erheblich.  
-* **Safe Areas:** Die Anwendung berücksichtigt "Safe Areas" (z.B. Notches oder abgerundete Displayecken bei Smartphones) für die obere und untere Navigationsleiste, indem entsprechende env(safe-area-inset-\*) CSS-Variablen genutzt werden.  
-* **Top-Bar Anpassung auf Mobilgeräten:** Bei schmalen Viewports bricht die Top-Bar um, wobei die Suchleiste unterhalb des Breadcrumbs platziert wird, um eine optimale Nutzung des vertikalen Raums zu gewährleisten.
-
-### **4.5. Animationen und Übergänge**
-
+### 4.5. Animationen und Übergänge
 Die Anwendung legt Wert auf flüssige und ansprechende Animationen, um die Nutzererfahrung zu verbessern.
+* **Karten-Einblendanimation:** Beim Scrollen werden neu in den sichtbaren Bereich gelangende Karten mit einer dezenten, gestaffelten Animation (Einblenden von unten mit leichter Skalierung und Opazitätsänderung) eingeblendet. Dies wird durch die Intersection Observer API in Kombination mit der GSAP (GreenSock Animation Platform) realisiert (`duration: 0.6s`, `stagger: 0.06s`).
+* **Seitenübergänge (View Transitions):** Die Navigation zwischen verschiedenen Ordnerebenen wird durch sanfte, animierte Übergänge visuell unterstützt, sofern die View Transitions API vom Browser unterstützt wird. Je nach Navigationsrichtung (vorwärts/rückwärts) erscheinen diese als Slide- oder Fade-Effekt, gesteuert über das `data-page-transition-direction` Attribut am `html`-Element.
+* **Hover-Effekte auf Karten:** Interaktive Karten reagieren auf Maus-Hover (auf Nicht-Mobilgeräten) mit einer subtilen 3D-Neigung (gesteuert durch Mausposition, `--rotateX`, `--rotateY`, `MAX_ROTATION: 6deg`), einer leichten Vergrößerung (`scale(1.03)`), Anhebung (`translateY(-8px)`) und einem pulsierenden Leuchteffekt am Rand (`animation: glow`).
+* **Button-Interaktionen:** Buttons zeigen beim Hover eine Hintergrundfarbänderung, Skalierung und Farbänderung des Icons. Beim Klick erfolgt eine leichte Skalierungsreduktion.
+* **Modal-Animation:** Das Öffnen und Schließen des Detail-Modals wird durch eine sanfte Skalierungs- und Opazitätsanimation (`cubic-bezier(0.175, 0.885, 0.32, 1.275)`) begleitet. Der Hintergrund wird dabei abgedunkelt und geblurrt.
+* **Vivus.js für Ordner-Icons:** SVG-Icons der Ordner-Karten werden beim ersten Berühren (Touch-Geräte) oder beim Überfahren mit der Maus (Desktop) mit einem "Live-Drawing"-Effekt animiert (`duration: 100ms`).
 
-* **Karten-Einblendanimation:** Beim Scrollen werden neu in den sichtbaren Bereich gelangende Karten mit einer dezenten, gestaffelten Animation (Einblenden von unten mit leichter Skalierung und Opazitätsänderung) eingeblendet. Dies wird durch die Intersection Observer API in Kombination mit GSAP (GreenSock Animation Platform) realisiert (duration: 0.6s, stagger: 0.06s).  
-* **Seitenübergänge (View Transitions):** Die Navigation zwischen verschiedenen Ordnerebenen wird durch sanfte, animierte Übergänge visuell unterstützt, sofern die View Transitions API vom Browser unterstützt wird. Je nach Navigationsrichtung (vorwärts/rückwärts) erscheinen diese als Slide- oder Fade-Effekt, gesteuert über das data-page-transition-direction Attribut am html-Element.  
-* **Hover-Effekte auf Karten:** Interaktive Karten reagieren auf Maus-Hover (auf Nicht-Mobilgeräten) mit einer subtilen 3D-Neigung (gesteuert durch Mausposition, \--rotateX, \--rotateY, MAX\_ROTATION: 6deg), einer leichten Vergrößerung (scale(1.03)) und einem pulsierenden Leuchteffekt am Rand (animation: glow).  
-* **Button-Interaktionen:** Buttons zeigen beim Hover eine Hintergrundfarbänderung, Skalierung und Farbänderung des Icons. Beim Klick erfolgt eine leichte Skalierungsreduktion.  
-* **Modal-Animation:** Das Öffnen und Schließen des Detail-Modals wird durch eine sanfte Skalierungs- und Opazitätsanimation (cubic-bezier(0.175, 0.885, 0.32, 1.275)) begleitet. Der Hintergrund wird dabei abgedunkelt und geblurrt.  
-* **Vivus.js für Ordner-Icons:** SVG-Icons der Ordner-Karten werden beim ersten Berühren (Touch-Geräte) oder beim Überfahren mit der Maus (Desktop) mit einem "Live-Drawing"-Effekt animiert (duration: 100ms).
+## 5. Hauptkomponenten der Benutzeroberfläche
 
-## **5\. Hauptkomponenten der Benutzeroberfläche**
+### 5.1. Obere Navigationsleiste (Top-Bar)
+Die Top-Bar ist am oberen Bildschirmrand fixiert, verfügt über einen Milchglas-Hintergrund (`backdrop-filter: blur(16px) saturate(120%)`) und passt ihre Polsterung an Display-Ausschnitte ("Safe Areas") an.
+* **5.1.1. Zurück-Button (Links oben)**
+    * **Icon:** Pfeil nach links (`<polyline points="15 18 9 12 15 6"></polyline>`).
+    * **Funktion:**
+        * Wenn das Detail-Modal geöffnet ist: Schließt das Modal. Die Browser-History wird dabei (auf mobilen Geräten) so angepasst, dass kein neuer Verlaufseintrag für das Schließen entsteht (`closeModal({ fromBackdrop: true })`).
+        * Wenn kein Modal geöffnet ist und man sich nicht auf der Home-Ebene befindet: Navigiert eine Ordnerebene höher (`MapsOneLevelUp()`). Dies beinhaltet einen animierten Übergang und aktualisiert bei mobilen Geräten den Browser-Verlauf.
+    * **Sichtbarkeit:** Ist auf der obersten Ebene ("Home") ausgeblendet, wenn kein Modal geöffnet ist.
+* **5.1.2. Breadcrumb-Navigation (Mitte)**
+    * **Anzeige:** Zeigt den aktuellen Pfad innerhalb der Ordnerhierarchie an, beginnend mit "Home" (z.B. "Home > Ordner A > Unterordner B"). Bei schmalen Viewports ist der Breadcrumb-Bereich horizontal scrollbar, um abgeschnittene Inhalte zu vermeiden.
+    * **Interaktion:** Jede übergeordnete Ordnerebene im Pfad ist als Link klickbar und ermöglicht eine direkte Navigation zu dieser Ebene. Die aktuell angezeigte Ordnerebene ist optisch (blau, fett) hervorgehoben und nicht klickbar.
+* **5.1.3. Fullscreen-Button (Rechts)**
+    * **Icons:** Wechselt zwischen "Fullscreen-Enter" (`<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>`) und "Fullscreen-Exit" Symbolen.
+    * **Funktion:** Ermöglicht das Umschalten der gesamten Webanwendung in den Vollbildmodus des Browsers und zurück.
+    * **Sichtbarkeit:** Wird nur angezeigt, wenn die Fullscreen-API vom Browser des Nutzers unterstützt wird. Auf sehr schmalen Bildschirmen (unter 360px Breite) wird dieser Button ausgeblendet, wenn auch der Theme-Toggle-Button ausgeblendet ist, um Platz zu sparen.
+* **5.1.4. Theme-Toggle-Button (App-Logo, Rechts)**
+    * **Icon:** Stellt das App-Logo dar (eine stilisierte Glühbirne/Idee), dessen Linien- und Akzentfarben sich dem aktiven Theme anpassen.
+    * **Funktion:** Ein Klick auf diesen Button schaltet zwischen dem Dark- und Light-Theme der Anwendung um. Der `aria-label` wird entsprechend angepasst ("Light Theme aktivieren" / "Dark Theme aktivieren").
+    * **Sichtbarkeit:** Auf sehr schmalen Bildschirmen (unter 360px Breite) wird dieser Button ausgeblendet.
 
-### **5.1. Obere Navigationsleiste (Top-Bar)**
-
-Die Top-Bar ist am oberen Bildschirmrand fixiert, verfügt über einen Milchglas-Hintergrund (backdrop-filter: blur(16px) saturate(120%)) und passt ihre Polsterung an Display-Ausschnitte ("Safe Areas") an. Auf mobilen Geräten ist sie **umbruchfähig**, um die Suchleiste auf einer separaten Zeile unterzubringen.
-
-* **5.1.1. Zurück-Button (Links oben)**  
-  * **Icon:** Pfeil nach links.  
-  * **Funktion:**  
-    * Wenn das Detail-Modal geöffnet ist: Schließt das Modal.  
-    * Wenn kein Modal geöffnet ist und man sich nicht auf der Home-Ebene befindet: Navigiert eine Ordnerebene höher.  
-  * **Sichtbarkeit:** Ist auf der obersten Ebene ("Home") und wenn keine Suche aktiv ist, ausgeblendet.  
-* **5.1.2. Breadcrumb-Navigation (Mitte)**  
-  * **Anzeige:** Zeigt den aktuellen Pfad innerhalb der Ordnerhierarchie an, beginnend mit "Home" (z.B. "Home \> Ordner A \> Unterordner B"). Bei schmalen Viewports ist der Breadcrumb-Bereich horizontal scrollbar, um abgeschnittene Inhalte zu vermeiden. Bei aktiver Suche wird "Suche: '\[Suchbegriff\]'" angezeigt.  
-  * **Interaktion:** Jede übergeordnete Ordnerebene im Pfad ist als Link klickbar und ermöglicht eine direkte Navigation zu dieser Ebene. Die aktuell angezeigte Ordnerebene ist optisch (blau, fett) hervorgehoben und nicht klickbar. Ein Klick auf einen Breadcrumb-Link setzt die Suche zurück.  
-* **5.1.3. Suchleiste (\#search-input)**  
-  * **Funktion:** Ermöglicht die **Volltextsuche** nach Ordner- und Prompt-Titeln sowie dem Prompt-Text. Die Suchergebnisse werden dynamisch im Karten-Container angezeigt.  
-  * **Erscheinungsbild:** Integriertes Eingabefeld mit Such-Icon, das sich bei aktivem Fokus und aktiver Suche farblich hervorhebt. Auf Mobilgeräten nimmt es die volle Breite ein und wird unter dem Breadcrumb platziert.  
-* **5.1.4. Theme-Toggle-Button (App-Logo, Rechts)**  
-  * **Icon:** Stellt das App-Logo dar (eine stilisierte Glühbirne/Idee), dessen Linien- und Akzentfarben sich dem aktiven Theme anpassen.  
-  * **Funktion:** Ein Klick auf diesen Button schaltet zwischen dem Dark- und Light-Theme der Anwendung um.  
-  * **Sichtbarkeit:** Auf sehr schmalen Bildschirmen (unter 360px Breite) wird dieser Button ausgeblendet.
-
-### **5.2. Karten-Container (\#cards-container)**
-
+### 5.2. Karten-Container (`#cards-container`)
 Der zentrale Bereich der Anwendung, der die Ordner- und Prompt-Karten in einem Grid-Layout anzeigt.
+* **Layout:** Wie unter 4.4. beschrieben, passt sich das Grid responsiv an.
+* **Interaktion bei Klick auf freie Fläche:** Ein Klick auf eine leere Fläche innerhalb des Karten-Containers (d.h. nicht auf eine Karte oder ein interaktives Element einer Karte) navigiert eine Ordnerebene zurück (`MapsOneLevelUp()`), falls man sich nicht auf der Home-Ebene befindet oder das Detail-Modal geöffnet ist.
 
-* **Layout:** Wie unter 4.4. beschrieben, passt sich das Grid responsiv an (Desktop: mehrspaltig, Mobil: einspaltig).  
-* **Interaktion bei Klick auf freie Fläche:** Ein Klick auf eine leere Fläche innerhalb des Karten-Containers (d.h. nicht auf eine Karte oder ein interaktives Element einer Karte) navigiert eine Ordnerebene zurück (MapsOneLevelUp()), falls man sich nicht auf der Home-Ebene befindet oder das Detail-Modal geöffnet ist.
+### 5.3. Karten (Ordner und Prompts)
+Alle Karten teilen ein Basisdesign mit abgerundeten Ecken (`border-radius: 12px`), einem Milchglas-Hintergrund und einem dezenten Rand.
+* **5.3.1. Einheitliche Kartenhöhe:** Innerhalb einer aktuell angezeigten Ordnerebene wird die Höhe aller dargestellten Karten dynamisch vereinheitlicht. Die Referenzhöhe ist mindestens 190px oder die Höhe der größten Ordnerkarte in der aktuellen Ansicht.
+* **5.3.2. Ordner-Karten (`.folder-card`)**
+    * **Anzeige:** Zeigen zentriert den Titel des Ordners und ein großes, stilisiertes Ordner-SVG-Icon (`#svg-template-folder`).
+    * **Interaktion:** Ein Klick auf eine Ordner-Karte navigiert in diesen Ordner und zeigt dessen Inhalt an (`MapsToNode(node)`).
+* **5.3.3. Prompt-Karten (`.prompt-card`)**
+    * **Anzeige:** Zeigen zentriert den Titel des Prompts (max. 4 Zeilen mit Ellipsis, `word-break: break-word`).
+    * **Aktionsbuttons (unterhalb des Titels):**
+        * **"Details anzeigen" Button:**
+            * **Icon:** Pfeil nach unten (`#svg-template-expand`).
+            * **Funktion:** Öffnet das Prompt-Detail-Modal mit dem vollständigen Text des Prompts (`openModal(node)`).
+        * **"Prompt kopieren" Button:**
+            * **Icon:** Kopiersymbol (`#svg-template-copy`).
+            * **Funktion:** Kopiert den vollständigen Text des Prompts (Attribut `beschreibung` aus XML) direkt in die Zwischenablage des Nutzers (`copyPromptTextForCard(node, button)`).
+    * **Interaktion (Karte selbst):** Ein Klick auf die Prompt-Karte (außerhalb der Buttons) öffnet ebenfalls das Detail-Modal.
 
-### **5.3. Karten (Ordner und Prompts)**
-
-Alle Karten teilen ein Basisdesign mit abgerundeten Ecken (border-radius: 12px), einem Milchglas-Hintergrund und einem dezenten Rand.
-
-* **5.3.1. Einheitliche Kartenhöhe:** Innerhalb einer aktuell angezeigten Ordnerebene (oder Suchergebnisse) wird die Höhe aller dargestellten Karten dynamisch vereinheitlicht, um eine ästhetisch ansprechende Gitteransicht zu gewährleisten. Die Referenzhöhe ist mindestens 160px (mobil) oder 190px (Desktop) oder die Höhe der größten Karte in der aktuellen Ansicht.  
-* **5.3.2. Dynamische Icons:** Basierend auf dem image-Attribut in Templates.xml werden spezifische SVG-Icons dynamisch in den Karten angezeigt. Dies erhöht die visuelle Unterscheidbarkeit von Ordnern und Prompts.  
-* **5.3.3. Ordner-Karten (.folder-card)**  
-  * **Anzeige:** Zeigen zentriert den Titel des Ordners und ein großes, stilisiertes Ordner-SVG-Icon.  
-  * **Interaktion:** Ein Klick auf eine Ordner-Karte navigiert in diesen Ordner und zeigt dessen Inhalt an.  
-* **5.3.4. Prompt-Karten (.prompt-card)**  
-  * **Anzeige:** Zeigen zentriert den Titel des Prompts (max. 6 Zeilen, bei Bedarf mit Ellipsis und Zeilenumbruch). Optional wird ein dynamisches Icon (Dokument-Icon) angezeigt, wenn das image-Attribut in Templates.xml auf 1 gesetzt ist.  
-  * **"Tap-to-Reveal" Aktionsbuttons (unterhalb des Titels):** Die Buttons "Details anzeigen" und "Prompt kopieren" sind standardmäßig ausgeblendet.  
-    * **Interaktion:** Ein **einmaliges Antippen/Klicken auf die Prompt-Karte** (außerhalb der Buttons selbst) blendet die Buttons mit einer sanften Animation ein. Ein **zweites Antippen auf einen der eingeblendeten Buttons** löst die entsprechende Aktion aus. Ein Klick außerhalb der Karte oder auf eine andere Karte blendet die Buttons der zuvor aktiven Karte wieder aus.  
-    * **"Details anzeigen" Button:**  
-      * **Icon:** Pfeil nach unten.  
-      * **Funktion:** Öffnet das Prompt-Detail-Modal mit dem vollständigen Text des Prompts.  
-    * **"Prompt kopieren" Button:**  
-      * **Icon:** Kopiersymbol.  
-      * **Funktion:** Kopiert den vollständigen Text des Prompts (Attribut beschreibung aus XML) direkt in die Zwischenablage des Nutzers.  
-  * **Interaktion (Karte selbst):** Ein Klick auf die Prompt-Karte (außerhalb der Buttons), während die Buttons ausgeblendet sind, blendet diese ein. Ist der Prompt-Text lang genug, öffnet ein direkter Klick auf die Karte das Detail-Modal.
-
-### **5.4. Prompt-Detail-Modal (\#prompt-modal)**
-
+### 5.4. Prompt-Detail-Modal (`#prompt-modal`)
 Ein überlagerndes Fenster, das den vollständigen Inhalt eines ausgewählten Prompts darstellt.
+* **Erscheinungsbild:** Bei Öffnung wird der Hintergrund der Hauptanwendung abgedunkelt und mit einem Unschärfeeffekt versehen (`backdrop-filter: blur(8px)`). Das Modal-Fenster erscheint zentriert, hat einen Milchglas-Hintergrund (`background: var(--bg-surface)` im Dark Mode, `var(--bg-glass)` im Light Mode), abgerundete Ecken und einen Schatten.
+* **Inhalt:** Zeigt den vollständigen, unformatierten Text des Prompts (`#prompt-fulltext`). Der Textbereich ist bei Bedarf vertikal scrollbar.
+* **Aktionsbuttons im Modal (rechts unten):**
+    * **"Schließen" Button (`#modal-close-button`):**
+        * **Icon:** Pfeil nach oben (`<polyline points="18 15 12 9 6 15"></polyline>`).
+        * **Funktion:** Schließt das Detail-Modal (`closeModal()`).
+    * **"Prompt kopieren" Button (`#copy-prompt-modal-button`):**
+        * **Icon:** Kopiersymbol (identisch zum Karten-Button).
+        * **Funktion:** Kopiert den im Modal angezeigten vollständigen Prompt-Text in die Zwischenablage (`copyPromptText(button)`).
+* **Schließen des Modals (alternativ):**
+    * Durch einen Klick auf den abgedunkelten Hintergrundbereich außerhalb des Modal-Inhaltsfensters (`closeModal({ fromBackdrop: true })`).
+    * Durch die "Zurück"-Buttons in der Top-Bar oder der mobilen Navigationsleiste (siehe 5.1.1 und 5.5.2).
+    * Durch die Browser-Zurück-Geste/Button, falls das Modal über die History API geöffnet wurde (mobil).
 
-* **Erscheinungsbild:** Bei Öffnung wird der Hintergrund der Hauptanwendung abgedunkelt und mit einem Unschärfeeffekt versehen (backdrop-filter: blur(8px)). Das Modal-Fenster erscheint zentriert, hat einen Milchglas-Hintergrund, abgerundete Ecken und einen Schatten.  
-* **Inhalt:** Zeigt den vollständigen, unformatierten Text des Prompts. Der Textbereich ist bei Bedarf vertikal scrollbar.  
-* **Aktionsbuttons im Modal (rechts unten):**  
-  * **"Schließen" Button (\#modal-close-button):**  
-    * **Icon:** Pfeil nach oben.  
-    * **Funktion:** Schließt das Detail-Modal.  
-  * **"Prompt kopieren" Button (\#copy-prompt-modal-button):**  
-    * **Icon:** Kopiersymbol (identisch zum Karten-Button).  
-    * **Funktion:** Kopiert den im Modal angezeigten vollständigen Prompt-Text in die Zwischenablage.  
-* **Schließen des Modals (alternativ):**  
-  * Durch einen Klick auf den abgedunkelten Hintergrundbereich außerhalb des Modal-Inhaltsfensters.  
-  * Durch die "Zurück"-Buttons in der Top-Bar oder der mobilen Navigationsleiste.  
-  * Durch die Browser-Zurück-Geste/Button, falls das Modal über die History API geöffnet wurde (mobil).
+### 5.5. Mobile Navigationsleiste (`#mobile-nav`) - *Nur auf mobilen Geräten*
+Diese Navigationsleiste ist ausschließlich auf mobilen Geräten sichtbar (wenn `isMobile()` true ist) und am unteren Bildschirmrand fixiert. Sie verfügt über einen Milchglas-Hintergrund und berücksichtigt "Safe Areas".
+* **5.5.1. Home-Button (`#mobile-home`)**
+    * **Icon:** Haus-Symbol (`<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>`).
+    * **Funktion:** Navigiert den Nutzer immer direkt zur obersten Ebene ("Home"). Wenn das Detail-Modal geöffnet ist, wird dieses zuerst geschlossen (History-Anpassung via `replaceState`), bevor zur Home-Ansicht navigiert wird (History-Anpassung via `pushState`).
+* **5.5.2. Zurück-Button (`#mobile-back`)**
+    * **Icon:** Pfeil nach links (identisch zum Top-Bar Zurück-Button).
+    * **Funktion:**
+        * Wenn das Detail-Modal geöffnet ist: Schließt **nur** das Modal (`closeModal({ fromBackdrop: true })`). Die Browser-History wird durch `replaceState` angepasst.
+        * Wenn kein Modal geöffnet ist und man sich nicht auf der Home-Ebene befindet: Navigiert eine Ordnerebene höher (`MapsOneLevelUp()`). Die Browser-History wird durch `pushState` aktualisiert.
+    * **Sichtbarkeit:** Ist ausgeblendet, wenn man sich auf der Home-Ebene befindet und kein Modal geöffnet ist.
 
-### **5.5. Mobile Navigationsleiste (\#mobile-nav) \- *Nur auf mobilen Geräten***
-
-Diese Navigationsleiste ist ausschließlich auf mobilen Geräten sichtbar (wenn isMobile() true ist) und am unteren Bildschirmrand fixiert. Sie verfügt über einen Milchglas-Hintergrund und berücksichtigt "Safe Areas".
-
-* **5.5.1. Home-Button (\#mobile-home)**  
-  * **Icon:** Haus-Symbol.  
-  * **Funktion:** Navigiert den Nutzer immer direkt zur obersten Ebene ("Home") und setzt dabei auch einen eventuell aktiven Suchvorgang zurück. Wenn das Detail-Modal geöffnet ist, wird dieses zuerst geschlossen.  
-* **5.5.2. Zurück-Button (\#mobile-back)**  
-  * **Icon:** Pfeil nach links.  
-  * **Funktion:**  
-    * Wenn das Detail-Modal geöffnet ist: Schließt **nur** das Modal.  
-    * Wenn kein Modal geöffnet ist und man sich nicht auf der Home-Ebene befindet: Navigiert eine Ordnerebene höher.  
-    * Wenn eine Suche aktiv ist: Setzt die Suche zurück und kehrt zur zuletzt angezeigten Ordnerebene zurück.  
-  * **Sichtbarkeit:** Ist ausgeblendet, wenn man sich auf der Home-Ebene befindet und kein Modal oder keine Suche aktiv ist.
-
-### **5.6. Fixierter "Zurück zur Home"-Button (\#fixed-back) \- *Nur auf Desktop/Tablets***
-
+### 5.6. Fixierter "Zurück zur Home"-Button (`#fixed-back`) - *Nur auf Desktop/Tablets*
 Auf Geräten, die nicht als mobil eingestuft werden, erscheint ein runder, fixierter Button am linken Bildschirmrand, vertikal zentriert.
+* **Icon:** Pfeil nach links (identisch zum Top-Bar Zurück-Button).
+* **Funktion:** Ermöglicht eine schnelle Rückkehr zur obersten Ebene ("Home"). Schließt ebenfalls ein eventuell geöffnetes Detail-Modal, bevor zur Home-Ansicht navigiert wird.
+* **Sichtbarkeit:** Ist ausgeblendet, wenn sich der Nutzer bereits auf der Home-Ebene befindet und kein Modal geöffnet ist.
 
-* **Icon:** Pfeil nach links.  
-* **Funktion:** Ermöglicht eine schnelle Rückkehr zur obersten Ebene ("Home") und setzt dabei auch einen eventuell aktiven Suchvorgang zurück. Schließt ebenfalls ein eventuell geöffnetes Detail-Modal.  
-* **Sichtbarkeit:** Ist ausgeblendet, wenn sich der Nutzer bereits auf der Home-Ebene befindet und kein Modal oder keine Suche aktiv ist.
-
-### **5.7. Visueller Swipe-Indikator (\#swipe-indicator) \- *Nur auf mobilen Geräten***
-
-Ein dezenter, halb-transparenter Pfeil, der am linken Bildschirmrand (vertikal zentriert) erscheint.
-
-* **Erscheinungsbild:** Ein kleiner Kreis mit einem Pfeil nach links, der beim Wischen nach rechts sichtbar wird und die Möglichkeit der Zurück-Navigation anzeigt.  
-* **Funktion:** Dient als visueller Hinweis für die unterstützte Wischgeste zum Zurücknavigieren. Ein Klick auf den Indikator hat die gleiche Funktion wie der Zurück-Button.  
-* **Sichtbarkeit:** Wird nur angezeigt, wenn eine Zurück-Navigation möglich ist (d.h. nicht auf der Home-Ebene, kein Modal geöffnet und keine Suche aktiv).
-
-### **5.8. Benachrichtigungen (\#notification-area)**
-
+### 5.7. Benachrichtigungen (`#notification-area`)
 Nach einem erfolgreichen Kopiervorgang eines Prompt-Textes (oder bei einem Fehler) erscheint kurzzeitig eine Benachrichtigung oben rechts auf dem Bildschirm.
-
-* **Aussehen:** Kleines Panel mit Milchglas-Hintergrund, abgerundeten Ecken und Textfarbe entsprechend dem Theme.  
-* **Inhalt:** Zeigt die Meldung "Prompt kopiert\!" zusammen mit einem farblich passenden Haken-Icon im Erfolgsfall, oder "Fehler beim Kopieren" im Fehlerfall.  
+* **Aussehen:** Kleines Panel mit Milchglas-Hintergrund, abgerundeten Ecken und Textfarbe entsprechend dem Theme.
+* **Inhalt:** Zeigt die Meldung "Prompt kopiert!" zusammen mit einem farblich passenden Haken-Icon (`#svg-template-checkmark`) im Erfolgsfall, oder "Fehler beim Kopieren" im Fehlerfall.
 * **Animation:** Die Benachrichtigung blendet sich mit einer Slide-In-Animation ein und nach ca. 2.8 Sekunden mit einer Fade-Out-Animation automatisch wieder aus.
 
-## **6\. Kernfunktionalitäten und Interaktion**
+## 6. Kernfunktionalitäten und Interaktion
 
-### **6.1. Initialisierung und Laden der Daten**
+### 6.1. Initialisierung und Laden der Daten
+Beim ersten Laden der `index.html` initialisiert sich die Anwendung (`initApp()`):
+1.  DOM-Elemente werden referenziert.
+2.  Dynamische CSS-Übergangsdauern werden ausgelesen.
+3.  Das bevorzugte Theme (Dark/Light) wird geladen und angewendet.
+4.  Der Intersection Observer für Kartenanimationen wird eingerichtet.
+5.  Globale Event-Listener werden registriert.
+6.  Die Unterstützung für den Fullscreen-Modus wird geprüft.
+7.  Bei mobilen Geräten werden spezifische Features (untere Navigationsleiste, Touch-Gesten, History API Management) initialisiert.
+8.  Die `Templates.xml` wird asynchron mittels `Workspace` geladen und mit `DOMParser` geparst. Bei Fehlern wird eine entsprechende Meldung angezeigt.
+9.  Nach erfolgreichem Laden wird die oberste Ebene (Home) der Hierarchie im Karten-Container dargestellt (`renderView()`) und der Breadcrumb aktualisiert (`updateBreadcrumb()`). Der initiale Zustand wird in der Browser-History für mobile Geräte gesetzt.
 
-Beim ersten Laden der index.html initialisiert sich die Anwendung (initApp()):
+### 6.2. Navigation
+* **Ordner öffnen:** Klick auf eine Ordner-Karte. Führt zu `MapsToNode()`, was `pathStack` aktualisiert, `renderView()` für den neuen Ordner aufruft und `updateBreadcrumb()` auslöst. Für mobile Geräte wird `history.pushState()` verwendet.
+* **Zurück-Navigation (eine Ebene höher):**
+    * **Top-Bar Zurück-Button / Mobile Navigationsleiste Zurück-Button (ohne offenes Modal):** Ruft `MapsOneLevelUp()` auf. Popmt das letzte Element von `pathStack`, setzt `currentNode` neu, rendert die Ansicht und aktualisiert Breadcrumbs. Für mobile Geräte wird `history.pushState()` verwendet.
+    * **Klick auf freie Fläche im Karten-Container (ohne offenes Modal):** Identisch zu oben, ruft `MapsOneLevelUp()` auf.
+    * **Wischgeste (Mobile, rechts wischen):** Ruft `MapsHistory('backward')` auf, was `window.history.back()` auslöst und somit den `handlePopState` Event-Handler zur Wiederherstellung des vorherigen Zustands nutzt.
+    * **Browser Zurück/Vorwärts-Buttons:** Löst `handlePopState` aus. Dieser Handler analysiert den `event.state` (oder einen Standardzustand), ermittelt die Navigationsrichtung und stellt den korrekten Ansichts- und Modalzustand wieder her, indem er `pathStack` und `currentNode` anpasst, `renderView()` und `updateBreadcrumb()` aufruft bzw. das Modal öffnet/schließt.
+* **Navigation über Breadcrumbs:** Klick auf einen Breadcrumb-Link. `pathStack` wird entsprechend gekürzt, `currentNode` gesetzt und die Ansicht aktualisiert. Für mobile Geräte wird `history.pushState()` verwendet.
+* **Direkte Navigation zu "Home":** Über den "Home"-Link im Breadcrumb, den mobilen Home-Button oder den fixierten Desktop-Home-Button. Setzt `pathStack` zurück, `currentNode` auf das Wurzelelement und rendert die Ansicht neu. Für mobile Geräte wird `history.pushState()` verwendet.
 
-1. DOM-Elemente werden referenziert.  
-2. Dynamische CSS-Übergangsdauern werden ausgelesen.  
-3. Das bevorzugte Theme (Dark/Light) wird geladen und angewendet.  
-4. Der Intersection Observer für Kartenanimationen wird eingerichtet.  
-5. Globale Event-Listener (inkl. Suchfeld) werden registriert.  
-6. Bei mobilen Geräten werden spezifische Features (untere Navigationsleiste, Touch-Gesten, History API Management, Swipe-Indikator) initialisiert.  
-7. Die Templates.xml wird asynchron mittels fetch geladen und mit DOMParser geparst. Bei Fehlern wird eine entsprechende Meldung angezeigt.  
-8. Nach erfolgreichem Laden wird die oberste Ebene (Home) der Hierarchie im Karten-Container dargestellt (renderView()) und der Breadcrumb aktualisiert (updateBreadcrumb()). Der initiale Zustand wird in der Browser-History für mobile Geräte gesetzt.
+### 6.3. Anzeigen von Prompt-Details
+Ein Klick auf eine Prompt-Karte oder deren "Details anzeigen"-Button ruft `openModal(node)` auf.
+* Der Text des Prompts wird in `#prompt-fulltext` angezeigt.
+* Das Modal wird sichtbar gemacht.
+* Für mobile Geräte wird `history.pushState()` aufgerufen, um den Modalzustand (inklusive `promptGuid`) im Verlauf zu speichern.
+* Die Breadcrumb-Navigation wird aktualisiert (z.B. um den "Zurück"-Button korrekt anzuzeigen).
 
-### **6.2. Navigation**
-
-* **Ordner öffnen:** Klick auf eine Ordner-Karte. Führt zu navigateToNode(), was pathStack aktualisiert, renderView() für den neuen Ordner aufruft und updateBreadcrumb() auslöst. Für mobile Geräte wird history.pushState() verwendet.  
-* **Zurück-Navigation (eine Ebene höher):**  
-  * **Top-Bar Zurück-Button / Mobile Navigationsleiste Zurück-Button (ohne offenes Modal):** Ruft navigateOneLevelUp() auf. Popmt das letzte Element von pathStack, setzt currentNode neu, rendert die Ansicht und aktualisiert Breadcrumbs. Für mobile Geräte wird history.pushState() verwendet.  
-  * **Klick auf freie Fläche im Karten-Container (ohne offenes Modal):** Identisch zu oben, ruft navigateOneLevelUp() auf.  
-  * **Wischgeste (Mobile, rechts wischen) / Klick auf Swipe-Indikator:** Löst window.history.back() aus und somit den handlePopState Event-Handler zur Wiederherstellung des vorherigen Zustands.  
-  * **Browser Zurück/Vorwärts-Buttons:** Löst handlePopState aus. Dieser Handler analysiert den event.state (oder einen Standardzustand), ermittelt die Navigationsrichtung und stellt den korrekten Ansichts- und Modalzustand wieder her, indem er pathStack und currentNode anpasst, renderView() und updateBreadcrumb() aufruft bzw. das Modal öffnet/schließt.  
-* **Navigation über Breadcrumbs:** Klick auf einen Breadcrumb-Link. pathStack wird entsprechend gekürzt, currentNode gesetzt und die Ansicht aktualisiert. Für mobile Geräte wird history.pushState() verwendet. Ein Klick auf einen Breadcrumb-Link **setzt die aktive Suche zurück**.  
-* **Direkte Navigation zu "Home":** Über den "Home"-Link im Breadcrumb, den mobilen Home-Button oder den fixierten Desktop-Home-Button. Setzt pathStack zurück, currentNode auf das Wurzelelement und **setzt auch einen aktiven Suchvorgang zurück**, rendert die Ansicht neu. Für mobile Geräte wird history.pushState() verwendet.
-
-### **6.3. Anzeigen von Prompt-Details**
-
-Ein Klick auf eine Prompt-Karte oder deren "Details anzeigen"-Button ruft openModal(node) auf.
-
-* Der Text des Prompts wird in \#prompt-fulltext angezeigt.  
-* Das Modal wird sichtbar gemacht.  
-* Für mobile Geräte wird history.pushState() aufgerufen, um den Modalzustand (inklusive promptGuid, searchActive, searchQuery) im Verlauf zu speichern.  
+### 6.4. Schließen des Prompt-Detail-Modals
+Aufruf von `closeModal()` (ggf. mit Optionen wie `fromBackdrop` oder `fromPopstate`).
+* Das Modal wird unsichtbar gemacht.
+* Die Browser-History wird bei mobilen Geräten entsprechend angepasst:
+    * Bei Schließen durch Backdrop-Klick oder expliziten Schließen-Buttons (nicht Browser-Zurück): `history.replaceState()` wird verwendet, um den `modalOpen: true` Zustand durch `modalOpen: false` zu ersetzen, ohne einen neuen Verlaufseintrag zu erzeugen.
+    * Bei Schließen durch Browser-Zurück-Button (mobil): `window.history.back()` wurde bereits ausgelöst; `handlePopState` kümmert sich um die korrekte Zustandsänderung.
 * Die Breadcrumb-Navigation wird aktualisiert.
 
-### **6.4. Schließen des Prompt-Detail-Modals**
+### 6.5. Kopieren von Prompt-Texten
+Die Funktionen `copyPromptText()` (für Modal) und `copyPromptTextForCard()` rufen `copyToClipboard(text, buttonElement)` auf.
+* Nutzt `navigator.clipboard.writeText()` (wenn im sicheren Kontext verfügbar).
+* Als Fallback wird ein temporäres `<textarea>`-Element erstellt, der Text hineinkopiert, ausgewählt und mit `document.execCommand('copy')` kopiert.
+* Nach dem Kopiervorgang wird `showNotification()` aufgerufen, um visuelles Feedback zu geben.
 
-Aufruf von closeModal() (ggf. mit Optionen wie fromBackdrop oder fromPopstate).
+### 6.6. Theme-Wechsel
+Ein Klick auf den Theme-Toggle-Button ruft `toggleTheme()` auf.
+* Die Klasse `light-mode` oder `dark-mode` wird auf dem `<body>`-Element umgeschaltet.
+* Die neue Theme-Präferenz wird in `localStorage` gespeichert.
+* Der `aria-label` des Buttons und die `meta name="theme-color"` werden aktualisiert.
 
-* Das Modal wird unsichtbar gemacht.  
-* Die Browser-History wird bei mobilen Geräten entsprechend angepasst: history.replaceState() wird verwendet, um den modalOpen: true Zustand durch modalOpen: false zu ersetzen, ohne einen neuen Verlaufseintrag zu erzeugen, wenn das Schließen nicht durch den Browser-Zurück-Button erfolgt.  
-* Die Breadcrumb-Navigation wird aktualisiert.
+### 6.7. Vollbildmodus
+Ein Klick auf den Fullscreen-Button ruft `toggleFullscreen()` auf.
+* Nutzt die Fullscreen API des Browsers (`requestFullscreen` oder `exitFullscreen` und deren herstellerspezifische Varianten).
+* Der Zustand des Buttons (Icon, `aria-label`) wird durch `updateFullscreenButton()` bei `fullscreenchange`-Events aktualisiert.
 
-### **6.5. Kopieren von Prompt-Texten**
-
-Die Funktionen copyPromptText() (für Modal) und copyPromptTextForCard() rufen copyToClipboard(text, buttonElement) auf.
-
-* Nutzt navigator.clipboard.writeText() (wenn im sicheren Kontext verfügbar).  
-* Als Fallback wird ein temporäres \<textarea\>-Element erstellt, der Text hineinkopiert, ausgewählt und mit document.execCommand('copy') kopiert.  
-* Nach dem Kopiervorgang wird showNotification() aufgerufen, um visuelles Feedback zu geben.
-
-### **6.6. Theme-Wechsel**
-
-Ein Klick auf den Theme-Toggle-Button ruft toggleTheme() auf.
-
-* Die Klasse light-mode oder dark-mode wird auf dem \<body\>-Element umgeschaltet.  
-* Die neue Theme-Präferenz wird in localStorage gespeichert.  
-* Der aria-label des Buttons und die meta name="theme-color" werden aktualisiert.
-
-### **6.7. Suchfunktion**
-
-Die Anwendung bietet eine **umfassende Suchfunktion**, die auf Ordnernamen, Prompt-Titeln und dem vollständigen Prompt-Text (beschreibung-Attribut) basiert.
-
-* **Auslösung:** Die Suche wird bei jeder Eingabe im Suchfeld (\#search-input) ausgelöst.  
-* **Anzeige der Ergebnisse:** Passende Ordner und Prompts werden direkt im Karten-Container angezeigt, unabhängig von ihrer Position in der ursprünglichen Hierarchie. Die normale Ordneransicht wird dabei temporär durch die Suchergebnisse ersetzt.  
-* **Historie-Integration:** Der Suchzustand (Suchbegriff, aktive Suche) wird in der Browser-History gespeichert, sodass die Zurück-/Vorwärts-Navigation des Browsers die Suchergebnisse korrekt wiederherstellt.  
-* **Interaktion mit Navigation:** Navigiert der Nutzer über Breadcrumbs oder Home-Button zurück, wird die Suche automatisch zurückgesetzt.
-
-### **6.8. Fehlerbehandlung**
-
-* **XML Lade-/Parse-Fehler:** Wenn Templates.xml nicht geladen oder geparst werden kann, wird eine Fehlermeldung im Karten-Container angezeigt.  
-* **Kopierfehler:** Wenn das Kopieren in die Zwischenablage fehlschlägt, wird eine entsprechende Benachrichtigung angezeigt.  
+### 6.8. Fehlerbehandlung
+* **XML Lade-/Parse-Fehler:** Wenn `Templates.xml` nicht geladen oder geparst werden kann, wird eine Fehlermeldung im Karten-Container angezeigt.
+* **Kopierfehler:** Wenn das Kopieren in die Zwischenablage fehlschlägt, wird eine entsprechende Benachrichtigung angezeigt.
 * **Ungültige Knoten:** Wenn versucht wird, einen nicht existierenden oder ungültigen Knoten zu rendern, wird eine Fehlermeldung angezeigt.
 
-## **7\. Progressive Web App (PWA) Funktionalität**
-
+## 7. Progressive Web App (PWA) Funktionalität
 Die Anwendung ist als Progressive Web App konzipiert, um ein App-ähnliches Erlebnis zu bieten:
-
-* **Web App Manifest (manifest.json):** Definiert den Namen der App ("Prompt-Templates Browser", Kurzname "Prompts"), Start-URL, Display-Modus (standalone), Hintergrund- und Theme-Farben (\#08080a) sowie Icons für den Homescreen.  
-* **"Zum Startbildschirm hinzufügen":** Auf unterstützten mobilen Browsern können Nutzer die Anwendung zum Startbildschirm ihres Geräts hinzufügen.  
+* **Web App Manifest (`manifest.json`):** Definiert den Namen der App ("Prompt-Templates Browser", Kurzname "Prompts"), Start-URL, Display-Modus (`standalone`), Hintergrund- und Theme-Farben (`#08080a`) sowie Icons für den Homescreen.
+* **"Zum Startbildschirm hinzufügen":** Auf unterstützten mobilen Browsern können Nutzer die Anwendung zum Startbildschirm ihres Geräts hinzufügen.
 * **Eigenständiges Fenster:** Beim Start über das Homescreen-Icon öffnet sich die Anwendung in einem eigenständigen Fenster ohne die übliche Browser-Adressleiste und nutzt die im Manifest definierten Icons und Theme-Farben.
 
-## **8\. Mobile-spezifische Interaktionen**
-
-* **"Widget"-Ansicht:** Das Design priorisiert eine kompakte, einspaltige Darstellung von Karten, um eine hohe Übersichtlichkeit und Bedienbarkeit auf Mobilgeräten zu gewährleisten.  
-* **"Tap-to-Reveal" Buttons:** Auf Prompt-Karten werden Aktionsbuttons erst bei Antippen der Karte eingeblendet, was die Oberfläche aufgeräumter macht.  
-* **Wischgesten für Navigation:** Eine Wischgeste von links nach rechts (handleTouchEnd) über den Karten-Container löst eine Zurück-Navigation aus, die window.history.back() nutzt.  
-* **Visueller Swipe-Indikator:** Ein kleiner, dezenter Pfeil am linken Bildschirmrand signalisiert die Verfügbarkeit der Wischgeste zur Navigation und dient als klickbarer Zurück-Button.  
-* **Optimierte Browser-History-Integration:** Die Anwendung manipuliert die Browser-History (pushState, replaceState, onpopstate) gezielt, um eine kohärente und intuitive Navigation mit den physischen/OS-eigenen Zurück- und Vorwärts-Buttons auf mobilen Geräten zu ermöglichen. Dies stellt sicher, dass der Anwendungszustand (aktueller Pfad, Modalstatus, Suchstatus) korrekt wiederhergestellt wird.
+## 8. Mobile-spezifische Interaktionen
+* **Touch-Gesten für Navigation:** Eine Wischgeste von links nach rechts (`handleTouchEnd`) über den Karten-Container löst eine Zurück-Navigation aus (`MapsHistory('backward')`), die auf mobilen Geräten `window.history.back()` nutzt. Eine visuelle Rückmeldung (`swiping-right` Klasse, leichte Verschiebung des Containers) wird während des Wischens angezeigt.
+* **Optimierte Browser-History-Integration:** Die Anwendung manipuliert die Browser-History (`pushState`, `replaceState`, `onpopstate`) gezielt, um eine kohärente und intuitive Navigation mit den physischen/OS-eigenen Zurück- und Vorwärts-Buttons auf mobilen Geräten zu ermöglichen. Dies stellt sicher, dass der Anwendungszustand (aktueller Pfad, Modalstatus) korrekt wiederhergestellt wird.
