@@ -27,6 +27,45 @@ let currentSearchQuery = ''; // Speichert den aktuellen Suchbegriff
 let searchActive = false; // Zeigt an, ob die Suche aktiv ist
 let activePromptCard = null; // Globale Variable für "Tap-to-Reveal"
 
+// Hauptinitialisierungsfunktion (JETZT HIER PLATZIERT)
+function initApp() {
+    // DOM-Elemente referenzieren
+    modalEl = document.getElementById('prompt-modal');
+    breadcrumbEl = document.getElementById('breadcrumb');
+    containerEl = document.getElementById('cards-container');
+    promptFullTextEl = document.getElementById('prompt-fulltext');
+    notificationAreaEl = document.getElementById('notification-area');
+    topBarEl = document.getElementById('top-bar');
+    topbarBackBtn = document.getElementById('topbar-back-button');
+    fixedBackBtn = document.getElementById('fixed-back');
+    themeToggleButton = document.getElementById('theme-toggle-button');
+    swipeIndicatorEl = document.getElementById('swipe-indicator');
+    searchInputElement = document.getElementById('search-input');
+
+    mobileNavEl = document.getElementById('mobile-nav');
+
+    // SVG-Templates referenzieren
+    svgTemplateFolder = document.getElementById('svg-template-folder');
+    svgTemplateExpand = document.getElementById('svg-template-expand');
+    svgTemplateCopy = document.getElementById('svg-template-copy');
+    svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
+    svgTemplateIcon1 = document.getElementById('svg-template-icon-1');
+    svgTemplateIcon2 = document.getElementById('svg-template-icon-2');
+
+    // Setup-Funktionen aufrufen
+    updateDynamicDurations();
+    setupTheme();
+    setupIntersectionObserver();
+    setupEventListeners();
+
+    if (isMobile()) {
+        setupMobileSpecificFeatures();
+    }
+
+    loadXmlDocument(currentXmlFile);
+}
+
+
 // --- Hilfsfunktionen & allgemeine Utilities (Definiert am Anfang) ---
 
 // Prüft, ob es sich um ein mobiles Gerät handelt
@@ -402,17 +441,12 @@ function renderView(xmlNode) {
 
     let nodesToRender;
     if (searchActive && currentSearchQuery) {
-        // Bei aktiver Suche rufe die Suchlogik auf und rendere gefilterte Ansicht
-        // Da renderViewFiltered direkt den Container leert und neu füllt,
-        // können wir es direkt aufrufen und hier beenden.
         filterAndRenderNodes(xmlData.documentElement, currentSearchQuery);
         return;
     } else {
-        // Ansonsten normale Ordneransicht
         nodesToRender = Array.from(xmlNode.children).filter(node => node.tagName === 'TreeViewNode');
     }
 
-    // vivusSetups ist nicht mehr direkt in diesem Block nötig, da setupVivusAnimation direkt aufgerufen wird
     const cardsToObserve = [];
 
     if (nodesToRender.length === 0) {
@@ -455,7 +489,7 @@ function renderView(xmlNode) {
                 folderIconSvg.classList.add('dynamic-card-icon');
                 contentWrapper.appendChild(folderIconSvg);
                 if (iconToUse === svgTemplateFolder) {
-                    setupVivusAnimation(card, folderIconId); // Direkter Aufruf hier
+                    setupVivusAnimation(card, folderIconId);
                 }
             }
         } else {
