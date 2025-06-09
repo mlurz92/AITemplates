@@ -6,488 +6,13 @@ let pathStack = [];
 const currentXmlFile = "Templates.xml";
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton;
-let mobileNavEl, mobileHomeBtn, mobileBackBtn;
-let swipeIndicatorEl; // Neu hinzugefügt
-
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark;
-let svgTemplateIcon1, svgTemplateIcon2; // Neu hinzugefügt für dynamische Icons
-
-let cardObserver;
-
-let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
-const swipeThreshold = 50;
-const swipeFeedbackThreshold = 5;
-
-const MAX_ROTATION = 6;
-let currentTransitionDurationMediumMs = 300;
-
-function initApp() {
-    modalEl = document.getElementById('prompt-modal');
-    breadcrumbEl = document.getElementById('breadcrumb');
-    containerEl = document.getElementById('cards-container');
-    promptFullTextEl = document.getElementById('prompt-fulltext');
-    notificationAreaEl = document.getElementById('notification-area');
-    topBarEl = document.getElementById('top-bar');
-    topbarBackBtn = document.getElementById('topbar-back-button');
-    fixedBackBtn = document.getElementById('fixed-back');
-    fullscreenBtn = document.getElementById('fullscreen-button');
-    themeToggleButton = document.getElementById('theme-toggle-button');
-    swipeIndicatorEl = document.getElementById('swipe-indicator'); // Neu hinzugefügt
-
-    if (fullscreenBtn) {
-        fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
-        fullscreenExitIcon = fullscreenBtn.querySelector('.icon-fullscreen-exit');
-    }
-    mobileNavEl = document.getElementById('mobile-nav');
-
-    svgTemplateFolder = document.getElementById('svg-template-folder');
-    svgTemplateExpand = document.getElementById('svg-template-expand');
-    svgTemplateCopy = document.getElementById('svg-template-copy');
-    svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
-    svgTemplateIcon1 = document.getElementById('svg-template-icon-1'); // Neu hinzugefügt
-    svgTemplateIcon2 = document.getElementById('svg-template-icon-2'); // Neu hinzugefügt
-
-    updateDynamicDurations();
-    setupTheme();
-    setupIntersectionObserver();
-    setupEventListeners();
-    checkFullscreenSupport();
-
-    if (isMobile()) {
-        setupMobileSpecificFeatures();
-    }
-
-    loadXmlDocument(currentXmlFile);
-}
-
-function updateDynamicDurations() {
-    try {
-        const rootStyle = getComputedStyle(document.documentElement);
-        const mediumDuration = rootStyle.getPropertyValue('--transition-duration-medium').trim();
-        if (mediumDuration.endsWith('ms')) {
-            currentTransitionDurationMediumMs = parseFloat(mediumDuration);
-        } else if (mediumDuration.endsWith('s')) {
-            currentTransitionDurationMediumMs = parseFloat(mediumDuration) * 1000;
-        }
-    } catch (error) {
-        console.warn("Could not read --transition-duration-medium from CSS, using default.", error);
-        currentTransitionDurationMediumMs = 300;
-    }
-}
-
-function setupTheme() {
-    const preferredTheme = localStorage.getItem('preferredTheme') || 'dark';
-    applyTheme(preferredTheme);
-    if (themeToggleButton) {
-        themeToggleButton.addEventListener('click', toggleTheme);
-    }
-}
-
-function applyTheme(themeName) {
-    document.body.classList.remove('light-mode', 'dark-mode');
-    document.body.classList.add(themeName + '-mode');
-    if (themeToggleButton) {
-        themeToggleButton.setAttribute('aria-label', themeName === 'dark' ? 'Light Theme aktivieren' : 'Dark Theme aktivieren');
-    }
-    const metaThemeColor = document.querySelector("meta[name=theme-color]");
-    if (metaThemeColor) {
-        try {
-            const rootStyle = getComputedStyle(document.documentElement);
-            const newThemeColor = rootStyle.getPropertyValue('--bg-base').trim();
-            metaThemeColor.setAttribute("content", newThemeColor);
-        } catch(e) {
-            metaThemeColor.setAttribute("content", themeName === 'dark' ? "#08080a" : "#f8f9fa");
-        }
-    }
-}
-
-function toggleTheme() {
-    const currentThemeIsLight = document.body.classList.contains('light-mode');
-    const newTheme = currentThemeIsLight ? 'dark' : 'light';
-    applyTheme(newTheme);
-    localStorage.setItem('preferredTheme', newTheme);
-}
-
-function setupEventListeners() {
-    topbarBackBtn.addEventListener('click', () => {
-        if (modalEl.classList.contains('visible')) {
-            closeModal({ fromBackdrop: true });
-        } else if (pathStack.length > 0) {
-            navigateOneLevelUp();
-        }
-    });
-
-    fixedBackBtn.addEventListener('click', () => {
-        if (modalEl.classList.contains('visible')) {
-            closeModal();
-        }
-        if (pathStack.length > 0 || (currentNode && currentNode !== xmlData.documentElement)) {
-            performViewTransition(() => {
-                currentNode = xmlData.documentElement;
-                pathStack = [];
-                renderView(currentNode);
-                updateBreadcrumb();
-                hideSwipeIndicator(); // Hide indicator when navigating home
-            }, 'backward');
-            if (isMobile()) {
-                 window.history.pushState({ path: [], modalOpen: false, searchActive: false, searchQuery: '' }, '', window.location.href);
-            }
-        }
-    });
-
-    document.getElementById('modal-close-button').addEventListener('click', () => closeModal());
-    const copyModalButton = document.getElementById('copy-prompt-modal-button');
-    if (copyModalButton) {
-      copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
-    }
-
-    modalEl.addEventListener('click', (e) => {
-        if (e.target === modalEl) {
-            e.stopPropagation();
-            closeModal({ fromBackdrop: true });
-        }
-    });
-
-    containerEl.addEventListener('click', handleCardContainerClick);
-    document.body.addEventListener('click', handleGlobalClick); // Global click to dismiss prompt card buttons
-
-    // Search functionality listeners
-    if (searchInputElement) {
-        searchInputElement.addEventListener('input', handleSearchInput);
-        searchInputElement.addEventListener('focus', () => {
-             document.body.classList.add('search-active');
-        });
-        searchInputElement.addEventListener('blur', () => {
-             // Only remove if no query, otherwise keep search results active
-             if (!searchInputElement.value.trim()) {
-                 document.body.classList.remove('search-active');
-             }
-        });
-    }
-}
-
-let activePromptCard = null; // Global variable for "Tap-to-Reveal"
-
-function handleCardContainerClick(e) {
-    if (modalEl.classList.contains('visible') || e.target.closest('.modal-content')) {
-        return;
-    }
-
-    const card = e.target.closest('.card');
-    const button = e.target.closest('button[data-action]');
-
-    if (activePromptCard && activePromptCard !== card) {
-        activePromptCard.classList.remove('buttons-visible');
-        activePromptCard = null;
-    }
-
-    if (card) {
-        const guid = card.getAttribute('data-guid');
-        const node = findNodeByGuid(xmlData.documentElement, guid);
-        if (!node) return;
-        const cardType = card.getAttribute('data-type');
-
-        if (cardType === 'prompt') {
-            if (button) {
-                e.stopPropagation();
-                const action = button.getAttribute('data-action');
-                if (action === 'expand') openModal(node);
-                else if (action === 'copy') copyPromptTextForCard(node, e.target.closest('button'));
-                card.classList.remove('buttons-visible'); // Hide buttons after action
-                activePromptCard = null;
-            } else {
-                if (card.classList.contains('buttons-visible')) {
-                    // Click on card, but not a button, and buttons are already visible -> hide them
-                    card.classList.remove('buttons-visible');
-                    activePromptCard = null;
-                } else {
-                    // Click on card, buttons not visible -> show them
-                    card.classList.add('buttons-visible');
-                    activePromptCard = card;
-                    e.stopPropagation(); // Prevent container click from going up
-                }
-            }
-        } else if (cardType === 'folder') {
-            navigateToNode(node);
-            if (activePromptCard) { // Dismiss any active prompt card when navigating into folder
-                activePromptCard.classList.remove('buttons-visible');
-                activePromptCard = null;
-            }
-        }
-    } else if (e.target === containerEl && pathStack.length > 0) {
-         navigateOneLevelUp();
-         if (activePromptCard) { // Dismiss any active prompt card when navigating up
-            activePromptCard.classList.remove('buttons-visible');
-            activePromptCard = null;
-        }
-    }
-}
-
-function handleGlobalClick(e) {
-    // If a prompt card's buttons are visible and the click is outside the card, hide the buttons.
-    if (activePromptCard && !activePromptCard.contains(e.target) && !modalEl.contains(e.target)) {
-        activePromptCard.classList.remove('buttons-visible');
-        activePromptCard = null;
-    }
-}
-
-function setupMobileSpecificFeatures() {
-    document.body.classList.add('mobile');
-    if (mobileNavEl) mobileNavEl.classList.remove('hidden');
-    mobileHomeBtn = document.getElementById('mobile-home');
-    mobileBackBtn = document.getElementById('mobile-back');
-    swipeIndicatorEl = document.getElementById('swipe-indicator'); // Ensure it's referenced here for mobile
-
-    if (mobileHomeBtn) {
-        mobileHomeBtn.addEventListener('click', () => {
-            const modalWasVisible = modalEl.classList.contains('visible');
-            if (modalWasVisible) {
-                closeModal({ fromBackdrop: true });
-            }
-
-            const isCurrentlyAtHome = (currentNode === xmlData.documentElement && pathStack.length === 0);
-
-            if (!isCurrentlyAtHome || modalWasVisible) {
-                performViewTransition(() => {
-                    currentNode = xmlData.documentElement;
-                    pathStack = [];
-                    renderView(currentNode);
-                    updateBreadcrumb();
-                    hideSwipeIndicator();
-                }, 'backward');
-
-                window.history.pushState({ path: [], modalOpen: false, searchActive: false, searchQuery: '' }, '', window.location.href);
-            }
-        });
-    }
-
-    if (mobileBackBtn) {
-        mobileBackBtn.addEventListener('click', () => {
-            if (modalEl.classList.contains('visible')) {
-                closeModal({ fromBackdrop: true });
-            } else if (pathStack.length > 0) {
-                navigateOneLevelUp();
-            }
-        });
-    }
-
-    containerEl.addEventListener('touchstart', handleTouchStart, { passive: true });
-    containerEl.addEventListener('touchmove', handleTouchMove, { passive: true });
-    containerEl.addEventListener('touchend', handleTouchEnd, { passive: true });
-    if (swipeIndicatorEl) {
-        swipeIndicatorEl.addEventListener('click', () => navigateOneLevelUp());
-    }
-
-    window.history.replaceState({ path: [], modalOpen: false, searchActive: false, searchQuery: '' }, '', window.location.href);
-    window.onpopstate = handlePopState;
-}
-
-function navigateOneLevelUp() {
-    if (pathStack.length === 0) {
-        return;
-    }
-
-    performViewTransition(() => {
-        const parentNode = pathStack.pop();
-        currentNode = parentNode;
-        renderView(currentNode);
-        updateBreadcrumb();
-        if (activePromptCard) { // Dismiss any active prompt card when navigating up
-            activePromptCard.classList.remove('buttons-visible');
-            activePromptCard = null;
-        }
-    }, 'backward');
-}
-
-function handleTouchStart(e) {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchEndX = touchStartX;
-    touchEndY = touchStartY;
-}
-
-function handleTouchMove(e) {
-    if (!touchStartX || modalEl.classList.contains('visible')) return;
-    touchEndX = e.touches[0].clientX;
-    touchEndY = e.touches[0].clientY;
-    let diffX = touchEndX - touchStartX;
-
-    if (Math.abs(diffX) > Math.abs(touchEndY - touchStartY) && diffX > swipeFeedbackThreshold) {
-        containerEl.classList.add('swiping-right');
-        let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.1);
-        containerEl.style.transform = `translateX(${moveX}px)`;
-        showSwipeIndicator(); // Show indicator during swipe feedback
-    } else {
-        containerEl.classList.remove('swiping-right');
-        containerEl.style.transform = '';
-        hideSwipeIndicator(); // Hide if not swiping enough
-    }
-}
-
-function handleTouchEnd() {
-    if (!touchStartX || modalEl.classList.contains('visible')) return;
-    let diffX = touchEndX - touchStartX;
-    let diffY = touchEndY - touchStartY;
-
-    containerEl.classList.remove('swiping-right');
-    containerEl.style.transform = '';
-    hideSwipeIndicator();
-
-    if (Math.abs(diffX) > Math.abs(diffY) && diffX > swipeThreshold) {
-        if (pathStack.length > 0) {
-             navigateHistory('backward');
-        }
-    }
-    touchStartX = 0; touchStartY = 0; touchEndX = 0; touchEndY = 0;
-}
-
-function navigateHistory(direction) {
-    if (isMobile() && (pathStack.length > 0 || (window.history.state && window.history.state.modalOpen))) {
-        window.history.back();
-    } else if (!isMobile() && pathStack.length > 0) {
-        performViewTransition(() => {
-            if (pathStack.length > 0) {
-                const parentNode = pathStack.pop();
-                currentNode = parentNode;
-                renderView(currentNode);
-                updateBreadcrumb();
-            }
-        }, direction);
-    }
-}
-
-function handlePopState(event) {
-    const state = event.state || { path: [], modalOpen: false, searchActive: false, searchQuery: '' };
-    const currentlyModalOpen = modalEl.classList.contains('visible');
-    const direction = state.path.length < pathStack.length || (state.searchActive && !currentSearchQuery) ? 'backward' : 'forward';
-
-    if (currentlyModalOpen && !state.modalOpen) {
-        closeModal({ fromPopstate: true });
-    } else if (!currentlyModalOpen && state.modalOpen) {
-        const promptGuidForModal = state.promptGuid;
-        const nodeToOpen = promptGuidForModal ? findNodeByGuid(xmlData.documentElement, promptGuidForModal) : null;
-
-        if (nodeToOpen && nodeToOpen.getAttribute('beschreibung')) {
-            pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
-            if (state.path.length > 0 && pathStack.length > 0 && pathStack[pathStack.length-1].getAttribute('guid') === promptGuidForModal) {
-                 pathStack.pop();
-            }
-            currentNode = pathStack.length > 0 ? pathStack[pathStack.length-1] : xmlData.documentElement;
-            if (searchInputElement && state.searchQuery) { // Restore search if active
-                searchInputElement.value = state.searchQuery;
-                document.body.classList.add('search-active');
-            } else if (searchInputElement) {
-                searchInputElement.value = '';
-                document.body.classList.remove('search-active');
-            }
-            openModal(nodeToOpen, true);
-        } else {
-             handleNavigationFromState(state, direction);
-        }
-    } else {
-        handleNavigationFromState(state, direction);
-    }
-
-    if (searchInputElement) {
-        searchInputElement.value = state.searchQuery || '';
-        if (state.searchActive) {
-            document.body.classList.add('search-active');
-            handleSearchInput({ target: searchInputElement }); // Re-run search
-        } else {
-            document.body.classList.remove('search-active');
-            currentSearchQuery = ''; // Clear current search query
-        }
-    }
-}
-
-function handleNavigationFromState(state, direction) {
-    const targetPathLength = state.path.length;
-    const updateDOM = () => {
-        pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
-        if(pathStack.length !== targetPathLength && state.path.length > 0) {
-             pathStack = [];
-        } else if (targetPathLength === 0) {
-            pathStack = [];
-        }
-        currentNode = targetPathLength === 0 ? xmlData.documentElement : pathStack[pathStack.length - 1];
-        if (!currentNode && xmlData) currentNode = xmlData.documentElement;
-
-        if (activePromptCard) {
-            activePromptCard.classList.remove('buttons-visible');
-            activePromptCard = null;
-        }
-
-        if (searchInputElement && state.searchQuery) {
-            searchInputElement.value = state.searchQuery;
-            document.body.classList.add('search-active');
-            currentSearchQuery = state.searchQuery;
-            filterAndRenderNodes(xmlData.documentElement, currentSearchQuery);
-        } else {
-            searchInputElement.value = '';
-            document.body.classList.remove('search-active');
-            currentSearchQuery = '';
-            renderView(currentNode);
-        }
-        updateBreadcrumb();
-    };
-    performViewTransition(updateDOM, direction);
-}
-
-function performViewTransition(updateDomFunction, direction) {
-    if (!document.startViewTransition) {
-        updateDomFunction();
-        return;
-    }
-    document.documentElement.dataset.pageTransitionDirection = direction;
-    const transition = document.startViewTransition(updateDomFunction);
-    transition.finished.finally(() => {
-        delete document.documentElement.dataset.pageTransitionDirection;
-    });
-}
-
-function setupIntersectionObserver() {
-    const options = { rootMargin: "0px", threshold: 0.05 };
-    cardObserver = new IntersectionObserver((entries, observer) => {
-        const visibleEntries = entries.filter(entry => entry.isIntersecting);
-        if (visibleEntries.length > 0) {
-            const targets = visibleEntries.map(entry => entry.target);
-            gsap.to(targets, {
-                opacity: 1,
-                y: 0,
-                scale: 1,
-                duration: 0.6,
-                ease: "expo.out",
-                stagger: {
-                    each: 0.06,
-                    from: "start"
-                },
-                onComplete: function() {
-                    this.targets().forEach(target => {
-                        observer.unobserve(target);
-                        target.classList.add('is-visible');
-                    });
-                }
-            });
-        }
-    }, options);
-}
-
-document.addEventListener('DOMContentLoaded', initApp);
-
-let xmlData = null;
-let currentNode = null;
-let pathStack = [];
-const currentXmlFile = "Templates.xml";
-
-let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, themeToggleButton;
+let topBarEl, topbarBackBtn, fixedBackBtn, themeToggleButton; // fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon entfernt
 let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 let swipeIndicatorEl;
-let searchInputElement; // Neu: Für die Suchleiste
+let searchInputElement; // Für die Suchleiste
 
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark;
-let svgTemplateIcon1, svgTemplateIcon2;
+let svgTemplateIcon1, svgTemplateIcon2; // Für dynamische Icons
 
 let cardObserver;
 
@@ -497,8 +22,8 @@ const swipeFeedbackThreshold = 5;
 
 const MAX_ROTATION = 6;
 let currentTransitionDurationMediumMs = 300;
-let currentSearchQuery = ''; // Neu: Speichert den aktuellen Suchbegriff
-let searchActive = false; // Neu: Zeigt an, ob die Suche aktiv ist
+let currentSearchQuery = ''; // Speichert den aktuellen Suchbegriff
+let searchActive = false; // Zeigt an, ob die Suche aktiv ist
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -511,7 +36,7 @@ function initApp() {
     fixedBackBtn = document.getElementById('fixed-back');
     themeToggleButton = document.getElementById('theme-toggle-button');
     swipeIndicatorEl = document.getElementById('swipe-indicator');
-    searchInputElement = document.getElementById('search-input'); // Neu: Referenz zur Suchleiste
+    searchInputElement = document.getElementById('search-input'); // Referenz zur Suchleiste
 
     mobileNavEl = document.getElementById('mobile-nav');
 
@@ -526,6 +51,7 @@ function initApp() {
     setupTheme();
     setupIntersectionObserver();
     setupEventListeners();
+    // checkFullscreenSupport() entfernt, da Fullscreen-Funktion entfernt wurde
 
     if (isMobile()) {
         setupMobileSpecificFeatures();
@@ -741,13 +267,13 @@ function setupMobileSpecificFeatures() {
         mobileBackBtn.addEventListener('click', () => {
             if (modalEl.classList.contains('visible')) {
                 closeModal({ fromBackdrop: true });
-            } else if (pathStack.length > 0 || currentSearchQuery) { // Auch bei Suche zurück navigieren
+            } else if (pathStack.length > 0 || currentSearchQuery) {
                 if (currentSearchQuery) {
                     currentSearchQuery = '';
                     searchActive = false;
                     if (searchInputElement) searchInputElement.value = '';
                     performViewTransition(() => {
-                        renderView(currentNode); // Zeige den zuletzt angezeigten Ordner an
+                        renderView(currentNode);
                         updateBreadcrumb();
                     }, 'backward');
                     window.history.pushState({ path: pathStack.map(n => n.getAttribute('guid')), modalOpen: false, searchActive: false, searchQuery: '' }, '', window.location.href);
@@ -765,7 +291,7 @@ function setupMobileSpecificFeatures() {
         swipeIndicatorEl.addEventListener('click', () => {
             if (pathStack.length > 0) {
                 navigateOneLevelUp();
-            } else if (currentSearchQuery) { // Wenn Suche aktiv, zurück zur normalen Ansicht
+            } else if (currentSearchQuery) {
                 currentSearchQuery = '';
                 searchActive = false;
                 if (searchInputElement) searchInputElement.value = '';
@@ -807,7 +333,7 @@ function handleTouchStart(e) {
 }
 
 function handleTouchMove(e) {
-    if (!touchStartX || modalEl.classList.contains('visible') || searchActive) return; // Deaktiviere Swipe während der Suche
+    if (!touchStartX || modalEl.classList.contains('visible') || searchActive) return;
     let diffX = touchEndX - touchStartX;
     let diffY = touchEndY - touchStartY;
 
@@ -824,7 +350,7 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd() {
-    if (!touchStartX || modalEl.classList.contains('visible') || searchActive) return; // Deaktiviere Swipe während der Suche
+    if (!touchStartX || modalEl.classList.contains('visible') || searchActive) return;
     let diffX = touchEndX - touchStartX;
     let diffY = touchEndY - touchStartY;
 
@@ -1001,12 +527,9 @@ function isMobile() {
 
 function setupVivusAnimation(parentElement, svgId) {
     const svgElement = document.getElementById(svgId);
-    if (!svgElement || (!parentElement.classList.contains('folder-card') && !parentElement.classList.contains('prompt-card'))) return; // Apply to both folder and prompt cards if they have an SVG
+    if (!svgElement || (!parentElement.classList.contains('folder-card') && !parentElement.classList.contains('prompt-card'))) return;
 
-    // Vivus instance should only be created if it's not a dynamic-card-icon directly cloned
-    // The vivus-instant style block takes care of initial animation for app logo.
-    // For folder icons, we want a manual trigger.
-    if (parentElement.classList.contains('folder-card')) {
+    if (parentElement.classList.contains('folder-card') && svgElement.id === `icon-folder-${parentElement.getAttribute('data-guid')}`) { // Only apply Vivus to the original folder icon, not dynamic ones
         const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 100, start: 'manual' });
         vivusInstance.finish();
         svgElement.style.opacity = '1';
@@ -1081,22 +604,20 @@ function renderView(xmlNode) {
          return;
      }
 
-    const childNodes = Array.from(xmlNode.children).filter(node => node.tagName === 'TreeViewNode');
-    const vivusSetups = [];
-    const cardsToObserve = [];
-
-    // Filter cards if search is active
-    let nodesToRender = childNodes;
+    let nodesToRender;
     if (searchActive && currentSearchQuery) {
         nodesToRender = filterNodes(xmlData.documentElement, currentSearchQuery);
     } else {
         nodesToRender = Array.from(xmlNode.children).filter(node => node.tagName === 'TreeViewNode');
     }
 
+    const vivusSetups = [];
+    const cardsToObserve = [];
+
     if (nodesToRender.length === 0) {
         containerEl.innerHTML = `<p style="text-align:center; padding:2rem; opacity:0.7;">${searchActive ? 'Keine Ergebnisse für die Suche "' + currentSearchQuery + '".' : 'Dieser Ordner ist leer.'}</p>`;
         gsap.to(containerEl.firstChild, {opacity: 1, duration: 0.5});
-        hideSwipeIndicator(); // Hide indicator if no content
+        hideSwipeIndicator();
         return;
     }
 
@@ -1118,7 +639,7 @@ function renderView(xmlNode) {
         contentWrapper.classList.add('card-content-wrapper');
         contentWrapper.appendChild(titleElem);
 
-        const imageAttr = node.getAttribute('image'); // Holen Sie das image-Attribut
+        const imageAttr = node.getAttribute('image');
 
         if (isFolder) {
             card.classList.add('folder-card'); card.setAttribute('data-type', 'folder');
@@ -1130,18 +651,20 @@ function renderView(xmlNode) {
                 const folderIconSvg = iconToUse.cloneNode(true);
                 const folderIconId = `icon-folder-${nodeGuid}`;
                 folderIconSvg.id = folderIconId;
-                folderIconSvg.classList.add('dynamic-card-icon'); // Füge Klasse für dynamische Icons hinzu
+                folderIconSvg.classList.add('dynamic-card-icon');
                 contentWrapper.appendChild(folderIconSvg);
-                // Vivus nur für das ursprüngliche folder-icon, da die neuen dynamischen Icons statisch sind
-                // vivusSetups.push({ parent: card, svgId: folderIconId });
+                // Vivus nur für das ursprüngliche folder-icon, nicht für dynamische
+                if (iconToUse === svgTemplateFolder) { // Nur wenn das ursprüngliche Folder-SVG verwendet wird
+                    vivusSetups.push({ parent: card, svgId: folderIconId });
+                }
             }
         } else {
             card.setAttribute('data-type', 'prompt');
             card.classList.add('prompt-card');
-            if (imageAttr === '1' && svgTemplateIcon1) { // Verwende icon-1 für Prompts
+            if (imageAttr === '1' && svgTemplateIcon1) {
                 const promptIconSvg = svgTemplateIcon1.cloneNode(true);
                 promptIconSvg.classList.add('dynamic-card-icon');
-                contentWrapper.insertBefore(promptIconSvg, titleElem); // Icon über dem Titel
+                contentWrapper.insertBefore(promptIconSvg, titleElem);
                 promptIconSvg.style.marginBottom = '0.8rem';
             }
 
@@ -1164,12 +687,15 @@ function renderView(xmlNode) {
     if (cardsToObserve.length > 0) {
         cardsToObserve.forEach(c => cardObserver.observe(c));
     }
-    if(childNodes.length > 0 && !searchActive) { // Only adjust height if not in search mode
+    if(nodesToRender.length > 0 && !searchActive) { // Only adjust height if not in search mode
         containerEl.scrollTop = currentScroll;
         adjustCardHeights();
+    } else if (searchActive) { // If search is active, still adjust heights
+        adjustCardHeights();
     }
+
     if (isMobile() && !searchActive && (pathStack.length > 0 || currentNode !== xmlData.documentElement)) {
-        showSwipeIndicator(); // Show indicator if not on home and not in search
+        showSwipeIndicator();
     } else {
         hideSwipeIndicator();
     }
@@ -1179,32 +705,28 @@ function adjustCardHeights() {
     const allCards = Array.from(containerEl.querySelectorAll('.card'));
     if (allCards.length === 0) return;
 
-    let targetHeight = 160; // Base height for mobile widget view
+    let targetHeight = 160;
 
-    // If it's a single column layout, simplify height adjustment
-    if (window.innerWidth <= 768) { // Assuming 768px as breakpoint for 1-column mobile layout
+    if (window.innerWidth <= 768) {
         allCards.forEach(card => {
-            // Reset to allow content to dictate height, then set a max
             card.style.height = 'auto';
-            card.style.maxHeight = 'none'; // Ensure max height is removed for content
-            // However, we want them visually uniform, so find the max content height
+            card.style.maxHeight = 'none';
             let contentHeight = card.querySelector('.card-content-wrapper').offsetHeight;
-            targetHeight = Math.max(targetHeight, contentHeight + 40); // Add some padding
+            targetHeight = Math.max(targetHeight, contentHeight + 40);
         });
         allCards.forEach(card => {
             card.style.height = `${targetHeight}px`;
             card.style.maxHeight = `${targetHeight}px`;
         });
     } else {
-        // Desktop/Tablet logic (multiple columns)
         let maxCardHeight = 0;
         allCards.forEach(card => {
-            card.style.height = ''; // Reset to natural height first
+            card.style.height = '';
             if (card.offsetHeight > maxCardHeight) {
                 maxCardHeight = card.offsetHeight;
             }
         });
-        targetHeight = Math.max(190, maxCardHeight); // Minimum 190px or max content height
+        targetHeight = Math.max(190, maxCardHeight);
 
         allCards.forEach(card => {
             card.style.height = `${targetHeight}px`;
@@ -1252,7 +774,7 @@ function navigateToNode(node) {
         currentNode = node;
         renderView(currentNode);
         updateBreadcrumb();
-        hideSwipeIndicator(); // Hide indicator when navigating into folder
+        hideSwipeIndicator();
     }, 'forward');
 
     if (isMobile() && !modalEl.classList.contains('visible')) {
@@ -1283,7 +805,7 @@ function updateBreadcrumb() {
 
     clearAllActiveBreadcrumbs();
 
-    if (pathStack.length === 0 && currentNode === xmlData.documentElement && !currentSearchQuery) { // Berücksichtige Suche
+    if (pathStack.length === 0 && currentNode === xmlData.documentElement && !currentSearchQuery) {
         homeLink.classList.add('current-level-active');
         homeLink.classList.remove('breadcrumb-link');
     } else {
@@ -1310,7 +832,7 @@ function updateBreadcrumb() {
             const link = document.createElement('span');
             link.textContent = nodeValue;
 
-            if (nodeInPath === currentNode && !currentSearchQuery) { // Berücksichtige Suche
+            if (nodeInPath === currentNode && !currentSearchQuery) {
                 clearAllActiveBreadcrumbs();
                 link.classList.add('current-level-active');
             } else {
@@ -1320,7 +842,7 @@ function updateBreadcrumb() {
                     performViewTransition(() => {
                         pathStack = pathStack.slice(0, index + 1);
                         currentNode = nodeInPath;
-                        currentSearchQuery = ''; searchActive = false; if (searchInputElement) searchInputElement.value = ''; // Suche bei Breadcrumb-Navigation zurücksetzen
+                        currentSearchQuery = ''; searchActive = false; if (searchInputElement) searchInputElement.value = '';
                         renderView(currentNode); updateBreadcrumb();
                     }, 'backward');
                     if (isMobile()) window.history.pushState({ path: pathStack.map(n => n.getAttribute('guid')), modalOpen: false, searchActive: false, searchQuery: '' }, '', window.location.href);
@@ -1330,7 +852,7 @@ function updateBreadcrumb() {
         }
     });
 
-    if (currentSearchQuery) { // Zeige Suchbegriff im Breadcrumb an
+    if (currentSearchQuery) {
         const separator = document.createElement('span');
         separator.textContent = ' > ';
         breadcrumbEl.appendChild(separator);
@@ -1341,12 +863,11 @@ function updateBreadcrumb() {
     }
 
     const isModalVisible = modalEl.classList.contains('visible');
-    const isTrulyAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement && !currentSearchQuery; // Berücksichtige Suche
+    const isTrulyAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement && !currentSearchQuery;
     fixedBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
     if(mobileBackBtn) mobileBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
     topbarBackBtn.style.visibility = (isTrulyAtHome && !isModalVisible) ? 'hidden' : 'visible';
 
-    // Swipe-Indikator Sichtbarkeit basierend auf aktuellem Zustand
     if (isMobile()) {
         if (!isTrulyAtHome && !isModalVisible && !currentSearchQuery) {
             showSwipeIndicator();
@@ -1366,7 +887,7 @@ function openModal(node, calledFromPopstate = false) {
          });
     });
 
-    if (activePromptCard) { // Schließe Tap-to-Reveal Karte, wenn Modal geöffnet wird
+    if (activePromptCard) {
         activePromptCard.classList.remove('buttons-visible');
         activePromptCard = null;
     }
@@ -1407,8 +928,8 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
                 path: window.history.state.path,
                 modalOpen: false,
                 promptGuid: LrpmtGuid,
-                searchActive: searchActive, // Behalte den Suchstatus bei
-                searchQuery: currentSearchQuery // Behalte den Suchbegriff bei
+                searchActive: searchActive,
+                searchQuery: currentSearchQuery
             }, '', window.location.href);
         }
         updateBreadcrumb();
@@ -1457,7 +978,6 @@ function showNotification(message, type = 'info', buttonElement = null) {
         icon.classList.add('icon');
         notificationEl.appendChild(icon);
     } else if (type === 'error') {
-        // Optionally add an error icon here
     }
 
     const textNode = document.createElement('span');
@@ -1493,7 +1013,6 @@ function hideSwipeIndicator() {
     }
 }
 
-// Suchlogik
 function handleSearchInput(event) {
     currentSearchQuery = event.target.value.trim().toLowerCase();
     searchActive = currentSearchQuery.length > 0;
@@ -1501,14 +1020,13 @@ function handleSearchInput(event) {
     performViewTransition(() => {
         filterAndRenderNodes(xmlData.documentElement, currentSearchQuery);
         updateBreadcrumb();
-        // Update history state for search
         window.history.pushState({
-            path: [], // Reset path when search is active
+            path: [],
             modalOpen: false,
             searchActive: searchActive,
             searchQuery: currentSearchQuery
         }, '', window.location.href);
-    }, 'initial'); // 'initial' for a fade-in effect for search results
+    }, 'initial');
 }
 
 function filterAndRenderNodes(rootNode, query) {
@@ -1523,23 +1041,18 @@ function searchNodesRecursive(node, query, results) {
     const isFolder = Array.from(node.children).some(child => child.tagName === 'TreeViewNode');
 
     if (nodeValue.includes(query) || nodeBeschreibung.includes(query)) {
-        // If it's a folder, add it directly. If it's a prompt, add it directly.
         results.push(node);
-        // If a folder matches, also add all its children (folders and prompts) to the results.
-        // This ensures that when a folder is found, its contents are also displayed in search results.
-        if (isFolder) {
+        if (isFolder && nodeValue.includes(query)) { // Nur wenn der Ordner selbst übereinstimmt, werden seine Kinder hinzugefügt
             Array.from(node.children).filter(child => child.tagName === 'TreeViewNode').forEach(child => {
-                searchNodesRecursive(child, '', results); // Pass empty query to include all children
+                searchNodesRecursive(child, '', results);
             });
         }
     } else if (isFolder) {
-        // If current node is a folder but doesn't match, check its children recursively
         Array.from(node.children).filter(child => child.tagName === 'TreeViewNode').forEach(child => {
             searchNodesRecursive(child, query, results);
         });
     }
 }
-
 
 function renderViewFiltered(nodesToRender) {
     containerEl.innerHTML = '';
@@ -1552,7 +1065,6 @@ function renderViewFiltered(nodesToRender) {
         return;
     }
 
-    // Remove duplicates from nodesToRender (can happen if a child matches and its parent also matches)
     const uniqueNodes = [];
     const guidsSeen = new Set();
     nodesToRender.forEach(node => {
@@ -1595,6 +1107,10 @@ function renderViewFiltered(nodesToRender) {
                 folderIconSvg.id = folderIconId;
                 folderIconSvg.classList.add('dynamic-card-icon');
                 contentWrapper.appendChild(folderIconSvg);
+                if (iconToUse === svgTemplateFolder) {
+                    // Vivus nur für das ursprüngliche folder-icon, nicht für dynamische
+                    // vivusSetups.push({ parent: card, svgId: folderIconId }); // Vivus logic needs to be careful with IDs
+                }
             }
         } else {
             card.setAttribute('data-type', 'prompt');
@@ -1621,7 +1137,10 @@ function renderViewFiltered(nodesToRender) {
         addCard3DHoverEffect(card);
     });
 
-    cardsToObserve.forEach(c => cardObserver.observe(c));
-    adjustCardHeights(); // Adjust height after rendering
-    hideSwipeIndicator(); // Always hide swipe indicator when search results are shown
+    // vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); }); // Vivus needs more careful handling of dynamic IDs
+    if (cardsToObserve.length > 0) {
+        cardsToObserve.forEach(c => cardObserver.observe(c));
+    }
+    adjustCardHeights();
+    hideSwipeIndicator();
 }
