@@ -27,6 +27,15 @@ let currentSearchQuery = ''; // Speichert den aktuellen Suchbegriff
 let searchActive = false; // Zeigt an, ob die Suche aktiv ist
 let activePromptCard = null; // Globale Variable für "Tap-to-Reveal"
 
+// Hilfsfunktion: Prüft, ob es sich um ein mobiles Gerät handelt
+function isMobile() {
+    let isMobileDevice = false;
+    try {
+        isMobileDevice = navigator.maxTouchPoints > 0 || 'ontouchstart' in window || /Mobi|Android/i.test(navigator.userAgent);
+    } catch (e) { /* Ignore */ }
+    return isMobileDevice;
+}
+
 // Hauptinitialisierungsfunktion
 function initApp() {
     // DOM-Elemente referenzieren
@@ -640,9 +649,8 @@ function renderView(xmlNode) {
                 folderIconSvg.id = folderIconId;
                 folderIconSvg.classList.add('dynamic-card-icon');
                 contentWrapper.appendChild(folderIconSvg);
-                // Vivus nur für das ursprüngliche folder-icon, nicht für dynamische Icons
                 if (iconToUse === svgTemplateFolder) {
-                    setupVivusAnimation(card, folderIconId); // Direkter Aufruf hier
+                    setupVivusAnimation(card, folderIconId);
                 }
             }
         } else {
@@ -671,7 +679,7 @@ function renderView(xmlNode) {
     });
 
     cardsToObserve.forEach(c => cardObserver.observe(c));
-    adjustCardHeights(); // Adjust height after rendering
+    adjustCardHeights();
     // hideSwipeIndicator(); // This is now handled in updateBreadcrumb or search logic for clarity
 
     if(nodesToRender.length > 0 && !searchActive) {
