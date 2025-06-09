@@ -179,28 +179,49 @@ body.light-mode #app-logo-svg .icon-accent {
     white-space: nowrap; /* Prevent current level text from wrapping */
 }
 
-.fullscreen-toggle {
-    margin-left: auto;
-    flex-shrink: 0;
+/* Search Container Styling */
+.search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-left: auto; /* Push to right */
+    flex-shrink: 1; /* Allow shrinking */
+    max-width: 250px; /* Max width on desktop */
 }
 
-.fullscreen-toggle .icon-fullscreen-exit.hidden,
-.fullscreen-toggle .icon-fullscreen-enter.hidden {
-    display: none;
+.search-input {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem 1rem 0.5rem 2.5rem; /* Left padding for icon */
+    font-size: 0.95rem;
+    color: var(--text-color);
+    width: 100%;
+    outline: none;
+    transition: all var(--transition-duration-fast) ease-out;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-#app-logo-svg {
-  flex-shrink: 0;
-  display: block;
-  opacity: 0.95;
-  transition-property: opacity;
-  transition-duration: var(--transition-duration-fast);
-  transition-timing-function: var(--timing-function-ease);
-}
-#theme-toggle-button:hover #app-logo-svg {
-    opacity: 1;
+.search-input::placeholder {
+    color: var(--text-color-muted);
+    opacity: 0.7;
 }
 
+.search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent), inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.search-icon {
+    position: absolute;
+    left: 0.8rem;
+    color: var(--text-color-muted);
+    transition: color var(--transition-duration-fast) ease;
+}
+
+body.search-active .search-icon {
+    color: var(--accent); /* Highlight icon when search is active */
+}
 
 .cards-container {
   display: grid;
@@ -327,6 +348,7 @@ body.light-mode .card:hover {
    margin-bottom: 1.2rem;
 }
 
+
 /* Tap-to-Reveal Buttons */
 .prompt-card .card-buttons {
   display: flex;
@@ -412,17 +434,7 @@ body.light-mode .card:hover {
   transform-origin: center;
 }
 
-.button:hover .icon-fullscreen-enter path,
-.button:hover .icon-fullscreen-exit path {
-  transform: scale(0.92);
-}
-.icon-fullscreen-enter path,
-.icon-fullscreen-exit path {
-  transition-property: transform, stroke;
-  transition-duration: var(--transition-duration-fast);
-  transition-timing-function: var(--timing-function-ease);
-  transform-origin: center center;
-}
+/* Fullscreen toggle button removed */
 
 .mobile-nav {
   position: fixed;
@@ -683,7 +695,6 @@ body.light-mode .notification.error svg.icon {
 
 @media (max-width: 768px) {
   .cards-container {
-    /* Adjusted to always be single column on smaller screens */
     grid-template-columns: 1fr; /* Single column for all mobile */
     row-gap: 1.2rem;
     column-gap: 1.2rem; /* Will not apply with 1fr, but keep for consistency */
@@ -703,16 +714,42 @@ body.light-mode .notification.error svg.icon {
       -webkit-line-clamp: 5; /* Adjusted for single column, allowing more text */
       min-height: 5em;
   }
+  .search-container {
+      max-width: 100%; /* Take full width on mobile */
+      order: 1; /* Place below breadcrumb */
+      margin-top: 0.5rem;
+  }
+  .top-bar {
+      flex-wrap: wrap; /* Allow items to wrap */
+      justify-content: center; /* Center items when wrapped */
+      padding-bottom: 0.8rem; /* Add padding below search bar */
+  }
+  .topbar-back {
+      margin-right: auto; /* Push back button left */
+      margin-left: 0; /* Reset margin */
+  }
+  .breadcrumb {
+      order: 0; /* Keep breadcrumb at the top */
+      flex-basis: 100%; /* Take full width */
+      margin-bottom: 0.5rem;
+      text-align: left; /* Align breadcrumb left when wrapped */
+      justify-content: flex-start; /* Ensure left alignment */
+      padding-left: 0.5rem; /* Add some padding to breadcrumb */
+      padding-right: 0.5rem;
+  }
+  #theme-toggle-button {
+      margin-left: auto; /* Push theme toggle right */
+      order: 2; /* Place after search */
+  }
 }
 
 
 @media (max-width: 600px) { /* Primary mobile breakpoint */
   .cards-container {
-    /* Already single column from 768px, so just refining padding */
     padding-left: 1rem;
     padding-right: 1rem;
     padding-bottom: calc(5rem + var(--safe-area-inset-bottom));
-    padding-top: calc(6rem + var(--safe-area-inset-top));
+    padding-top: calc(6.5rem + var(--safe-area-inset-top)); /* Adjusted for search bar */
   }
   .card {
     padding: 1rem;
@@ -762,7 +799,7 @@ body.light-mode .notification.error svg.icon {
     }
     #theme-toggle-button {
       margin-left: 0.3rem;
-      order: -1;
+      order: -1; /* Keep order to ensure it's not hidden if 360px is only breakpoint */
     }
     .top-bar {
       padding: 0.5rem 0.75rem;
@@ -774,66 +811,19 @@ body.light-mode .notification.error svg.icon {
     .breadcrumb-link, .breadcrumb > span.current-level-active {
         padding: 0.2em 0.3em; /* Reduce padding for breadcrumb items */
     }
-    #fullscreen-button {
-      margin-left: 0.3rem;
-    }
 
-    /* Remove specific 360px media query for cards-container to ensure 1fr from 768px down */
-    /*
     @media (max-width: 360px) {
-        #theme-toggle-button { display: none; }
-        #fullscreen-button { margin-left: auto; }
-        .cards-container {
-            grid-template-columns: 1fr;
-            row-gap: 1rem;
+        /* If necessary, further adjustments can go here, but for now, rely on 768px for single column */
+        #theme-toggle-button {
+            display: none; /* Hide theme toggle on very small screens */
         }
-        .card {
-            width: 100%;
-        }
-        .card h3 {
-            font-size: 0.95rem;
-            -webkit-line-clamp: 4;
-             min-height: 3.8em;
-        }
-         .breadcrumb {
-            font-size: 0.7rem;
-        }
-    }
-    */
-}
-
-/* Specific rule for mobile-only elements that should be hidden on desktop */
-@media (min-width: 769px) {
-    #swipe-indicator {
-        display: none;
     }
 }
 
-
-@media screen and (min-aspect-ratio: 1/1) and (max-height: 500px) { /* Landscape on small height devices */
-    .fixed-back {
-      left: calc(0.6rem + var(--safe-area-inset-left));
-      padding: 0.45rem;
-    }
-    .fixed-back svg.icon {
-      width: 20px;
-      height: 20px;
-    }
-    .cards-container {
-        padding-top: calc(5rem + var(--safe-area-inset-top));
-        padding-bottom: calc(4.5rem + var(--safe-area-inset-bottom));
-     }
-     .mobile-nav {
-        min-height: 3rem;
-     }
-     .top-bar {
-        min-height: 3.5rem;
-     }
-}
-
-body:not([data-fullscreen-supported]) #fullscreen-button {
+/* Fullscreen functions removed as per user request, so this media query is no longer needed */
+/* body:not([data-fullscreen-supported]) #fullscreen-button {
   display: none;
-}
+} */
 
 @keyframes fade-in-vt {
   from { opacity: 0; }
