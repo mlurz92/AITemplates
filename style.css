@@ -255,8 +255,9 @@ body.search-active .search-icon {
   transition-timing-function: var(--timing-function-ease-out);
   backdrop-filter: blur(12px) saturate(110%);
   -webkit-backdrop-filter: blur(12px) saturate(110%);
-  min-height: 190px;
-  max-height: 240px;
+  /* Reduzierte Kartengröße für Desktop */
+  min-height: 140px; /* Von 190px auf 140px */
+  max-height: 180px; /* Von 240px auf 180px */
   cursor: pointer;
   will-change: transform, box-shadow, opacity;
   width: auto;
@@ -289,17 +290,17 @@ body.light-mode .card:hover {
 }
 
 .card h3 {
-  font-size: 1.15rem;
+  font-size: 1rem; /* Von 1.15rem auf 1rem */
   font-weight: 600;
   text-align: center;
   white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 4; /* Increased line clamp slightly */
+  -webkit-line-clamp: 4; /* Beibehalten, da es responsive angepasst wird */
   -webkit-box-orient: vertical;
   margin-bottom: 0.8rem;
-  min-height: 3.75em; /* Ensure enough space for at least 3 lines */
+  min-height: 3.75em; /* Beibehalten, da es responsive angepasst wird */
   line-height: 1.25;
   color: var(--text-color);
   transition-property: color;
@@ -371,8 +372,8 @@ body.light-mode .card:hover {
 
 /* Adjust prompt card h3 when buttons are hidden to allow more text */
 .prompt-card:not(.buttons-visible) h3 {
-    -webkit-line-clamp: 6; /* Allow more lines when buttons are hidden */
-    min-height: 5em; /* Adjust minimum height accordingly */
+    -webkit-line-clamp: 5; /* Angepasst auf 5 Zeilen für kleinere Karten (Desktop) */
+    min-height: 4em; /* Angepasst auf 4em für kleinere Karten (Desktop) */
     margin-bottom: 0.5rem; /* Reduce margin to make more space for text */
 }
 
@@ -702,17 +703,18 @@ body.light-mode .notification.error svg.icon {
     padding-right: 1.2rem;
   }
   .card {
-     min-height: 160px; /* Slightly smaller for single column */
-     max-height: 200px; /* Adjust max-height for more content */
+     /* Reduzierte Kartengröße für Mobile */
+     min-height: 120px; /* Von 160px auf 120px */
+     max-height: 150px; /* Von 200px auf 150px */
      padding: 1rem;
      max-width: none; /* Allow cards to take full width */
   }
    .card h3 {
-      font-size: 1.05rem;
+      font-size: 0.95rem; /* Von 1.05rem auf 0.95rem */
     }
   .prompt-card:not(.buttons-visible) h3 {
-      -webkit-line-clamp: 5; /* Adjusted for single column, allowing more text */
-      min-height: 5em;
+      -webkit-line-clamp: 6; /* Angepasst auf 6 Zeilen für kleinere Karten (Mobil) */
+      min-height: 4.5em; /* Angepasst auf 4.5em für kleinere Karten (Mobil) */
   }
   .search-container {
       max-width: 100%; /* Take full width on mobile */
@@ -755,7 +757,7 @@ body.light-mode .notification.error svg.icon {
     padding: 1rem;
   }
   .card h3 {
-    font-size: 1rem;
+    font-size: 0.9rem; /* Von 1rem auf 0.9rem */
   }
   .breadcrumb {
     font-size: 0.9rem;
@@ -784,9 +786,9 @@ body.light-mode .notification.error svg.icon {
       padding: 0.8rem;
     }
     .card h3 {
-      font-size: 0.95rem; /* Slightly larger for single column cards to fill space better */
-      -webkit-line-clamp: 4; /* Adjust for single column */
-      min-height: 3.8em;
+      font-size: 0.85rem; /* Von 0.95rem auf 0.85rem */
+      -webkit-line-clamp: 5; /* Angepasst auf 5 Zeilen für sehr kleine Karten */
+      min-height: 4em; /* Angepasst auf 4em */
       margin-bottom: 0.6rem;
     }
     .fixed-back {
@@ -813,7 +815,6 @@ body.light-mode .notification.error svg.icon {
     }
 
     @media (max-width: 360px) {
-        /* If necessary, further adjustments can go here, but for now, rely on 768px for single column */
         #theme-toggle-button {
             display: none; /* Hide theme toggle on very small screens */
         }
