@@ -54,7 +54,7 @@ function initApp() {
 
     // Setup-Funktionen aufrufen
     updateDynamicDurations();
-    setupTheme();
+    setupTheme(); // Diese Funktion ist jetzt hier definiert
     setupIntersectionObserver();
     setupEventListeners();
 
@@ -139,7 +139,15 @@ function updateDynamicDurations() {
     }
 }
 
-// Theme-Management
+// Theme-Management (JETZT HIER PLATZIERT)
+function setupTheme() {
+    const preferredTheme = localStorage.getItem('preferredTheme') || 'dark';
+    applyTheme(preferredTheme);
+    if (themeToggleButton) {
+        themeToggleButton.addEventListener('click', toggleTheme);
+    }
+}
+
 function applyTheme(themeName) {
     document.body.classList.remove('light-mode', 'dark-mode');
     document.body.classList.add(themeName + '-mode');
