@@ -179,9 +179,14 @@ body.light-mode #app-logo-svg .icon-accent {
     white-space: nowrap; 
 }
 
+.reset-toggle,
 .download-toggle {
     margin-left: auto;
     flex-shrink: 0;
+}
+
+.download-toggle {
+    margin-left: 0.2rem;
 }
 
 .fullscreen-toggle {
@@ -392,14 +397,18 @@ body.light-mode .card:hover {
 .button:hover .icon-fullscreen-exit path,
 .button:hover .icon-download path,
 .button:hover .icon-download polyline,
-.button:hover .icon-download line {
+.button:hover .icon-download line,
+.button:hover .icon-reset path,
+.button:hover .icon-reset polyline {
   transform: scale(0.92);
 }
 .icon-fullscreen-enter path,
 .icon-fullscreen-exit path,
 .icon-download path,
 .icon-download polyline,
-.icon-download line {
+.icon-download line,
+.icon-reset path,
+.icon-reset polyline {
   transition-property: transform, stroke;
   transition-duration: var(--transition-duration-fast);
   transition-timing-function: var(--timing-function-ease);
@@ -734,8 +743,11 @@ body.light-mode .notification.error svg.icon {
       margin-left: 0.3rem;
       order: 1; 
     }
-    #download-button {
+    #reset-button {
       order: 0;
+    }
+    #download-button {
+      order: -1;
     }
     .top-bar {
       padding: 0.5rem 0.75rem;
@@ -752,7 +764,7 @@ body.light-mode .notification.error svg.icon {
     }
 
     @media (max-width: 360px) {
-        #theme-toggle-button, #download-button { display: none; }
+        #theme-toggle-button, #download-button, #reset-button { display: none; }
         #fullscreen-button { margin-left: auto; }
         .cards-container {
             grid-template-columns: 1fr;
