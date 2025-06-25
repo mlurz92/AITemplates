@@ -4,10 +4,12 @@ let xmlData = null;
 let currentNode = null;
 let pathStack = [];
 const currentXmlFile = "Templates.xml";
+const localStorageKey = 'customTemplatesXml';
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn;
 let mobileNavEl, mobileHomeBtn, mobileBackBtn;
+let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
 
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark;
 
@@ -31,12 +33,18 @@ function initApp() {
     fixedBackBtn = document.getElementById('fixed-back');
     fullscreenBtn = document.getElementById('fullscreen-button');
     themeToggleButton = document.getElementById('theme-toggle-button');
+    downloadBtn = document.getElementById('download-button');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
         fullscreenExitIcon = fullscreenBtn.querySelector('.icon-fullscreen-exit');
     }
     mobileNavEl = document.getElementById('mobile-nav');
+
+    modalEditBtn = document.getElementById('modal-edit-button');
+    modalSaveBtn = document.getElementById('modal-save-button');
+    modalCloseBtn = document.getElementById('modal-close-button');
+    copyModalButton = document.getElementById('copy-prompt-modal-button');
 
     svgTemplateFolder = document.getElementById('svg-template-folder');
     svgTemplateExpand = document.getElementById('svg-template-expand');
@@ -110,7 +118,7 @@ function setupEventListeners() {
         if (modalEl.classList.contains('visible')) {
             closeModal({ fromBackdrop: true });
         } else if (pathStack.length > 0) {
-            navigateOneLevelUp(); // Geändert: Exakt wie mobileBackBtn
+            navigateOneLevelUp();
         }
     });
 
@@ -130,6 +138,8 @@ function setupEventListeners() {
             }
         }
     });
+    
+    downloadBtn.addEventListener('click', downloadCustomXml);
 
     if (fullscreenBtn) {
         fullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -139,11 +149,14 @@ function setupEventListeners() {
         document.addEventListener('MSFullscreenChange', updateFullscreenButton);
     }
 
-    document.getElementById('modal-close-button').addEventListener('click', () => closeModal());
-    const copyModalButton = document.getElementById('copy-prompt-modal-button');
+    modalCloseBtn.addEventListener('click', () => closeModal());
+    
     if (copyModalButton) {
       copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
     }
+
+    modalEditBtn.addEventListener('click', toggleEditMode);
+    modalSaveBtn.addEventListener('click', savePromptChanges);
 
     modalEl.addEventListener('click', (e) => {
         if (e.target === modalEl) {
@@ -283,17 +296,16 @@ function handleTouchEnd() {
 
     if (Math.abs(diffX) > Math.abs(diffY) && diffX > swipeThreshold) {
         if (pathStack.length > 0) {
-             navigateHistory('backward'); // Behält window.history.back() für Swipe auf Mobilgeräten
+             navigateHistory('backward');
         }
     }
     touchStartX = 0; touchStartY = 0; touchEndX = 0; touchEndY = 0;
 }
 
-function navigateHistory(direction) { // Diese Funktion wird jetzt primär vom Swipe aufgerufen
+function navigateHistory(direction) {
     if (isMobile() && pathStack.length > 0) {
         window.history.back();
     } else if (!isMobile() && pathStack.length > 0) {
-        // Dieser Zweig ist unwahrscheinlicher geworden, da topbarBackBtn nun navigateOneLevelUp verwendet
         performViewTransition(() => {
             if (pathStack.length > 0) {
                 const parentNode = pathStack.pop();
@@ -442,7 +454,7 @@ function isMobile() {
     let isMobileDevice = false;
     try {
         isMobileDevice = navigator.maxTouchPoints > 0 || 'ontouchstart' in window || /Mobi|Android/i.test(navigator.userAgent);
-    } catch (e) { /* Ignore */ }
+    } catch (e) { }
     return isMobileDevice;
 }
 
@@ -482,7 +494,39 @@ function setupVivusAnimation(parentElement, svgId) {
     parentElement.addEventListener('touchcancel', touchEndHandler);
 }
 
+function processXml(xmlDoc) {
+    xmlData = xmlDoc;
+    currentNode = xmlData.documentElement;
+    pathStack = [];
+    performViewTransition(() => {
+        renderView(currentNode);
+        updateBreadcrumb();
+    }, 'initial');
+    if (isMobile()) {
+        window.history.replaceState({ path: [], modalOpen: false }, '', window.location.href);
+    }
+}
+
 function loadXmlDocument(filename) {
+    const storedXml = localStorage.getItem(localStorageKey);
+    if (storedXml) {
+        try {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(storedXml, "application/xml");
+            const parserError = xmlDoc.getElementsByTagName("parsererror");
+            if (parserError.length > 0) {
+                throw new Error("Fehler beim Parsen der lokalen XML-Daten.");
+            }
+            processXml(xmlDoc);
+            downloadBtn.style.display = 'flex';
+            return;
+        } catch (error) {
+            console.error("Fehler beim Laden der XML aus dem Local Storage, lade Originaldatei:", error);
+            localStorage.removeItem(localStorageKey);
+        }
+    }
+    
+    downloadBtn.style.display = 'none';
     fetch(filename)
         .then(response => { if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`); return response.text(); })
         .then(str => {
@@ -498,14 +542,7 @@ function loadXmlDocument(filename) {
                 }
                 throw new Error(errorMessage);
             }
-            xmlData = xmlDoc;
-            currentNode = xmlData.documentElement;
-            pathStack = [];
-            performViewTransition(() => {
-                renderView(currentNode);
-                updateBreadcrumb();
-            }, 'initial');
-            if (isMobile()) { window.history.replaceState({ path: [], modalOpen: false }, '', window.location.href); }
+            processXml(xmlDoc);
         })
         .catch(error => {
             console.error(`Load/Parse Error for ${filename}:`, error);
@@ -754,7 +791,10 @@ function updateBreadcrumb() {
 
 
 function openModal(node, calledFromPopstate = false) {
-    promptFullTextEl.textContent = node.getAttribute('beschreibung') || '';
+    const guid = node.getAttribute('guid');
+    modalEl.setAttribute('data-guid', guid);
+    promptFullTextEl.value = node.getAttribute('beschreibung') || '';
+
     modalEl.classList.remove('hidden');
     requestAnimationFrame(() => {
          requestAnimationFrame(() => {
@@ -766,8 +806,7 @@ function openModal(node, calledFromPopstate = false) {
         const currentState = window.history.state || { path: [], modalOpen: false };
         if (!currentState.modalOpen) {
             const currentViewPathGuids = pathStack.map(n => n.getAttribute('guid'));
-            const nodeGuid = node.getAttribute('guid');
-            window.history.pushState({ path: currentViewPathGuids, modalOpen: true, promptGuid: nodeGuid }, '', window.location.href);
+            window.history.pushState({ path: currentViewPathGuids, modalOpen: true, promptGuid: guid }, '', window.location.href);
         }
     }
     updateBreadcrumb();
@@ -786,9 +825,14 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
 
     if (!modalEl.classList.contains('visible')) return;
 
+    if (promptFullTextEl.classList.contains('is-editing')) {
+        toggleEditMode();
+    }
+
     modalEl.classList.remove('visible');
     setTimeout(() => {
         modalEl.classList.add('hidden');
+        modalEl.removeAttribute('data-guid');
     }, currentTransitionDurationMediumMs);
 
     if (fromBackdrop) {
@@ -808,7 +852,64 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
     }
 }
 
-function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.textContent, buttonElement || document.getElementById('copy-prompt-modal-button')); }
+function toggleEditMode() {
+    const isEditing = promptFullTextEl.classList.toggle('is-editing');
+    promptFullTextEl.readOnly = !isEditing;
+    modalEditBtn.classList.toggle('hidden', isEditing);
+    modalSaveBtn.classList.toggle('hidden', !isEditing);
+    copyModalButton.classList.toggle('hidden', isEditing);
+    modalCloseBtn.classList.toggle('hidden', isEditing);
+    if (isEditing) {
+        promptFullTextEl.focus();
+        promptFullTextEl.setSelectionRange(promptFullTextEl.value.length, promptFullTextEl.value.length);
+    }
+}
+
+function savePromptChanges() {
+    const guid = modalEl.getAttribute('data-guid');
+    if (!guid || !xmlData) return;
+
+    const nodeToUpdate = findNodeByGuid(xmlData.documentElement, guid);
+    if (nodeToUpdate) {
+        const newText = promptFullTextEl.value;
+        nodeToUpdate.setAttribute('beschreibung', newText);
+        
+        const serializer = new XMLSerializer();
+        const xmlString = serializer.serializeToString(xmlData);
+        
+        try {
+            localStorage.setItem(localStorageKey, xmlString);
+            showNotification('Prompt gespeichert!', 'success');
+            if (downloadBtn) {
+                downloadBtn.style.display = 'flex';
+            }
+        } catch (e) {
+            console.error("Fehler beim Speichern im Local Storage:", e);
+            showNotification('Speichern fehlgeschlagen!', 'error');
+        }
+    }
+    toggleEditMode();
+}
+
+function downloadCustomXml() {
+    const xmlString = localStorage.getItem(localStorageKey);
+    if (!xmlString) {
+        showNotification('Keine Änderungen zum Herunterladen vorhanden.', 'info');
+        return;
+    }
+
+    const blob = new Blob([xmlString], { type: 'application/xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Templates_modified.xml';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button')); }
 function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.getAttribute('beschreibung') || '', buttonElement); }
 
 function copyToClipboard(text, buttonElement = null) {
