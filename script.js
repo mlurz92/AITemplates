@@ -166,6 +166,7 @@ function setupEventListeners() {
     });
 
     containerEl.addEventListener('click', handleCardContainerClick);
+    promptFullTextEl.addEventListener('input', () => adjustTextareaHeight(promptFullTextEl));
 }
 
 function setupMobileSpecificFeatures() {
@@ -789,11 +790,18 @@ function updateBreadcrumb() {
     topbarBackBtn.style.visibility = (isTrulyAtHome && !isModalVisible) ? 'hidden' : 'visible';
 }
 
+function adjustTextareaHeight(element) {
+    if (!element) return;
+    element.style.height = 'auto';
+    element.style.height = (element.scrollHeight) + 'px';
+}
 
 function openModal(node, calledFromPopstate = false) {
     const guid = node.getAttribute('guid');
     modalEl.setAttribute('data-guid', guid);
     promptFullTextEl.value = node.getAttribute('beschreibung') || '';
+    
+    requestAnimationFrame(() => adjustTextareaHeight(promptFullTextEl));
 
     modalEl.classList.remove('hidden');
     requestAnimationFrame(() => {
@@ -833,6 +841,7 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
     setTimeout(() => {
         modalEl.classList.add('hidden');
         modalEl.removeAttribute('data-guid');
+        promptFullTextEl.style.height = 'auto';
     }, currentTransitionDurationMediumMs);
 
     if (fromBackdrop) {
@@ -861,8 +870,10 @@ function toggleEditMode() {
     modalCloseBtn.classList.toggle('hidden', isEditing);
     if (isEditing) {
         promptFullTextEl.focus();
-        promptFullTextEl.setSelectionRange(promptFullTextEl.value.length, promptFullTextEl.value.length);
+        const textLength = promptFullTextEl.value.length;
+        promptFullTextEl.setSelectionRange(textLength, textLength);
     }
+    adjustTextareaHeight(promptFullTextEl);
 }
 
 function savePromptChanges() {
