@@ -26,6 +26,13 @@
         </svg>
       </button>
       <nav id="breadcrumb" class="breadcrumb"></nav>
+      <button id="download-button" class="button download-toggle" aria-label="Templates herunterladen" style="display: none;">
+        <svg class="icon icon-download" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+      </button>
       <button id="fullscreen-button" class="button fullscreen-toggle" aria-label="Vollbildmodus aktivieren">
          <svg class="icon icon-fullscreen-enter" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
@@ -71,17 +78,30 @@
 
     <div id="prompt-modal" class="modal hidden">
        <div class="modal-content">
-        <div id="prompt-fulltext" class="prompt-fulltext"></div>
+        <textarea id="prompt-fulltext" class="prompt-fulltext" readonly></textarea>
         <div class="modal-buttons">
-          <button id="modal-close-button" class="button modal-close" aria-label="Modal schließen">
-            <svg class="icon icon-minimize" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="18 15 12 9 6 15"></polyline>
+           <button id="modal-edit-button" class="button" aria-label="Prompt bearbeiten">
+             <svg class="icon icon-edit" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+          <button id="modal-save-button" class="button hidden" aria-label="Änderungen speichern">
+            <svg class="icon icon-save" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
             </svg>
           </button>
           <button id="copy-prompt-modal-button" class="button copy-button" aria-label="Prompt kopieren">
             <svg class="icon icon-copy" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <rect class="copy-rect" x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                 <path class="copy-line" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+          <button id="modal-close-button" class="button modal-close" aria-label="Modal schließen">
+            <svg class="icon icon-minimize" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="18 15 12 9 6 15"></polyline>
             </svg>
           </button>
         </div>
