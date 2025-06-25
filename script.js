@@ -7,7 +7,7 @@ const currentXmlFile = "Templates.xml";
 const localStorageKey = 'customTemplatesXml';
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn;
 let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
 
@@ -34,6 +34,7 @@ function initApp() {
     fullscreenBtn = document.getElementById('fullscreen-button');
     themeToggleButton = document.getElementById('theme-toggle-button');
     downloadBtn = document.getElementById('download-button');
+    resetBtn = document.getElementById('reset-button');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
@@ -140,6 +141,7 @@ function setupEventListeners() {
     });
     
     downloadBtn.addEventListener('click', downloadCustomXml);
+    resetBtn.addEventListener('click', resetLocalStorage);
 
     if (fullscreenBtn) {
         fullscreenBtn.addEventListener('click', toggleFullscreen);
@@ -520,6 +522,7 @@ function loadXmlDocument(filename) {
             }
             processXml(xmlDoc);
             downloadBtn.style.display = 'flex';
+            resetBtn.style.display = 'flex';
             return;
         } catch (error) {
             console.error("Fehler beim Laden der XML aus dem Local Storage, lade Originaldatei:", error);
@@ -528,6 +531,7 @@ function loadXmlDocument(filename) {
     }
     
     downloadBtn.style.display = 'none';
+    resetBtn.style.display = 'none';
     fetch(filename)
         .then(response => { if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`); return response.text(); })
         .then(str => {
@@ -893,6 +897,7 @@ function savePromptChanges() {
             showNotification('Prompt gespeichert!', 'success');
             if (downloadBtn) {
                 downloadBtn.style.display = 'flex';
+                resetBtn.style.display = 'flex';
             }
         } catch (e) {
             console.error("Fehler beim Speichern im Local Storage:", e);
@@ -918,6 +923,17 @@ function downloadCustomXml() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+function resetLocalStorage() {
+    const confirmation = confirm("Möchten Sie wirklich alle lokalen Änderungen verwerfen und die originalen Vorlagen laden? Alle nicht heruntergeladenen Anpassungen gehen dabei verloren.");
+    if (confirmation) {
+        localStorage.removeItem(localStorageKey);
+        showNotification('Änderungen zurückgesetzt. Lade neu...', 'info');
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+    }
 }
 
 function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button')); }
