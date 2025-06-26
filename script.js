@@ -6,8 +6,8 @@ let pathStack = [];
 const currentXmlFile = "Templates.xml";
 const localStorageKey = 'customTemplatesXml';
 
-let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn;
+let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addPromptBtn;
 let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
 
@@ -27,6 +27,7 @@ function initApp() {
     breadcrumbEl = document.getElementById('breadcrumb');
     containerEl = document.getElementById('cards-container');
     promptFullTextEl = document.getElementById('prompt-fulltext');
+    promptTitleInputEl = document.getElementById('prompt-title-input');
     notificationAreaEl = document.getElementById('notification-area');
     topBarEl = document.getElementById('top-bar');
     topbarBackBtn = document.getElementById('topbar-back-button');
@@ -35,6 +36,7 @@ function initApp() {
     themeToggleButton = document.getElementById('theme-toggle-button');
     downloadBtn = document.getElementById('download-button');
     resetBtn = document.getElementById('reset-button');
+    addPromptBtn = document.getElementById('add-prompt-button');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
@@ -139,7 +141,8 @@ function setupEventListeners() {
             }
         }
     });
-    
+
+    addPromptBtn.addEventListener('click', openNewPromptModal);
     downloadBtn.addEventListener('click', downloadCustomXml);
     resetBtn.addEventListener('click', resetLocalStorage);
 
@@ -157,7 +160,7 @@ function setupEventListeners() {
       copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
     }
 
-    modalEditBtn.addEventListener('click', toggleEditMode);
+    modalEditBtn.addEventListener('click', () => toggleEditMode(true));
     modalSaveBtn.addEventListener('click', savePromptChanges);
 
     modalEl.addEventListener('click', (e) => {
@@ -453,6 +456,13 @@ function findNodeByGuid(startNode, targetGuid) {
     return null;
 }
 
+function generateGuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 function isMobile() {
     let isMobileDevice = false;
     try {
@@ -575,7 +585,7 @@ function renderView(xmlNode) {
         const isFolder = Array.from(node.children).some(child => child.tagName === 'TreeViewNode');
         let nodeGuid = node.getAttribute('guid');
         if (!nodeGuid) {
-            nodeGuid = `genid-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+            nodeGuid = generateGuid();
             node.setAttribute('guid', nodeGuid);
         }
         card.setAttribute('data-guid', nodeGuid);
@@ -786,6 +796,8 @@ function updateBreadcrumb() {
          currentSpan.classList.add('current-level-active');
          breadcrumbEl.appendChild(currentSpan);
     }
+    
+    addPromptBtn.style.display = (currentNode === xmlData.documentElement || Array.from(currentNode.children).some(child => child.tagName === 'TreeViewNode')) ? 'flex' : 'none';
 
     const isModalVisible = modalEl.classList.contains('visible');
     const isTrulyAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
@@ -800,11 +812,26 @@ function adjustTextareaHeight(element) {
     element.style.height = (element.scrollHeight) + 'px';
 }
 
-function openModal(node, calledFromPopstate = false) {
-    const guid = node.getAttribute('guid');
-    modalEl.setAttribute('data-guid', guid);
-    promptFullTextEl.value = node.getAttribute('beschreibung') || '';
+function openNewPromptModal() {
+    modalEl.dataset.mode = 'new';
     
+    promptTitleInputEl.value = '';
+    promptFullTextEl.value = '';
+    promptTitleInputEl.style.display = 'block';
+
+    openModal(null);
+    toggleEditMode(true);
+    promptTitleInputEl.focus();
+}
+
+
+function openModal(node, calledFromPopstate = false) {
+    if (node) {
+        const guid = node.getAttribute('guid');
+        modalEl.setAttribute('data-guid', guid);
+        promptFullTextEl.value = node.getAttribute('beschreibung') || '';
+    }
+
     requestAnimationFrame(() => adjustTextareaHeight(promptFullTextEl));
 
     modalEl.classList.remove('hidden');
@@ -814,11 +841,11 @@ function openModal(node, calledFromPopstate = false) {
          });
     });
 
-    if (isMobile() && !calledFromPopstate) {
+    if (isMobile() && !calledFromPopstate && node) {
         const currentState = window.history.state || { path: [], modalOpen: false };
         if (!currentState.modalOpen) {
             const currentViewPathGuids = pathStack.map(n => n.getAttribute('guid'));
-            window.history.pushState({ path: currentViewPathGuids, modalOpen: true, promptGuid: guid }, '', window.location.href);
+            window.history.pushState({ path: currentViewPathGuids, modalOpen: true, promptGuid: node.getAttribute('guid') }, '', window.location.href);
         }
     }
     updateBreadcrumb();
@@ -838,13 +865,15 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
     if (!modalEl.classList.contains('visible')) return;
 
     if (promptFullTextEl.classList.contains('is-editing')) {
-        toggleEditMode();
+        toggleEditMode(false);
     }
 
     modalEl.classList.remove('visible');
     setTimeout(() => {
         modalEl.classList.add('hidden');
         modalEl.removeAttribute('data-guid');
+        modalEl.removeAttribute('data-mode');
+        promptTitleInputEl.style.display = 'none';
         promptFullTextEl.style.height = 'auto';
     }, currentTransitionDurationMediumMs);
 
@@ -865,47 +894,82 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
     }
 }
 
-function toggleEditMode() {
-    const isEditing = promptFullTextEl.classList.toggle('is-editing');
+function toggleEditMode(isEditing) {
+    promptFullTextEl.classList.toggle('is-editing', isEditing);
     promptFullTextEl.readOnly = !isEditing;
     modalEditBtn.classList.toggle('hidden', isEditing);
     modalSaveBtn.classList.toggle('hidden', !isEditing);
     copyModalButton.classList.toggle('hidden', isEditing);
     modalCloseBtn.classList.toggle('hidden', isEditing);
+
+    const isNewMode = modalEl.dataset.mode === 'new';
+    promptTitleInputEl.style.display = isEditing && isNewMode ? 'block' : 'none';
+
     if (isEditing) {
-        promptFullTextEl.focus();
-        const textLength = promptFullTextEl.value.length;
-        promptFullTextEl.setSelectionRange(textLength, textLength);
+        if (!isNewMode) {
+            promptFullTextEl.focus();
+            const textLength = promptFullTextEl.value.length;
+            promptFullTextEl.setSelectionRange(textLength, textLength);
+        }
     }
     adjustTextareaHeight(promptFullTextEl);
 }
 
 function savePromptChanges() {
-    const guid = modalEl.getAttribute('data-guid');
-    if (!guid || !xmlData) return;
-
-    const nodeToUpdate = findNodeByGuid(xmlData.documentElement, guid);
-    if (nodeToUpdate) {
-        const newText = promptFullTextEl.value;
-        nodeToUpdate.setAttribute('beschreibung', newText);
-        
-        const serializer = new XMLSerializer();
-        const xmlString = serializer.serializeToString(xmlData);
-        
-        try {
-            localStorage.setItem(localStorageKey, xmlString);
-            showNotification('Prompt gespeichert!', 'success');
-            if (downloadBtn) {
-                downloadBtn.style.display = 'flex';
-                resetBtn.style.display = 'flex';
-            }
-        } catch (e) {
-            console.error("Fehler beim Speichern im Local Storage:", e);
-            showNotification('Speichern fehlgeschlagen!', 'error');
+    const mode = modalEl.dataset.mode;
+    
+    if (mode === 'new') {
+        const title = promptTitleInputEl.value.trim();
+        if (!title) {
+            showNotification('Der Titel darf nicht leer sein.', 'error');
+            promptTitleInputEl.focus();
+            return;
         }
+
+        const newPromptNode = xmlData.createElement('TreeViewNode');
+        const newGuid = generateGuid();
+        newPromptNode.setAttribute('guid', newGuid);
+        newPromptNode.setAttribute('value', title);
+        newPromptNode.setAttribute('beschreibung', promptFullTextEl.value);
+        newPromptNode.setAttribute('image', '1');
+
+        currentNode.appendChild(newPromptNode);
+        
+        persistXmlData('Prompt hinzugefügt!', 'Hinzufügen fehlgeschlagen!');
+        renderView(currentNode);
+        closeModal();
+
+    } else { 
+        const guid = modalEl.getAttribute('data-guid');
+        if (!guid || !xmlData) return;
+        const nodeToUpdate = findNodeByGuid(xmlData.documentElement, guid);
+        if (nodeToUpdate) {
+            const newText = promptFullTextEl.value;
+            nodeToUpdate.setAttribute('beschreibung', newText);
+            persistXmlData('Prompt gespeichert!', 'Speichern fehlgeschlagen!');
+        }
+        toggleEditMode(false);
     }
-    toggleEditMode();
 }
+
+
+function persistXmlData(successMsg, errorMsg) {
+    const serializer = new XMLSerializer();
+    const xmlString = serializer.serializeToString(xmlData);
+    
+    try {
+        localStorage.setItem(localStorageKey, xmlString);
+        showNotification(successMsg, 'success');
+        if (downloadBtn) {
+            downloadBtn.style.display = 'flex';
+            resetBtn.style.display = 'flex';
+        }
+    } catch (e) {
+        console.error("Fehler beim Speichern im Local Storage:", e);
+        showNotification(errorMsg, 'error');
+    }
+}
+
 
 function downloadCustomXml() {
     const xmlString = localStorage.getItem(localStorageKey);
