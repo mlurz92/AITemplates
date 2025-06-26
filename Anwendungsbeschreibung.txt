@@ -2,103 +2,97 @@
 
 ## 1. Einleitung
 
-### 1.1. Zweck der Anwendung
-Der Prompt-Template Browser ist eine moderne, interaktive Webanwendung, die für die effiziente Verwaltung, Navigation, Nutzung und Anpassung hierarchisch organisierter Textbausteine (Prompts) konzipiert wurde. Die Anwendung lädt diese Daten aus einer lokalen XML-Datei, präsentiert sie in einer ansprechenden, benutzerfreundlichen Oberfläche und bietet die Möglichkeit, Prompts direkt in der Anwendung zu bearbeiten, diese Änderungen lokal im Browser zu speichern und die angepasste Vorlagensammlung herunterzuladen.
+### 1.1. Zweck und Kernidee der Anwendung
+Der Prompt-Template Browser ist eine hochmoderne, interaktive Webanwendung, die für die effiziente Verwaltung, Navigation und dynamische Anpassung einer hierarchisch organisierten Sammlung von Textbausteinen (Prompts) konzipiert wurde. Die Kernidee besteht darin, eine zentrale, intuitive und ästhetisch ansprechende Plattform zu schaffen, die es Nutzern ermöglicht, ihre Prompt-Vorlagen nicht nur zu durchsuchen und zu verwenden, sondern auch direkt in der Anwendung zu bearbeiten, neue Prompts hinzuzufügen und die personalisierte Sammlung lokal zu sichern und wiederzuverwenden.
 
 ### 1.2. Zielgruppe
-Die Anwendung richtet sich an Nutzer, die regelmäßig mit vordefinierten Textvorlagen oder Prompts arbeiten und eine schnelle, übersichtliche Methode zum Zugriff, zur Übernahme und zur individuellen Anpassung dieser Texte in andere Anwendungen oder Arbeitsabläufe benötigen. Dies umfasst beispielsweise Content-Ersteller, Entwickler, Support-Mitarbeiter oder jeden, der von einer strukturierten und personalisierbaren Sammlung von Textbausteinen profitiert.
+Die Anwendung richtet sich an eine breite Zielgruppe, die regelmäßig mit vordefinierten Textvorlagen arbeitet. Dazu gehören Content-Ersteller, Entwickler, Support-Mitarbeiter, Forscher und alle Anwender, die von einer strukturierten, schnell zugänglichen und erweiterbaren Wissens- oder Textdatenbank profitieren.
 
-### 1.3. Kernidee und Nutzen
-Die Kernidee besteht darin, eine intuitive und ästhetisch ansprechende Plattform für den Zugriff auf und die Bearbeitung einer persönlichen Sammlung von Prompt-Templates zu bieten. Der Hauptnutzen liegt in der deutlichen Zeitersparnis und der verbesserten Organisation durch eine klare Ordnerstruktur, schnelle Navigationsmöglichkeiten, direkte Kopierfunktionen sowie die flexible Anpassbarkeit der Inhalte. Die Anwendung ist für den lokalen Gebrauch optimiert und legt höchsten Wert auf eine exzellente Benutzererfahrung (UI/UX) sowohl auf Desktop-Computern als auch auf mobilen Endgeräten.
+### 1.3. Hauptnutzen
+Der Hauptnutzen liegt in der signifikanten Steigerung der Effizienz und der verbesserten Organisation bei der Arbeit mit Textbausteinen. Durch die klare Ordnerstruktur, schnelle Navigationsmechanismen, direkte Kopierfunktionen sowie die flexible Bearbeitung und Erweiterung der Inhalte direkt im Browser wird der Workflow optimiert und beschleunigt.
 
-## 2. Systemanforderungen
-* Ein moderner Webbrowser mit guter Unterstützung für aktuelle Webstandards:
-    * HTML5
-    * CSS3 (inklusive Flexbox, Grid, CSS Variablen, `backdrop-filter`)
-    * JavaScript (ES6+, Fetch API, DOMParser, XMLSerializer, Clipboard API, Fullscreen API, History API, Blob API, URL.createObjectURL)
-    * Local Storage API zur Speicherung von bearbeiteten Vorlagen.
-* Beispiele für kompatible Browser: Aktuelle Versionen von Google Chrome, Mozilla Firefox, Microsoft Edge, Apple Safari.
-* Für die PWA-Funktionalität (Progressive Web App) ist ein Browser erforderlich, der Web App Manifeste unterstützt.
+## 2. Globale UI-Konzepte und Design
 
-## 3. Datenquelle, -struktur und -persistenz
+Die Anwendung zeichnet sich durch ein modernes, klares und benutzerzentriertes Design aus, das auf "Glassmorphism"-Effekten basiert.
 
-### 3.1. Daten-Lade-Logik
-Die Anwendung folgt einer zweistufigen Ladelogik:
-1.  **Prüfung des Local Storage:** Beim Start prüft die Anwendung, ob eine bearbeitete Version der Vorlagen im Local Storage des Browsers gespeichert ist.
-2.  **Fallback auf XML-Datei:** Ist kein Eintrag im Local Storage vorhanden, lädt die Anwendung die inhaltliche Struktur dynamisch aus einer lokalen XML-Datei namens `Templates.xml`. Diese Datei muss sich im selben Verzeichnis wie die Hauptanwendungsdatei (`index.html`) befinden.
+* **Themes:** Es steht ein Dark- und ein Light-Theme zur Verfügung. Die vom Nutzer getroffene Auswahl wird im Local Storage des Browsers gespeichert und bei zukünftigen Besuchen automatisch angewendet.
+* **Responsivität:** Das Layout ist vollständig responsiv und passt sich nahtlos an alle Bildschirmgrößen an, von großen Desktop-Monitoren bis hin zu kleinen Smartphone-Displays. "Safe Areas" auf mobilen Geräten werden berücksichtigt, um eine optimale Darstellung ohne Überlappung durch Systemelemente zu gewährleisten.
+* **Animationen & Übergänge:** Flüssige und performante Animationen (View Transitions API, GSAP, Vivus.js) sorgen für eine dynamische und ansprechende Nutzererfahrung bei der Navigation und Interaktion mit Elementen.
 
-### 3.2. Aufbau der `Templates.xml`
-* **`<ROOT>`-Element:** Das Wurzelelement der XML-Datei.
-* **`<TreeViewNode>`-Elemente:** Jeder Eintrag (sowohl Ordner als auch Prompt) wird durch ein `<TreeViewNode>`-Element repräsentiert. Die hierarchische Verschachtelung dieser Elemente definiert die Ordnerstruktur.
-    * **`value="Name des Eintrags"`:** Dieses Attribut definiert den Titel, der für den Ordner oder das Prompt auf der jeweiligen Karte angezeigt wird.
-    * **`beschreibung="Vollständiger Text des Prompts..."`:** Dieses Attribut enthält den kompletten Text des Prompts. Bei Ordnern ist dieses Attribut leer.
-    * **`guid="EINE-GLOBALE-EINZIGARTIGE-ID"`:** Ein global eindeutiger Identifikator (GUID), der für jeden `<TreeViewNode>` vergeben sein muss. Dieses Attribut ist **essenziell** für die korrekte Funktionsweise der Navigation, der Bearbeitungs- und Speicherfunktionen und der internen Zustandsverwaltung.
+## 3. Hauptkomponenten der Benutzeroberfläche
 
-### 3.3. Datenpersistenz im Local Storage
-* **Speichervorgang:** Wenn ein Nutzer einen Prompt-Text im Detail-Modal bearbeitet und speichert, wird der gesamte aktuelle Zustand aller Vorlagen (das komplette XML-Dokument) als Text in den Local Storage des Browsers geschrieben.
-* **Aktualisierung:** Jede weitere Speicheraktion überschreibt den vorherigen Eintrag, sodass immer nur die aktuellste Version der Vorlagensammlung gespeichert ist.
-* **Sichtbarkeit:** Sobald Änderungen im Local Storage gespeichert sind, erscheint ein Download-Button in der oberen Navigationsleiste.
+### 3.1. Obere Navigationsleiste (Top-Bar)
+Diese am oberen Bildschirmrand fixierte Leiste ist die zentrale Steuerungseinheit und enthält folgende Elemente von links nach rechts:
 
-## 4. Globale UI-Konzepte und Design
-Das Erscheinungsbild ist modern, klar und nutzt "Glassmorphism"-Effekte. Es bietet ein umschaltbares Dark- und Light-Theme, dessen Wahl im Local Storage gespeichert wird. Das Layout ist vollständig responsiv und passt sich an alle Bildschirmgrößen an, wobei "Safe Areas" auf mobilen Geräten berücksichtigt werden. Flüssige Animationen und Übergänge (View Transitions, GSAP, Vivus.js) verbessern die Nutzererfahrung.
+* **Zurück-Button:** Ein Pfeil-Icon, das die Navigation eine Ordnerebene höher ermöglicht. Befindet sich der Nutzer im Hauptverzeichnis, ist dieser Button inaktiv. Wenn das Detail-Modal geöffnet ist, schließt dieser Button das Modal.
+* **Breadcrumb-Navigation:** Zeigt den aktuellen hierarchischen Pfad (z.B. Home > Ordner A > Unterordner B) an. Jeder Teil des Pfades ist ein klickbarer Link, der eine schnelle Rückkehr zu einer übergeordneten Ebene ermöglicht. Die aktuell angezeigte Ebene ist optisch hervorgehoben.
+* **Hinzufügen-Button (+):**
+    * **Funktion:** Öffnet das Detail-Modal in einem speziellen "Erstellen"-Modus, um eine neue Prompt-Karte im aktuell angezeigten Verzeichnis anzulegen.
+    * **Sichtbarkeit:** Der Button ist in allen Ordneransichten und im Hauptverzeichnis sichtbar.
+* **Änderungen zurücksetzen Button:**
+    * **Funktion:** Ermöglicht das Verwerfen aller im Local Storage gespeicherten Änderungen. Nach einer Bestätigungsabfrage wird der lokale Speicher geleert und die Anwendung mit den ursprünglichen Daten aus der `Templates.xml`-Datei neu geladen.
+    * **Sichtbarkeit:** Nur sichtbar, wenn Änderungen im Local Storage vorhanden sind.
+* **Download-Button:**
+    * **Funktion:** Startet den Download der aktuell im Browser gespeicherten Vorlagensammlung als `Templates_modified.xml`-Datei.
+    * **Sichtbarkeit:** Nur sichtbar, wenn Änderungen im Local Storage vorhanden sind.
+* **Fullscreen-Button:** Schaltet die Anwendung in den nativen Vollbildmodus des Browsers und wieder zurück.
+* **Theme-Toggle-Button (App-Logo):** Wechselt auf Klick zwischen dem Dark- und Light-Theme.
 
-## 5. Hauptkomponenten der Benutzeroberfläche
+### 3.2. Karten-Container (`#cards-container`)
+Der Hauptinhaltsbereich, der die Ordner- und Prompt-Karten in einem responsiven Grid-Layout darstellt. Die Karten erscheinen beim Laden der Ansicht mit einer dezenten Animation.
 
-### 5.1. Obere Navigationsleiste (Top-Bar)
-Die fixierte Leiste am oberen Rand enthält:
-* **Zurück-Button (Links):** Navigiert eine Ordnerebene höher oder schließt das Modal.
-* **Breadcrumb-Navigation (Mitte):** Zeigt den aktuellen Pfad an und erlaubt die direkte Navigation zu übergeordneten Ebenen.
-* **Download-Button (Mitte-Rechts):**
-    * **Funktion:** Ermöglicht das Herunterladen der aktuell im Browser gespeicherten Vorlagensammlung als `Templates_modified.xml`-Datei.
-    * **Sichtbarkeit:** Dieser Button ist nur sichtbar, wenn eine bearbeitete Version der Vorlagen im Local Storage vorhanden ist.
-* **Fullscreen-Button (Rechts):** Schaltet die Anwendung in den Vollbildmodus.
-* **Theme-Toggle-Button (App-Logo, Rechts):** Wechselt zwischen Dark- und Light-Theme.
+* **Ordner-Karten:** Repräsentieren Verzeichnisse. Sie zeigen den Ordner-Titel und ein animiertes SVG-Icon. Ein Klick auf die Karte navigiert den Nutzer in den entsprechenden Ordner.
+* **Prompt-Karten:** Repräsentieren einzelne Prompts. Sie zeigen den Titel des Prompts und zwei Aktionsbuttons:
+    * **Details anzeigen (Pfeil nach unten):** Öffnet das Detail-Modal, um den vollständigen Text zu lesen oder zu bearbeiten.
+    * **Kopieren:** Kopiert den vollständigen Text des Prompts direkt in die Zwischenablage und gibt eine visuelle Bestätigung.
+    * Ein Klick auf die Karte selbst (außerhalb der Buttons) öffnet ebenfalls das Detail-Modal.
 
-### 5.2. Karten-Container (`#cards-container`)
-Der zentrale Bereich, der die Ordner- und Prompt-Karten in einem responsiven Grid-Layout anzeigt.
+### 3.3. Prompt-Detail-Modal (`#prompt-modal`)
+Ein überlagerndes Fenster, das den Kern der Interaktion mit einzelnen Prompts darstellt.
 
-### 5.3. Karten (Ordner und Prompts)
-* **Ordner-Karten:** Zeigen Ordner-Titel und ein Icon. Ein Klick navigiert in den Ordner.
-* **Prompt-Karten:** Zeigen Prompt-Titel. Ein Klick öffnet das Detail-Modal. Buttons erlauben das direkte Kopieren oder Öffnen des Modals.
+* **Anzeigemodus (Standard):**
+    * **Inhalt:** Der vollständige Text des Prompts wird in einem schreibgeschützten Textfeld (`<textarea>`) angezeigt. Das Feld passt seine Höhe dynamisch an den Inhalt an, sodass der gesamte Text ohne internen Scrollbalken sichtbar ist.
+    * **Buttons:** "Bearbeiten", "Kopieren" und "Schließen".
+* **Bearbeitungsmodus:**
+    * **Aktivierung:** Durch Klick auf den "Bearbeiten"-Button.
+    * **Änderungen:** Das Textfeld wird editierbar, und der "Speichern"-Button ersetzt die anderen Aktionsbuttons.
+    * **Speichern:** Ein Klick auf den "Speichern"-Button persistiert die Änderungen im XML-Datenmodell und im Local Storage.
+* **Erstellen-Modus:**
+    * **Aktivierung:** Durch Klick auf den "Hinzufügen"-Button in der Top-Bar.
+    * **Änderungen:** Das Modal öffnet sich leer. Ein zusätzliches Eingabefeld für den **Titel** der neuen Karte wird sichtbar. Das Textfeld für den Inhalt ist direkt editierbar.
+    * **Speichern:** Ein Klick auf "Speichern" validiert, ob ein Titel eingegeben wurde. Anschließend wird ein neuer `<TreeViewNode>` im aktuellen Verzeichnis der XML-Datenstruktur erzeugt, und die Änderungen werden gespeichert. Die Ansicht im Hintergrund wird aktualisiert.
 
-### 5.4. Prompt-Detail-Modal (`#prompt-modal`)
-Ein überlagerndes Fenster zur Anzeige und Bearbeitung eines Prompts.
-* **Inhalt:** Der vollständige Text des Prompts wird in einem Textfeld (`<textarea>`) angezeigt, das seine Höhe automatisch dem Inhalt anpasst, sodass immer der gesamte Text ohne internen Scrollbalken sichtbar ist. Das Scrollen geschieht am Modal selbst.
-* **Aktionsbuttons im Modal (rechts unten):**
-    * **"Bearbeiten"-Button:**
-        * **Icon:** Stift-Symbol.
-        * **Funktion:** Schaltet das Textfeld in den Bearbeitungsmodus. Die Buttons "Schließen" und "Kopieren" werden ausgeblendet, und der "Speichern"-Button wird eingeblendet.
-    * **"Speichern"-Button:**
-        * **Icon:** Disketten-Symbol.
-        * **Funktion:** Speichert den geänderten Text. Die gesamte Vorlagenstruktur wird im Local Storage des Browsers persistiert. Danach wird der Bearbeitungsmodus beendet.
-        * **Sichtbarkeit:** Nur im Bearbeitungsmodus sichtbar.
-    * **"Kopieren"-Button:** Kopiert den aktuellen Text in die Zwischenablage. Nur im Lese-Modus sichtbar.
-    * **"Schließen"-Button:** Schließt das Modal. Nur im Lese-Modus sichtbar.
+### 3.4. Mobile Navigation & Fixierter "Zurück"-Button
+* **Mobile Navigationsleiste:** Eine am unteren Bildschirmrand fixierte Leiste (nur auf mobilen Geräten sichtbar) mit "Home"- und "Zurück"-Buttons für eine einfache Einhand-Bedienung.
+* **Fixierter "Zurück"-Button:** Ein schwebender Button am linken Bildschirmrand (nur auf Desktop sichtbar, wenn nicht im Hauptverzeichnis), der eine schnelle Navigation zur obersten Ebene ("Home") ermöglicht.
 
-### 5.5. Mobile Navigationsleiste & Fixierter "Zurück"-Button
-Diese Elemente bieten auf mobilen Geräten bzw. Desktops alternative und schnelle Navigationsmöglichkeiten (Home, Zurück).
+### 3.5. Benachrichtigungen
+Nach Aktionen wie dem Kopieren eines Prompts oder dem Speichern von Änderungen erscheint kurzzeitig eine Benachrichtigung oben rechts, die dem Nutzer visuelles Feedback über den Erfolg der Aktion gibt.
 
-### 5.6. Benachrichtigungen
-Visuelles Feedback (z.B. "Prompt kopiert!", "Prompt gespeichert!") erscheint nach entsprechenden Aktionen kurzzeitig oben rechts.
+## 4. Kernfunktionalitäten und Datenmanagement
 
-## 6. Kernfunktionalitäten und Interaktion
+### 4.1. Daten-Lade-Logik und Persistenz
+Die Anwendung folgt einer klaren Priorisierung:
+1.  **Local Storage zuerst:** Beim Start wird geprüft, ob eine bearbeitete Version der Vorlagen im Local Storage des Browsers unter dem Schlüssel `customTemplatesXml` gespeichert ist. Wenn ja, wird diese geparst und verwendet. Dies stellt sicher, dass Nutzer ihre Sitzung mit ihren letzten Änderungen fortsetzen können.
+2.  **Fallback auf `Templates.xml`:** Ist der Local Storage leer, wird die originale `Templates.xml`-Datei per `fetch` als Fallback geladen.
 
-### 6.1. Initialisierung und Laden der Daten
-Beim Start wird geprüft, ob eine `customTemplatesXml` im Local Storage existiert. Wenn ja, wird diese geladen. Wenn nein, wird die `Templates.xml`-Datei per `fetch` geholt.
+### 4.2. Navigation und Zustandsverwaltung
+Die Navigation durch die Ordnerhierarchie wird durch einen `pathStack` (ein Array von Knoten) verwaltet. Dies ermöglicht die Breadcrumb-Navigation und die "Zurück"-Funktionalität. Auf mobilen Geräten wird zusätzlich die Browser History API genutzt, um die physische Zurück-Taste des Geräts zu unterstützen und ein natives App-Gefühl zu erzeugen.
 
-### 6.2. Navigation
-Die Navigation durch Ordner und zurück erfolgt durch Klicks, Wischgesten (mobil) und die Browser-History, die insbesondere auf mobilen Geräten für ein natives Verhalten sorgt.
+### 4.3. Erstellen, Bearbeiten und Speichern von Prompts
+Jede Änderung an den Daten – sei es das Bearbeiten eines bestehenden Prompts oder das Hinzufügen eines neuen – modifiziert das im Arbeitsspeicher gehaltene XML-Dokument-Objektmodell (DOM).
 
-### 6.3. Anzeigen von Prompt-Details
-Ein Klick auf eine Prompt-Karte öffnet das Modal und zeigt den vollständigen Text im schreibgeschützten Textfeld an.
+* **Bearbeiten:** Der `beschreibung`-Attributwert des entsprechenden XML-Knotens wird aktualisiert.
+* **Erstellen:** Ein komplett neuer `<TreeViewNode>` wird mit allen notwendigen Attributen (`guid`, `value`, `beschreibung`, `image`) erzeugt und an den aktuell angezeigten Knoten angehängt. Eine neue, einzigartige GUID wird dabei dynamisch generiert.
+* **Persistierung:** Nach jeder dieser Modifikationen wird das gesamte XML-DOM mittels `XMLSerializer` in einen String umgewandelt und im Local Storage gespeichert. Dieser Ansatz stellt die Datenkonsistenz sicher.
 
-### 6.4. Bearbeiten und Speichern von Prompts
-* Ein Klick auf den **"Bearbeiten"-Button** im Modal aktiviert den Bearbeitungsmodus des Textfeldes.
-* Nach der Änderung des Textes speichert ein Klick auf den **"Speichern"-Button** den neuen Zustand. Technisch wird der entsprechende `beschreibung`-Attributwert im in-memory XML-Dokument aktualisiert, das gesamte Dokument wird mittels `XMLSerializer` in einen String umgewandelt und im Local Storage unter dem Schlüssel `customTemplatesXml` gespeichert.
+## 5. Datenquelle: `Templates.xml`
+Die Struktur und der Inhalt der Anwendung werden durch diese XML-Datei definiert.
 
-### 6.5. Herunterladen der angepassten Vorlagen
-* Der **Download-Button** in der Top-Bar (nur sichtbar nach einer Speicherung) initiiert den Download.
-* Er liest den XML-String aus dem Local Storage, erzeugt daraus ein `Blob`-Objekt und triggert den Download einer Datei namens `Templates_modified.xml`.
-
-### 6.6. Kopieren, Theme-Wechsel, Vollbildmodus
-Diese Funktionen bleiben wie ursprünglich implementiert und nutzen die entsprechenden Browser-APIs (`Clipboard`, `localStorage`, `Fullscreen`).
+* **`<TreeViewNode>`:** Das fundamentale Element für Ordner und Prompts.
+    * **Hierarchie:** Verschachtelte `<TreeViewNode>`-Elemente erzeugen die Ordnerstruktur. Ein Knoten mit Kind-Knoten ist ein Ordner, einer ohne ist ein Prompt.
+    * **Attribute:**
+        * `value`: Der sichtbare Titel der Karte.
+        * `beschreibung`: Der vollständige Text des Prompts.
+        * `guid`: Ein global eindeutiger Identifikator, essentiell für alle Operationen.
+        * `image`: Ein numerischer Wert, der intern zur Unterscheidung (z.B. für Icons) genutzt werden kann. Für Prompts sollte hier "1" stehen.
