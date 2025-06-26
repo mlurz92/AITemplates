@@ -26,6 +26,12 @@
         </svg>
       </button>
       <nav id="breadcrumb" class="breadcrumb"></nav>
+      <button id="add-prompt-button" class="button add-prompt" aria-label="Neue Prompt-Karte hinzufügen">
+        <svg class="icon icon-add" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+      </button>
       <button id="reset-button" class="button reset-toggle" aria-label="Änderungen zurücksetzen" style="display: none;">
         <svg class="icon icon-reset" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="23 4 23 10 17 10"></polyline>
@@ -85,6 +91,7 @@
 
     <div id="prompt-modal" class="modal hidden">
        <div class="modal-content">
+        <input type="text" id="prompt-title-input" class="prompt-title-input" placeholder="Titel der Prompt-Karte" style="display: none;">
         <textarea id="prompt-fulltext" class="prompt-fulltext" readonly></textarea>
         <div class="modal-buttons">
            <button id="modal-edit-button" class="button" aria-label="Prompt bearbeiten">
