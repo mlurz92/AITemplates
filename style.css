@@ -179,14 +179,15 @@ body.light-mode #app-logo-svg .icon-accent {
     white-space: nowrap; 
 }
 
-.reset-toggle,
-.download-toggle {
+.add-prompt {
     margin-left: auto;
     flex-shrink: 0;
 }
 
+.reset-toggle,
 .download-toggle {
     margin-left: 0.2rem;
+    flex-shrink: 0;
 }
 
 .fullscreen-toggle {
@@ -393,6 +394,15 @@ body.light-mode .card:hover {
   transform-origin: center;
 }
 
+.button:hover .icon-add line {
+    transform: scale(0.9) rotate(90deg);
+}
+.icon-add line {
+    transform-origin: center;
+    transition: transform var(--transition-duration-fast) var(--timing-function-ease);
+}
+
+
 .button:hover .icon-fullscreen-enter path,
 .button:hover .icon-fullscreen-exit path,
 .button:hover .icon-download path,
@@ -536,6 +546,25 @@ body.light-mode .modal .modal-content {
 .modal.visible .modal-content {
   transform: scale(1) translateZ(0);
   opacity: 1;
+}
+
+.prompt-title-input {
+    width: 100%;
+    font-family: inherit;
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 0.7rem 0.8rem;
+    margin-bottom: 1.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-base);
+    color: var(--text-color);
+    outline: none;
+    transition: border-color var(--transition-duration-fast) ease, box-shadow var(--transition-duration-fast) ease;
+}
+.prompt-title-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0, 170, 255, 0.2);
 }
 
 .prompt-fulltext {
