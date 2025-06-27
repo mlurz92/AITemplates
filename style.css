@@ -23,6 +23,7 @@
   --logo-accent-color: #00aaff;
   --delete-icon-bg: rgba(255, 59, 48, 0.85);
   --delete-icon-bg-hover: rgba(255, 89, 80, 1);
+  --ghost-bg: rgba(0, 170, 255, 0.1);
 
 
   --transition-duration-fast: 0.2s;
@@ -61,6 +62,7 @@ body.light-mode {
   --logo-accent-color: #0077cc;
   --delete-icon-bg: rgba(255, 69, 58, 0.9);
   --delete-icon-bg-hover: rgba(255, 89, 80, 1);
+  --ghost-bg: rgba(0, 119, 204, 0.1);
 }
 
 
@@ -451,17 +453,19 @@ body.light-mode .card:hover {
     cursor: grab;
 }
 
-.cards-container.edit-mode .card.dragging {
-    opacity: 0.5;
+.card.sortable-ghost {
+    background: var(--ghost-bg);
+    opacity: 0.4;
+    border-style: dashed;
+}
+
+.card.sortable-drag {
+    opacity: 0.9 !important;
     transform: scale(1.05);
     cursor: grabbing;
     animation: none;
     z-index: 100;
-}
-
-.card.drop-target {
-    background: var(--hover-bg);
-    transform: scale(1.02);
+    box-shadow: 0 15px 30px var(--shadow-color-heavy);
 }
 
 .card .delete-button {
