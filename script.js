@@ -5,7 +5,7 @@ let currentNode = null;
 let pathStack = [];
 const currentXmlFile = "Templates.xml";
 const localStorageKey = 'customTemplatesXml';
-let sortableInstance = null;
+let grid = null;
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addPromptBtn;
@@ -13,12 +13,6 @@ let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
 
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete;
-
-let cardObserver;
-
-let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
-const swipeThreshold = 50;
-const swipeFeedbackThreshold = 5;
 
 const MAX_ROTATION = 6;
 let currentTransitionDurationMediumMs = 300;
@@ -58,10 +52,8 @@ function initApp() {
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
     svgTemplateDelete = document.getElementById('svg-template-delete');
 
-
     updateDynamicDurations();
     setupTheme();
-    setupIntersectionObserver();
     setupEventListeners();
     checkFullscreenSupport();
 
@@ -107,7 +99,7 @@ function applyTheme(themeName) {
             const rootStyle = getComputedStyle(document.documentElement);
             const newThemeColor = rootStyle.getPropertyValue('--bg-base').trim();
             metaThemeColor.setAttribute("content", newThemeColor);
-        } catch(e) {
+        } catch (e) {
             metaThemeColor.setAttribute("content", themeName === 'dark' ? "#08080a" : "#f8f9fa");
         }
     }
@@ -119,7 +111,6 @@ function toggleTheme() {
     applyTheme(newTheme);
     localStorage.setItem('preferredTheme', newTheme);
 }
-
 
 function setupEventListeners() {
     topbarBackBtn.addEventListener('click', () => {
@@ -150,7 +141,7 @@ function setupEventListeners() {
                 updateBreadcrumb();
             }, 'backward');
             if (isMobile()) {
-                 window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
+                window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
             }
         }
     });
@@ -168,9 +159,9 @@ function setupEventListeners() {
     }
 
     modalCloseBtn.addEventListener('click', () => closeModal());
-    
+
     if (copyModalButton) {
-      copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
+        copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
     }
 
     modalEditBtn.addEventListener('click', () => toggleEditModeInModal(true));
@@ -193,37 +184,45 @@ function setupEventListeners() {
     });
 }
 
-function initSortable() {
-    if (sortableInstance) {
-        sortableInstance.destroy();
+function initOrDestroyGrid(shouldInit) {
+    if (grid) {
+        grid.destroy();
+        grid = null;
     }
-    sortableInstance = new Sortable(containerEl, {
-        animation: 150,
-        ghostClass: 'sortable-ghost',
-        dragClass: 'sortable-drag',
-        onEnd: (evt) => {
-            const newGuidOrder = [...evt.to.children].map(card => card.getAttribute('data-guid'));
-            const parentNode = currentNode;
 
+    if (shouldInit) {
+        grid = new Muuri('.cards-container', {
+            items: '.card',
+            dragEnabled: true,
+            layout: {
+                fillGaps: false,
+                horizontal: false,
+                alignRight: false,
+                alignBottom: false,
+                rounding: true
+            },
+            layoutOnResize: 50,
+            layoutOnInit: true,
+            sortData: {
+                guid: (item, element) => element.getAttribute('data-guid')
+            }
+        });
+
+        grid.on('dragEnd', () => {
+            const newGuidOrder = grid.getItems().map(item => item.getElement().getAttribute('data-guid'));
+            const parentNode = currentNode;
             const fragment = document.createDocumentFragment();
+            
             newGuidOrder.forEach(guid => {
                 const nodeToMove = findNodeByGuid(parentNode, guid);
                 if (nodeToMove) {
                     fragment.appendChild(nodeToMove);
                 }
             });
-            
-            parentNode.append(fragment);
-            
-            persistXmlData('Reihenfolge gespeichert!', 'Speichern fehlgeschlagen!');
-        }
-    });
-}
 
-function destroySortable() {
-    if (sortableInstance) {
-        sortableInstance.destroy();
-        sortableInstance = null;
+            parentNode.appendChild(fragment);
+            persistXmlData('Reihenfolge gespeichert!', 'Speichern fehlgeschlagen!');
+        });
     }
 }
 
@@ -312,7 +311,7 @@ function handleCardContainerClick(e) {
         }
         return;
     }
-    
+
     if (isEditMode) return;
 
     const button = e.target.closest('button[data-action]');
@@ -336,7 +335,7 @@ function handleCardContainerClick(e) {
             }
         }
     } else if (e.target === containerEl && pathStack.length > 0) {
-         navigateOneLevelUp();
+        navigateOneLevelUp();
     }
 }
 
@@ -350,46 +349,14 @@ function handleTouchStart(e) {
             }
         }, 500);
     }
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchEndX = touchStartX;
-    touchEndY = touchStartY;
 }
 
-function handleTouchMove(e) {
+function handleTouchMove() {
     clearTimeout(longPressTimer);
-    if (!touchStartX || modalEl.classList.contains('visible') || isEditMode) return;
-    touchEndX = e.touches[0].clientX;
-    touchEndY = e.touches[0].clientY;
-    let diffX = touchEndX - touchStartX;
-
-    if (Math.abs(diffX) > Math.abs(touchEndY - touchStartY) && diffX > swipeFeedbackThreshold) {
-        containerEl.classList.add('swiping-right');
-        let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.1);
-        containerEl.style.transform = `translateX(${moveX}px)`;
-    } else {
-        containerEl.classList.remove('swiping-right');
-        containerEl.style.transform = '';
-    }
 }
 
 function handleTouchEnd() {
     clearTimeout(longPressTimer);
-    if (!touchStartX || modalEl.classList.contains('visible')) return;
-    let diffX = touchEndX - touchStartX;
-    let diffY = touchEndY - touchStartY;
-
-    containerEl.classList.remove('swiping-right');
-    containerEl.style.transform = '';
-
-    if (Math.abs(diffX) > Math.abs(diffY) && diffX > swipeThreshold) {
-        if (isEditMode) {
-            toggleEditMode(false);
-        } else if (pathStack.length > 0) {
-            navigateHistory('backward');
-        }
-    }
-    touchStartX = 0; touchStartY = 0; touchEndX = 0; touchEndY = 0;
 }
 
 function navigateHistory(direction) {
@@ -420,13 +387,13 @@ function handlePopState(event) {
 
         if (nodeToOpen && nodeToOpen.getAttribute('beschreibung')) {
             pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
-            if (state.path.length > 0 && pathStack.length > 0 && pathStack[pathStack.length-1].getAttribute('guid') === promptGuidForModal) {
-                 pathStack.pop();
+            if (state.path.length > 0 && pathStack.length > 0 && pathStack[pathStack.length - 1].getAttribute('guid') === promptGuidForModal) {
+                pathStack.pop();
             }
-            currentNode = pathStack.length > 0 ? pathStack[pathStack.length-1] : xmlData.documentElement;
+            currentNode = pathStack.length > 0 ? pathStack[pathStack.length - 1] : xmlData.documentElement;
             openModal(nodeToOpen, true);
         } else {
-             handleNavigationFromState(state, direction);
+            handleNavigationFromState(state, direction);
         }
     } else {
         handleNavigationFromState(state, direction);
@@ -434,11 +401,11 @@ function handlePopState(event) {
 }
 
 function handleNavigationFromState(state, direction) {
-     const targetPathLength = state.path.length;
-     const updateDOM = () => {
+    const targetPathLength = state.path.length;
+    const updateDOM = () => {
         pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
-        if(pathStack.length !== targetPathLength && state.path.length > 0) {
-             pathStack = [];
+        if (pathStack.length !== targetPathLength && state.path.length > 0) {
+            pathStack = [];
         } else if (targetPathLength === 0) {
             pathStack = [];
         }
@@ -447,7 +414,7 @@ function handleNavigationFromState(state, direction) {
 
         renderView(currentNode);
         updateBreadcrumb();
-     };
+    };
     performViewTransition(updateDOM, direction);
 }
 
@@ -463,40 +430,13 @@ function performViewTransition(updateDomFunction, direction) {
     });
 }
 
-function setupIntersectionObserver() {
-    const options = { rootMargin: "0px", threshold: 0.05 };
-    cardObserver = new IntersectionObserver((entries, observer) => {
-        const visibleEntries = entries.filter(entry => entry.isIntersecting);
-        if (visibleEntries.length > 0) {
-            const targets = visibleEntries.map(entry => entry.target);
-            gsap.to(targets, {
-                opacity: 1,
-                y: 0,
-                scale: 1,
-                duration: 0.6,
-                ease: "expo.out",
-                stagger: {
-                    each: 0.06,
-                    from: "start"
-                },
-                onComplete: function() {
-                    this.targets().forEach(target => {
-                        observer.unobserve(target);
-                        target.classList.add('is-visible');
-                    });
-                }
-            });
-        }
-    }, options);
-}
-
 function checkFullscreenSupport() {
     const support = !!(document.documentElement.requestFullscreen || document.documentElement.mozRequestFullScreen || document.documentElement.webkitRequestFullscreen || document.documentElement.msRequestFullscreen);
     if (support && fullscreenBtn) {
         document.body.setAttribute('data-fullscreen-supported', 'true');
     } else {
         document.body.removeAttribute('data-fullscreen-supported');
-        if(fullscreenBtn) fullscreenBtn.remove();
+        if (fullscreenBtn) fullscreenBtn.remove();
     }
 }
 
@@ -521,7 +461,7 @@ function updateFullscreenButton() {
         fullscreenEnterIcon.classList.toggle('hidden', isFullscreen);
         fullscreenExitIcon.classList.toggle('hidden', !isFullscreen);
     }
-    if(fullscreenBtn) fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Vollbildmodus beenden' : 'Vollbildmodus aktivieren');
+    if (fullscreenBtn) fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Vollbildmodus beenden' : 'Vollbildmodus aktivieren');
 }
 
 function findNodeByGuid(startNode, targetGuid) {
@@ -553,8 +493,9 @@ function deleteNodeByGuid(guid) {
 }
 
 function generateGuid() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0,
+            v = c == 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
 }
@@ -579,7 +520,7 @@ function setupVivusAnimation(parentElement, svgId) {
     let isTouchStarted = false;
 
     const playAnimation = (immediate = false) => {
-        if(isEditMode) return;
+        if (isEditMode) return;
         clearTimeout(timeoutId);
         svgElement.style.opacity = immediate ? '1' : '0';
         const startVivus = () => {
@@ -636,7 +577,7 @@ function loadXmlDocument(filename) {
             localStorage.removeItem(localStorageKey);
         }
     }
-    
+
     downloadBtn.style.display = 'none';
     resetBtn.style.display = 'none';
     fetch(filename)
@@ -648,9 +589,9 @@ function loadXmlDocument(filename) {
             if (parserError.length > 0) {
                 let errorMessage = "XML Parse Error.";
                 if (parserError[0] && parserError[0].childNodes.length > 0 && parserError[0].childNodes[0].textContent) {
-                     errorMessage = parserError[0].childNodes[0].textContent.trim().split('\n')[0];
+                    errorMessage = parserError[0].childNodes[0].textContent.trim().split('\n')[0];
                 } else if (parserError[0] && parserError[0].textContent) {
-                     errorMessage = parserError[0].textContent.trim().split('\n')[0];
+                    errorMessage = parserError[0].textContent.trim().split('\n')[0];
                 }
                 throw new Error(errorMessage);
             }
@@ -659,22 +600,22 @@ function loadXmlDocument(filename) {
         .catch(error => {
             console.error(`Load/Parse Error for ${filename}:`, error);
             containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Fehler beim Laden der Vorlagen: ${error.message}</p>`;
-            gsap.to(containerEl, {opacity: 1, duration: 0.3});
         });
 }
 
 function renderView(xmlNode) {
-    const currentScroll = containerEl.scrollTop;
+    if (grid) {
+        grid.destroy();
+        grid = null;
+    }
     containerEl.innerHTML = '';
     if (!xmlNode) {
-         containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
-         gsap.to(containerEl, {opacity: 1, duration: 0.3});
-         return;
-     }
+        containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
+        return;
+    }
 
     const childNodes = Array.from(xmlNode.children).filter(node => node.tagName === 'TreeViewNode');
     const vivusSetups = [];
-    const cardsToObserve = [];
 
     childNodes.forEach(node => {
         const card = document.createElement('div');
@@ -687,11 +628,14 @@ function renderView(xmlNode) {
         }
         card.setAttribute('data-guid', nodeGuid);
 
-        const titleElem = document.createElement('h3');
-        titleElem.textContent = node.getAttribute('value') || 'Unbenannt';
-
+        const cardContent = document.createElement('div');
+        cardContent.className = 'card-content';
+        
         const contentWrapper = document.createElement('div');
         contentWrapper.classList.add('card-content-wrapper');
+        
+        const titleElem = document.createElement('h3');
+        titleElem.textContent = node.getAttribute('value') || 'Unbenannt';
         contentWrapper.appendChild(titleElem);
 
         const deleteBtn = document.createElement('button');
@@ -700,10 +644,11 @@ function renderView(xmlNode) {
         if (svgTemplateDelete) {
             deleteBtn.appendChild(svgTemplateDelete.cloneNode(true));
         }
-        card.appendChild(deleteBtn);
+        cardContent.appendChild(deleteBtn);
 
         if (isFolder) {
-            card.classList.add('folder-card'); card.setAttribute('data-type', 'folder');
+            card.classList.add('folder-card');
+            card.setAttribute('data-type', 'folder');
             if (svgTemplateFolder) {
                 const folderIconSvg = svgTemplateFolder.cloneNode(true);
                 const folderIconId = `icon-folder-${nodeGuid}`;
@@ -714,99 +659,45 @@ function renderView(xmlNode) {
         } else {
             card.setAttribute('data-type', 'prompt');
             card.classList.add('prompt-card');
-            const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
+            const btnContainer = document.createElement('div');
+            btnContainer.classList.add('card-buttons');
             if (svgTemplateExpand) {
-                const expandBtn = document.createElement('button'); expandBtn.classList.add('button'); expandBtn.setAttribute('aria-label', 'Details anzeigen'); expandBtn.setAttribute('data-action', 'expand'); expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); btnContainer.appendChild(expandBtn);
+                const expandBtn = document.createElement('button');
+                expandBtn.classList.add('button');
+                expandBtn.setAttribute('aria-label', 'Details anzeigen');
+                expandBtn.setAttribute('data-action', 'expand');
+                expandBtn.appendChild(svgTemplateExpand.cloneNode(true));
+                btnContainer.appendChild(expandBtn);
             }
             if (svgTemplateCopy) {
-                const copyBtn = document.createElement('button'); copyBtn.classList.add('button'); copyBtn.setAttribute('aria-label', 'Prompt kopieren'); copyBtn.setAttribute('data-action', 'copy'); copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); btnContainer.appendChild(copyBtn);
+                const copyBtn = document.createElement('button');
+                copyBtn.classList.add('button');
+                copyBtn.setAttribute('aria-label', 'Prompt kopieren');
+                copyBtn.setAttribute('data-action', 'copy');
+                copyBtn.appendChild(svgTemplateCopy.cloneNode(true));
+                btnContainer.appendChild(copyBtn);
             }
             contentWrapper.appendChild(btnContainer);
         }
-        card.appendChild(contentWrapper);
+        cardContent.appendChild(contentWrapper);
+        card.appendChild(cardContent);
         containerEl.appendChild(card);
-        cardsToObserve.push(card);
-        addCard3DHoverEffect(card);
+        
         addCardLongPressListener(card);
     });
     
-    if (isEditMode) {
-        containerEl.classList.add('edit-mode');
-        initSortable();
-    }
+    setTimeout(() => {
+        initOrDestroyGrid(isEditMode);
+        if (grid) {
+            grid.refreshItems().layout();
+        }
+        vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
+    }, 0);
 
 
-    vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
-    if (cardsToObserve.length > 0) {
-        cardsToObserve.forEach(c => cardObserver.observe(c));
-    }
-    if(childNodes.length > 0) {
-        containerEl.scrollTop = currentScroll;
-        adjustCardHeights();
-    } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
+    if (childNodes.length === 0 && containerEl.innerHTML === '') {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
-        gsap.to(containerEl.firstChild, {opacity: 1, duration: 0.5});
     }
-}
-
-function adjustCardHeights() {
-    const allCards = Array.from(containerEl.querySelectorAll('.card'));
-    if (allCards.length === 0) return;
-
-    let targetHeight = 190;
-
-    const folderCards = allCards.filter(card => card.classList.contains('folder-card'));
-    if (folderCards.length > 0) {
-        let maxFolderHeight = 0;
-        folderCards.forEach(card => {
-            card.style.height = '';
-            if (card.offsetHeight > maxFolderHeight) {
-                maxFolderHeight = card.offsetHeight;
-            }
-        });
-        targetHeight = Math.max(targetHeight, maxFolderHeight);
-    }
-
-    const promptCards = allCards.filter(card => card.classList.contains('prompt-card'));
-     if (promptCards.length > 0 && folderCards.length === 0) {
-    }
-
-    allCards.forEach(card => {
-        card.style.height = `${targetHeight}px`;
-    });
-}
-
-
-function addCard3DHoverEffect(card) {
-    let frameRequested = false;
-    card.addEventListener('mousemove', (e) => {
-        if (frameRequested || isMobile() || isEditMode) return;
-        frameRequested = true;
-        requestAnimationFrame(() => {
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            const deltaX = x - centerX;
-            const deltaY = y - centerY;
-
-            const rotateY = Math.max(-MAX_ROTATION, Math.min(MAX_ROTATION, (deltaX / centerX) * MAX_ROTATION));
-            const rotateX = Math.max(-MAX_ROTATION, Math.min(MAX_ROTATION, -(deltaY / centerY) * MAX_ROTATION));
-
-            card.style.setProperty('--rotateX', `${rotateX}deg`);
-            card.style.setProperty('--rotateY', `${rotateY}deg`);
-            frameRequested = false;
-        });
-    });
-
-    card.addEventListener('mouseleave', () => {
-        if(isMobile() || isEditMode) return;
-        requestAnimationFrame(() => {
-            card.style.setProperty('--rotateX', '0deg');
-            card.style.setProperty('--rotateY', '0deg');
-        });
-    });
 }
 
 function addCardLongPressListener(card) {
@@ -814,9 +705,9 @@ function addCardLongPressListener(card) {
         if ((e.type === 'mousedown' && e.button !== 0)) return;
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
-             if (!isEditMode && !modalEl.classList.contains('visible')) {
-                 toggleEditMode(true);
-             }
+            if (!isEditMode && !modalEl.classList.contains('visible')) {
+                toggleEditMode(true);
+            }
         }, 500);
     };
     const cancelPress = () => clearTimeout(longPressTimer);
@@ -828,7 +719,6 @@ function addCardLongPressListener(card) {
     card.addEventListener('touchend', cancelPress);
     card.addEventListener('touchcancel', cancelPress);
 }
-
 
 function navigateToNode(node) {
     if (isEditMode) return;
@@ -842,12 +732,12 @@ function navigateToNode(node) {
     }, 'forward');
 
     if (isMobile() && !modalEl.classList.contains('visible')) {
-         let historyPath = pathStack.map(n => n.getAttribute('guid'));
-         if (currentNode && currentNode !== xmlData.documentElement) {
-             historyPath.push(currentNode.getAttribute('guid'));
-         }
-         window.history.pushState({ path: historyPath, modalOpen: false }, '', window.location.href);
-     }
+        let historyPath = pathStack.map(n => n.getAttribute('guid'));
+        if (currentNode && currentNode !== xmlData.documentElement) {
+            historyPath.push(currentNode.getAttribute('guid'));
+        }
+        window.history.pushState({ path: historyPath, modalOpen: false }, '', window.location.href);
+    }
 }
 
 function updateBreadcrumb() {
@@ -862,7 +752,7 @@ function updateBreadcrumb() {
         allActive.forEach(el => {
             el.classList.remove('current-level-active');
             if (el === homeLink && !homeLink.classList.contains('breadcrumb-link')) {
-                 homeLink.classList.add('breadcrumb-link');
+                homeLink.classList.add('breadcrumb-link');
             }
         });
     };
@@ -883,8 +773,10 @@ function updateBreadcrumb() {
             if (isEditMode) toggleEditMode(false);
             if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
             performViewTransition(() => {
-                currentNode = xmlData.documentElement; pathStack = [];
-                renderView(currentNode); updateBreadcrumb();
+                currentNode = xmlData.documentElement;
+                pathStack = [];
+                renderView(currentNode);
+                updateBreadcrumb();
             }, 'backward');
             if (isMobile()) window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
         });
@@ -913,7 +805,8 @@ function updateBreadcrumb() {
                         performViewTransition(() => {
                             pathStack = pathStack.slice(0, index + 1);
                             currentNode = nodeInPath;
-                            renderView(currentNode); updateBreadcrumb();
+                            renderView(currentNode);
+                            updateBreadcrumb();
                         }, 'backward');
                         if (isMobile()) window.history.pushState({ path: pathStack.map(n => n.getAttribute('guid')), modalOpen: false }, '', window.location.href);
                     });
@@ -927,27 +820,27 @@ function updateBreadcrumb() {
 
         if (!isAtHome && currentNode !== parentOfCurrentNode && currentNode !== xmlData.documentElement) {
             clearAllActiveBreadcrumbs();
-            if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement )) {
+            if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement)) {
                 const separator = document.createElement('span');
                 separator.textContent = ' > ';
                 breadcrumbEl.appendChild(separator);
             }
-             const currentSpan = document.createElement('span');
-             currentSpan.textContent = currentNode.getAttribute('value');
-             currentSpan.classList.add('current-level-active');
-             breadcrumbEl.appendChild(currentSpan);
+            const currentSpan = document.createElement('span');
+            currentSpan.textContent = currentNode.getAttribute('value');
+            currentSpan.classList.add('current-level-active');
+            breadcrumbEl.appendChild(currentSpan);
         }
     }
-    
+
     addPromptBtn.style.display = (isEditMode || (currentNode !== xmlData.documentElement && !Array.from(currentNode.children).some(child => child.tagName === 'TreeViewNode'))) ? 'none' : 'flex';
 
     const isModalVisible = modalEl.classList.contains('visible');
     const isTrulyAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
-    
+
     const showFixedBack = !isTrulyAtHome || isModalVisible || isEditMode;
     fixedBackBtn.classList.toggle('hidden', !showFixedBack);
 
-    if(mobileBackBtn) {
+    if (mobileBackBtn) {
         const showMobileBack = !isTrulyAtHome || isModalVisible || isEditMode;
         mobileBackBtn.classList.toggle('hidden', !showMobileBack);
     }
@@ -962,7 +855,6 @@ function adjustTextareaHeight(element) {
 
 function openNewPromptModal() {
     modalEl.dataset.mode = 'new';
-    
     promptTitleInputEl.value = '';
     promptFullTextEl.value = '';
     promptTitleInputEl.style.display = 'block';
@@ -971,7 +863,6 @@ function openNewPromptModal() {
     toggleEditModeInModal(true);
     promptTitleInputEl.focus();
 }
-
 
 function openModal(node, calledFromPopstate = false) {
     if (node) {
@@ -989,9 +880,9 @@ function openModal(node, calledFromPopstate = false) {
 
     modalEl.classList.remove('hidden');
     requestAnimationFrame(() => {
-         requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
             modalEl.classList.add('visible');
-         });
+        });
     });
 
     if (isMobile() && !calledFromPopstate && node) {
@@ -1051,35 +942,26 @@ function toggleEditMode(enable) {
     if (isEditMode === enable) return;
     isEditMode = enable;
     containerEl.classList.toggle('edit-mode', enable);
-
-    if (enable) {
-        initSortable();
-    } else {
-        destroySortable();
-    }
+    initOrDestroyGrid(enable);
     updateBreadcrumb();
 }
-
 
 function toggleEditModeInModal(isEditing) {
     promptFullTextEl.classList.toggle('is-editing', isEditing);
     promptFullTextEl.readOnly = !isEditing;
-    
-    promptTitleInputEl.classList.toggle('is-editing', isEditing);
     promptTitleInputEl.readOnly = !isEditing;
 
     modalEditBtn.classList.toggle('hidden', isEditing);
     modalSaveBtn.classList.toggle('hidden', !isEditing);
     copyModalButton.classList.toggle('hidden', isEditing);
-    
+    modalCloseBtn.classList.toggle('hidden', isEditing);
+
     const isNewMode = modalEl.dataset.mode === 'new';
     promptTitleInputEl.style.display = 'block';
 
     if (isEditing) {
         if (!isNewMode) {
-            promptFullTextEl.focus();
-            const textLength = promptFullTextEl.value.length;
-            promptFullTextEl.setSelectionRange(textLength, textLength);
+            promptTitleInputEl.focus();
         } else {
             promptTitleInputEl.focus();
         }
@@ -1089,7 +971,7 @@ function toggleEditModeInModal(isEditing) {
 
 function savePromptChanges() {
     const mode = modalEl.dataset.mode;
-    
+
     if (mode === 'new') {
         const title = promptTitleInputEl.value.trim();
         if (!title) {
@@ -1106,12 +988,12 @@ function savePromptChanges() {
         newPromptNode.setAttribute('image', '1');
 
         currentNode.appendChild(newPromptNode);
-        
+
         persistXmlData('Prompt hinzugefügt!', 'Hinzufügen fehlgeschlagen!');
         renderView(currentNode);
         closeModal();
 
-    } else { 
+    } else {
         const guid = modalEl.getAttribute('data-guid');
         if (!guid || !xmlData) return;
         const nodeToUpdate = findNodeByGuid(xmlData.documentElement, guid);
@@ -1125,11 +1007,10 @@ function savePromptChanges() {
     }
 }
 
-
 function persistXmlData(successMsg, errorMsg) {
     const serializer = new XMLSerializer();
     const xmlString = serializer.serializeToString(xmlData);
-    
+
     try {
         localStorage.setItem(localStorageKey, xmlString);
         showNotification(successMsg, 'success');
@@ -1142,7 +1023,6 @@ function persistXmlData(successMsg, errorMsg) {
         showNotification(errorMsg, 'error');
     }
 }
-
 
 function downloadCustomXml() {
     const xmlString = localStorage.getItem(localStorageKey);
@@ -1174,37 +1054,55 @@ function resetLocalStorage() {
     }
 }
 
-function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button')); }
-function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.getAttribute('beschreibung') || '', buttonElement); }
+function copyPromptText(buttonElement = null) {
+    copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button'));
+}
+function copyPromptTextForCard(node, buttonElement) {
+    copyToClipboard(node.getAttribute('beschreibung') || '', buttonElement);
+}
 
 function copyToClipboard(text, buttonElement = null) {
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text)
             .then(() => showNotification('Prompt kopiert!', 'success', buttonElement))
-            .catch(err => { console.error('Clipboard error:', err); showNotification('Fehler beim Kopieren', 'error', buttonElement); });
+            .catch(err => {
+                console.error('Clipboard error:', err);
+                showNotification('Fehler beim Kopieren', 'error', buttonElement);
+            });
     } else {
         const textArea = document.createElement('textarea');
         textArea.value = text;
-        textArea.style.position = 'fixed'; textArea.style.top = '-9999px'; textArea.style.left = '-9999px'; textArea.style.opacity = '0';
-        document.body.appendChild(textArea); textArea.focus(); textArea.select();
-        try { document.execCommand('copy'); showNotification('Prompt kopiert!', 'success', buttonElement); }
-        catch (err) { console.error('Fallback copy error:', err); showNotification('Fehler beim Kopieren', 'error', buttonElement); }
+        textArea.style.position = 'fixed';
+        textArea.style.top = '-9999px';
+        textArea.style.left = '-9999px';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showNotification('Prompt kopiert!', 'success', buttonElement);
+        } catch (err) {
+            console.error('Fallback copy error:', err);
+            showNotification('Fehler beim Kopieren', 'error', buttonElement);
+        }
         document.body.removeChild(textArea);
     }
 }
 
 let notificationTimeoutId = null;
+
 function showNotification(message, type = 'info', buttonElement = null) {
     if (notificationTimeoutId) {
         const existingNotification = notificationAreaEl.querySelector('.notification');
-        if(existingNotification) existingNotification.remove();
+        if (existingNotification) existingNotification.remove();
         clearTimeout(notificationTimeoutId);
     }
 
     const notificationEl = document.createElement('div');
     notificationEl.classList.add('notification');
     if (type) {
-      notificationEl.classList.add(type);
+        notificationEl.classList.add(type);
     }
 
     if (type === 'success' && svgTemplateCheckmark) {
