@@ -219,64 +219,63 @@ body.light-mode #app-logo-svg .icon-accent {
 
 
 .cards-container {
-  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  row-gap: 1.5rem;
+  column-gap: 1.8rem;
   padding: 1.8rem;
   padding-top: calc(6rem + var(--safe-area-inset-top));
   padding-bottom: calc(5rem + var(--safe-area-inset-bottom));
+  position: relative;
   min-height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
   perspective: 1800px;
+  will-change: transform;
 }
 
 .cards-container.swiping-right { transition-property: none; }
 
 .card {
-  display: none;
-  position: absolute;
-  width: calc(100% / var(--grid-columns, 4) - 1.8rem);
-  margin: 0;
-  z-index: 1;
   background: var(--bg-glass);
   border: 1px solid var(--border-color);
   border-radius: 12px;
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
   box-shadow: 0 5px 15px var(--shadow-color-light);
+  position: relative;
+  overflow: hidden;
+  transition-property: transform, box-shadow, border-color, background-color, opacity, height;
+  transition-duration: var(--transition-duration-medium);
+  transition-timing-function: var(--timing-function-ease-out);
+  backdrop-filter: blur(12px) saturate(110%);
+  -webkit-backdrop-filter: blur(12px) saturate(110%);
+  min-height: 190px;
+  max-height: 240px;
+  cursor: pointer;
+  will-change: transform, box-shadow, opacity;
+  width: auto;
+  max-width: 420px;
+  opacity: 0;
+  transform: translateY(35px) scale(0.93) translateZ(0);
+  transform-style: preserve-3d;
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
-  will-change: transform;
-}
-
-.muuri-item-releasing {
-    z-index: 2;
-}
-
-.muuri-item-dragging {
-    z-index: 3;
-    cursor: grabbing;
-}
-
-.muuri-item-hidden {
-    z-index: 0;
 }
 
 .card.is-visible {
-  display: block;
 }
 
-.card-content {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.card:hover:not(.muuri-item-dragging) {
-  transform: translateY(-8px) scale(1.03);
+.card:hover {
+  transform: perspective(1200px) rotateX(var(--rotateX, 0deg)) rotateY(var(--rotateY, 0deg)) translateY(-8px) scale(1.03) translateZ(0);
   box-shadow: 0 12px 25px var(--shadow-color-heavy);
   border-color: var(--accent);
   animation: glow 2s var(--timing-function-ease-out) infinite alternate;
   z-index: 10;
 }
-body.light-mode .card:hover:not(.muuri-item-dragging) {
+body.light-mode .card:hover {
     border-color: var(--accent-hover);
 }
 
@@ -286,12 +285,12 @@ body.light-mode .card:hover:not(.muuri-item-dragging) {
     border-color: var(--border-color);
 }
 
+
 .card-content-wrapper {
-  padding: 1.2rem;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  height: 190px;
+  flex-grow: 1;
+  overflow: hidden;
 }
 
 .card h3 {
@@ -450,6 +449,19 @@ body.light-mode .card:hover:not(.muuri-item-dragging) {
 .cards-container.edit-mode .card {
     animation: shake 0.3s ease-in-out infinite;
     cursor: grab;
+}
+
+.card.dragging {
+    opacity: 0.5;
+    transform: scale(1.05);
+    cursor: grabbing;
+    animation: none;
+    z-index: 100;
+}
+
+.card.drop-target {
+    background: var(--hover-bg);
+    transform: scale(1.02);
 }
 
 .card .delete-button {
@@ -752,12 +764,17 @@ body.light-mode .notification.error svg.icon {
 
 
 @media (max-width: 768px) {
-  .card {
-     width: calc(100% / var(--grid-columns, 3) - 1.2rem);
+  .cards-container {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    column-gap: 1.2rem;
+    padding-left: 1.2rem;
+    padding-right: 1.2rem;
   }
-   .card-content-wrapper {
-      height: 170px;
-    }
+  .card {
+     min-height: 170px;
+     max-height: 220px;
+     padding: 1rem;
+  }
    .card h3 {
       font-size: 1.05rem;
     }
@@ -765,8 +782,21 @@ body.light-mode .notification.error svg.icon {
 
 
 @media (max-width: 600px) {
+  .cards-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 1.2rem;
+    column-gap: 1.2rem;
+    padding-bottom: calc(5rem + var(--safe-area-inset-bottom));
+    padding-top: calc(6rem + var(--safe-area-inset-top));
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
   .card {
-    width: calc(100% / var(--grid-columns, 2) - 1.2rem);
+    width: 100%;
+    margin-bottom: 0;
+    max-width: none;
+    flex-shrink: 0;
   }
   .card h3 {
     font-size: 1rem;
@@ -793,10 +823,10 @@ body.light-mode .notification.error svg.icon {
 }
 
 @media (max-width: 480px) {
-    .card {
-      width: calc(100% / var(--grid-columns, 2) - 1rem);
+    .cards-container {
+      column-gap: 1rem;
     }
-    .card-content-wrapper {
+    .card {
       padding: 0.8rem;
     }
     .card h3 {
@@ -840,8 +870,12 @@ body.light-mode .notification.error svg.icon {
     @media (max-width: 360px) {
         #theme-toggle-button, #download-button, #reset-button { display: none; }
         #fullscreen-button { margin-left: auto; }
+        .cards-container {
+            grid-template-columns: 1fr;
+            row-gap: 1rem;
+        }
         .card {
-            width: calc(100% / var(--grid-columns, 1) - 1rem);
+            width: 100%;
         }
         .card h3 {
             font-size: 0.95rem;
