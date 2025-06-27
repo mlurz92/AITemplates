@@ -5,6 +5,7 @@ let currentNode = null;
 let pathStack = [];
 const currentXmlFile = "Templates.xml";
 const localStorageKey = 'customTemplatesXml';
+let sortableInstance = null;
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addPromptBtn;
@@ -23,7 +24,6 @@ const MAX_ROTATION = 6;
 let currentTransitionDurationMediumMs = 300;
 let longPressTimer = null;
 let isEditMode = false;
-let draggedElement = null;
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -191,73 +191,40 @@ function setupEventListeners() {
             toggleEditMode(false);
         }
     });
-
-    containerEl.addEventListener('dragover', handleDragOver);
-    containerEl.addEventListener('drop', handleDrop);
 }
 
-function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.card:not(.dragging)')];
-
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
-        } else {
-            return closest;
-        }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
-}
-
-
-function handleDragOver(e) {
-    e.preventDefault();
-    if (!isEditMode || !draggedElement) return;
-
-    const afterElement = getDragAfterElement(containerEl, e.clientY);
-    if (afterElement == null) {
-        containerEl.appendChild(draggedElement);
-    } else {
-        containerEl.insertBefore(draggedElement, afterElement);
+function initSortable() {
+    if (sortableInstance) {
+        sortableInstance.destroy();
     }
-}
-
-function handleDrop(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!isEditMode || !draggedElement) return;
-
-    const newGuidOrder = [...containerEl.querySelectorAll('.card')].map(card => card.getAttribute('data-guid'));
-    const parentNode = currentNode;
-    
-    const fragment = document.createDocumentFragment();
-    newGuidOrder.forEach(guid => {
-        const nodeToMove = findNodeByGuid(parentNode, guid);
-        if (nodeToMove) {
-            fragment.appendChild(nodeToMove.cloneNode(true));
+    sortableInstance = new Sortable(containerEl, {
+        animation: 150,
+        ghostClass: 'drop-target',
+        onEnd: (evt) => {
+            const newGuidOrder = [...containerEl.querySelectorAll('.card')].map(card => card.getAttribute('data-guid'));
+            const parentNode = currentNode;
+            
+            const relevantChildren = Array.from(parentNode.children).filter(c => c.tagName === 'TreeViewNode');
+            
+            newGuidOrder.forEach((guid, index) => {
+                const nodeToMove = findNodeByGuid(parentNode, guid);
+                if (nodeToMove && relevantChildren[index] !== nodeToMove) {
+                    const referenceNode = index + 1 < relevantChildren.length ? findNodeByGuid(parentNode, newGuidOrder[index + 1]) : null;
+                    parentNode.insertBefore(nodeToMove, referenceNode);
+                }
+            });
+            
+            persistXmlData('Reihenfolge gespeichert!', 'Speichern fehlgeschlagen!');
         }
     });
-    
-    while (parentNode.firstChild) {
-        if(parentNode.firstChild.nodeName === 'TreeViewNode') {
-            parentNode.removeChild(parentNode.firstChild);
-        } else {
-            break;
-        }
-    }
-    
-    const childrenOfFragment = Array.from(fragment.children);
-    childrenOfFragment.forEach(child => {
-         if (child.nodeName === 'TreeViewNode') {
-              parentNode.appendChild(child);
-         }
-    });
-
-    persistXmlData('Reihenfolge gespeichert!', 'Speichern fehlgeschlagen!');
 }
 
+function destroySortable() {
+    if (sortableInstance) {
+        sortableInstance.destroy();
+        sortableInstance = null;
+    }
+}
 
 function setupMobileSpecificFeatures() {
     document.body.classList.add('mobile');
@@ -390,17 +357,15 @@ function handleTouchStart(e) {
 
 function handleTouchMove(e) {
     clearTimeout(longPressTimer);
-    if (!touchStartX || modalEl.classList.contains('visible')) return;
+    if (!touchStartX || modalEl.classList.contains('visible') || isEditMode) return;
     touchEndX = e.touches[0].clientX;
     touchEndY = e.touches[0].clientY;
     let diffX = touchEndX - touchStartX;
 
     if (Math.abs(diffX) > Math.abs(touchEndY - touchStartY) && diffX > swipeFeedbackThreshold) {
-        if (!isEditMode) {
-            containerEl.classList.add('swiping-right');
-            let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.1);
-            containerEl.style.transform = `translateX(${moveX}px)`;
-        }
+        containerEl.classList.add('swiping-right');
+        let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.1);
+        containerEl.style.transform = `translateX(${moveX}px)`;
     } else {
         containerEl.classList.remove('swiping-right');
         containerEl.style.transform = '';
@@ -766,7 +731,6 @@ function renderView(xmlNode) {
     
     if (isEditMode) {
         containerEl.classList.add('edit-mode');
-        cardsToObserve.forEach(c => c.setAttribute('draggable', true));
     }
 
 
@@ -858,21 +822,6 @@ function addCardLongPressListener(card) {
     card.addEventListener('mousedown', startPress);
     card.addEventListener('mouseup', cancelPress);
     card.addEventListener('mouseleave', cancelPress);
-    card.addEventListener('dragstart', (e) => {
-        clearTimeout(longPressTimer);
-        if (!isEditMode) {
-            e.preventDefault();
-            return;
-        }
-        draggedElement = card;
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', card.getAttribute('data-guid'));
-        setTimeout(() => card.classList.add('dragging'), 0);
-    });
-    card.addEventListener('dragend', () => {
-        card.classList.remove('dragging');
-        draggedElement = null;
-    });
 }
 
 
@@ -1015,6 +964,7 @@ function openModal(node, calledFromPopstate = false) {
     if (node) {
         const guid = node.getAttribute('guid');
         modalEl.setAttribute('data-guid', guid);
+        promptTitleInputEl.value = node.getAttribute('value');
         promptFullTextEl.value = node.getAttribute('beschreibung') || '';
     }
 
@@ -1085,13 +1035,10 @@ function toggleEditMode(enable) {
     isEditMode = enable;
     containerEl.classList.toggle('edit-mode', enable);
 
-    const cards = containerEl.querySelectorAll('.card');
-    cards.forEach(card => {
-        card.setAttribute('draggable', enable);
-    });
-
-    if (!enable) {
-        draggedElement = null;
+    if (enable) {
+        initSortable();
+    } else {
+        destroySortable();
     }
     updateBreadcrumb();
 }
@@ -1106,7 +1053,9 @@ function toggleEditModeInModal(isEditing) {
     modalCloseBtn.classList.toggle('hidden', isEditing);
 
     const isNewMode = modalEl.dataset.mode === 'new';
-    promptTitleInputEl.style.display = isEditing && isNewMode ? 'block' : 'none';
+    promptTitleInputEl.style.display = 'block';
+    promptTitleInputEl.readOnly = !isEditing && !isNewMode;
+
 
     if (isEditing) {
         if (!isNewMode) {
@@ -1147,12 +1096,12 @@ function savePromptChanges() {
         if (!guid || !xmlData) return;
         const nodeToUpdate = findNodeByGuid(xmlData.documentElement, guid);
         if (nodeToUpdate) {
-            const newText = promptFullTextEl.value;
-            nodeToUpdate.setAttribute('beschreibung', newText);
+            nodeToUpdate.setAttribute('value', promptTitleInputEl.value.trim());
+            nodeToUpdate.setAttribute('beschreibung', promptFullTextEl.value);
             persistXmlData('Prompt gespeichert!', 'Speichern fehlgeschlagen!');
             renderView(currentNode);
         }
-        toggleEditModeInModal(false);
+        closeModal();
     }
 }
 
