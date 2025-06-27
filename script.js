@@ -5,7 +5,7 @@ let currentNode = null;
 let pathStack = [];
 const currentXmlFile = "Templates.xml";
 const localStorageKey = 'customTemplatesXml';
-let grid = null;
+let sortableInstance = null;
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addPromptBtn;
@@ -13,6 +13,12 @@ let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
 
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete;
+
+let cardObserver;
+
+let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
+const swipeThreshold = 50;
+const swipeFeedbackThreshold = 5;
 
 const MAX_ROTATION = 6;
 let currentTransitionDurationMediumMs = 300;
@@ -52,8 +58,10 @@ function initApp() {
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
     svgTemplateDelete = document.getElementById('svg-template-delete');
 
+
     updateDynamicDurations();
     setupTheme();
+    setupIntersectionObserver();
     setupEventListeners();
     checkFullscreenSupport();
 
@@ -99,7 +107,7 @@ function applyTheme(themeName) {
             const rootStyle = getComputedStyle(document.documentElement);
             const newThemeColor = rootStyle.getPropertyValue('--bg-base').trim();
             metaThemeColor.setAttribute("content", newThemeColor);
-        } catch (e) {
+        } catch(e) {
             metaThemeColor.setAttribute("content", themeName === 'dark' ? "#08080a" : "#f8f9fa");
         }
     }
@@ -111,6 +119,7 @@ function toggleTheme() {
     applyTheme(newTheme);
     localStorage.setItem('preferredTheme', newTheme);
 }
+
 
 function setupEventListeners() {
     topbarBackBtn.addEventListener('click', () => {
@@ -141,7 +150,7 @@ function setupEventListeners() {
                 updateBreadcrumb();
             }, 'backward');
             if (isMobile()) {
-                window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
+                 window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
             }
         }
     });
@@ -159,9 +168,9 @@ function setupEventListeners() {
     }
 
     modalCloseBtn.addEventListener('click', () => closeModal());
-
+    
     if (copyModalButton) {
-        copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
+      copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
     }
 
     modalEditBtn.addEventListener('click', () => toggleEditModeInModal(true));
@@ -184,32 +193,16 @@ function setupEventListeners() {
     });
 }
 
-function initOrDestroyGrid(shouldInit) {
-    if (grid) {
-        grid.destroy();
-        grid = null;
+function initSortable() {
+    if (sortableInstance) {
+        sortableInstance.destroy();
     }
-
-    if (shouldInit) {
-        grid = new Muuri('.cards-container', {
-            items: '.card',
-            dragEnabled: true,
-            layout: {
-                fillGaps: false,
-                horizontal: false,
-                alignRight: false,
-                alignBottom: false,
-                rounding: true
-            },
-            layoutOnResize: 50,
-            layoutOnInit: true,
-            sortData: {
-                guid: (item, element) => element.getAttribute('data-guid')
-            }
-        });
-
-        grid.on('dragEnd', () => {
-            const newGuidOrder = grid.getItems().map(item => item.getElement().getAttribute('data-guid'));
+    sortableInstance = new Sortable(containerEl, {
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        onEnd: (evt) => {
+            const newGuidOrder = sortableInstance.toArray();
             const parentNode = currentNode;
             const fragment = document.createDocumentFragment();
             
@@ -220,9 +213,25 @@ function initOrDestroyGrid(shouldInit) {
                 }
             });
 
+            while (parentNode.firstChild) {
+                if (parentNode.firstChild.nodeName === 'TreeViewNode') {
+                     parentNode.removeChild(parentNode.firstChild);
+                } else {
+                    break; 
+                }
+            }
+            
             parentNode.appendChild(fragment);
+            
             persistXmlData('Reihenfolge gespeichert!', 'Speichern fehlgeschlagen!');
-        });
+        }
+    });
+}
+
+function destroySortable() {
+    if (sortableInstance) {
+        sortableInstance.destroy();
+        sortableInstance = null;
     }
 }
 
@@ -311,7 +320,7 @@ function handleCardContainerClick(e) {
         }
         return;
     }
-
+    
     if (isEditMode) return;
 
     const button = e.target.closest('button[data-action]');
@@ -335,7 +344,7 @@ function handleCardContainerClick(e) {
             }
         }
     } else if (e.target === containerEl && pathStack.length > 0) {
-        navigateOneLevelUp();
+         navigateOneLevelUp();
     }
 }
 
@@ -349,14 +358,46 @@ function handleTouchStart(e) {
             }
         }, 500);
     }
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchEndX = touchStartX;
+    touchEndY = touchStartY;
 }
 
-function handleTouchMove() {
+function handleTouchMove(e) {
     clearTimeout(longPressTimer);
+    if (!touchStartX || modalEl.classList.contains('visible') || isEditMode) return;
+    touchEndX = e.touches[0].clientX;
+    touchEndY = e.touches[0].clientY;
+    let diffX = touchEndX - touchStartX;
+
+    if (Math.abs(diffX) > Math.abs(touchEndY - touchStartY) && diffX > swipeFeedbackThreshold) {
+        containerEl.classList.add('swiping-right');
+        let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.1);
+        containerEl.style.transform = `translateX(${moveX}px)`;
+    } else {
+        containerEl.classList.remove('swiping-right');
+        containerEl.style.transform = '';
+    }
 }
 
 function handleTouchEnd() {
     clearTimeout(longPressTimer);
+    if (!touchStartX || modalEl.classList.contains('visible')) return;
+    let diffX = touchEndX - touchStartX;
+    let diffY = touchEndY - touchStartY;
+
+    containerEl.classList.remove('swiping-right');
+    containerEl.style.transform = '';
+
+    if (Math.abs(diffX) > Math.abs(diffY) && diffX > swipeThreshold) {
+        if (isEditMode) {
+            toggleEditMode(false);
+        } else if (pathStack.length > 0) {
+            navigateHistory('backward');
+        }
+    }
+    touchStartX = 0; touchStartY = 0; touchEndX = 0; touchEndY = 0;
 }
 
 function navigateHistory(direction) {
@@ -387,13 +428,13 @@ function handlePopState(event) {
 
         if (nodeToOpen && nodeToOpen.getAttribute('beschreibung')) {
             pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
-            if (state.path.length > 0 && pathStack.length > 0 && pathStack[pathStack.length - 1].getAttribute('guid') === promptGuidForModal) {
-                pathStack.pop();
+            if (state.path.length > 0 && pathStack.length > 0 && pathStack[pathStack.length-1].getAttribute('guid') === promptGuidForModal) {
+                 pathStack.pop();
             }
-            currentNode = pathStack.length > 0 ? pathStack[pathStack.length - 1] : xmlData.documentElement;
+            currentNode = pathStack.length > 0 ? pathStack[pathStack.length-1] : xmlData.documentElement;
             openModal(nodeToOpen, true);
         } else {
-            handleNavigationFromState(state, direction);
+             handleNavigationFromState(state, direction);
         }
     } else {
         handleNavigationFromState(state, direction);
@@ -401,11 +442,11 @@ function handlePopState(event) {
 }
 
 function handleNavigationFromState(state, direction) {
-    const targetPathLength = state.path.length;
-    const updateDOM = () => {
+     const targetPathLength = state.path.length;
+     const updateDOM = () => {
         pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
-        if (pathStack.length !== targetPathLength && state.path.length > 0) {
-            pathStack = [];
+        if(pathStack.length !== targetPathLength && state.path.length > 0) {
+             pathStack = [];
         } else if (targetPathLength === 0) {
             pathStack = [];
         }
@@ -414,7 +455,7 @@ function handleNavigationFromState(state, direction) {
 
         renderView(currentNode);
         updateBreadcrumb();
-    };
+     };
     performViewTransition(updateDOM, direction);
 }
 
@@ -430,13 +471,34 @@ function performViewTransition(updateDomFunction, direction) {
     });
 }
 
+function setupIntersectionObserver() {
+    const options = { rootMargin: "0px", threshold: 0.05 };
+    cardObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                 gsap.to(entry.target, {
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                    duration: 0.6,
+                    ease: "expo.out",
+                    onComplete: function() {
+                        entry.target.classList.add('is-visible');
+                    }
+                });
+                observer.unobserve(entry.target);
+            }
+        });
+    }, options);
+}
+
 function checkFullscreenSupport() {
     const support = !!(document.documentElement.requestFullscreen || document.documentElement.mozRequestFullScreen || document.documentElement.webkitRequestFullscreen || document.documentElement.msRequestFullscreen);
     if (support && fullscreenBtn) {
         document.body.setAttribute('data-fullscreen-supported', 'true');
     } else {
         document.body.removeAttribute('data-fullscreen-supported');
-        if (fullscreenBtn) fullscreenBtn.remove();
+        if(fullscreenBtn) fullscreenBtn.remove();
     }
 }
 
@@ -461,7 +523,7 @@ function updateFullscreenButton() {
         fullscreenEnterIcon.classList.toggle('hidden', isFullscreen);
         fullscreenExitIcon.classList.toggle('hidden', !isFullscreen);
     }
-    if (fullscreenBtn) fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Vollbildmodus beenden' : 'Vollbildmodus aktivieren');
+    if(fullscreenBtn) fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Vollbildmodus beenden' : 'Vollbildmodus aktivieren');
 }
 
 function findNodeByGuid(startNode, targetGuid) {
@@ -469,9 +531,8 @@ function findNodeByGuid(startNode, targetGuid) {
     if (startNode.nodeType !== 1) return null;
     if (startNode.getAttribute('guid') === targetGuid) return startNode;
 
-    const children = startNode.children;
-    for (let i = 0; i < children.length; i++) {
-        const child = children[i];
+    for (let i = 0; i < startNode.children.length; i++) {
+        const child = startNode.children[i];
         if (child.tagName === 'TreeViewNode') {
             const found = findNodeByGuid(child, targetGuid);
             if (found) return found;
@@ -493,9 +554,8 @@ function deleteNodeByGuid(guid) {
 }
 
 function generateGuid() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        var r = Math.random() * 16 | 0,
-            v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
 }
@@ -520,7 +580,7 @@ function setupVivusAnimation(parentElement, svgId) {
     let isTouchStarted = false;
 
     const playAnimation = (immediate = false) => {
-        if (isEditMode) return;
+        if(isEditMode) return;
         clearTimeout(timeoutId);
         svgElement.style.opacity = immediate ? '1' : '0';
         const startVivus = () => {
@@ -577,7 +637,7 @@ function loadXmlDocument(filename) {
             localStorage.removeItem(localStorageKey);
         }
     }
-
+    
     downloadBtn.style.display = 'none';
     resetBtn.style.display = 'none';
     fetch(filename)
@@ -589,9 +649,9 @@ function loadXmlDocument(filename) {
             if (parserError.length > 0) {
                 let errorMessage = "XML Parse Error.";
                 if (parserError[0] && parserError[0].childNodes.length > 0 && parserError[0].childNodes[0].textContent) {
-                    errorMessage = parserError[0].childNodes[0].textContent.trim().split('\n')[0];
+                     errorMessage = parserError[0].childNodes[0].textContent.trim().split('\n')[0];
                 } else if (parserError[0] && parserError[0].textContent) {
-                    errorMessage = parserError[0].textContent.trim().split('\n')[0];
+                     errorMessage = parserError[0].textContent.trim().split('\n')[0];
                 }
                 throw new Error(errorMessage);
             }
@@ -600,6 +660,7 @@ function loadXmlDocument(filename) {
         .catch(error => {
             console.error(`Load/Parse Error for ${filename}:`, error);
             containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Fehler beim Laden der Vorlagen: ${error.message}</p>`;
+            gsap.to(containerEl, {opacity: 1, duration: 0.3});
         });
 }
 
@@ -609,14 +670,16 @@ function renderView(xmlNode) {
         grid = null;
     }
     containerEl.innerHTML = '';
+    
     if (!xmlNode) {
-        containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
-        return;
-    }
+         containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
+         gsap.to(containerEl, {opacity: 1, duration: 0.3});
+         return;
+     }
 
     const childNodes = Array.from(xmlNode.children).filter(node => node.tagName === 'TreeViewNode');
     const vivusSetups = [];
-
+    
     childNodes.forEach(node => {
         const card = document.createElement('div');
         card.classList.add('card');
@@ -628,14 +691,11 @@ function renderView(xmlNode) {
         }
         card.setAttribute('data-guid', nodeGuid);
 
-        const cardContent = document.createElement('div');
-        cardContent.className = 'card-content';
-        
-        const contentWrapper = document.createElement('div');
-        contentWrapper.classList.add('card-content-wrapper');
-        
         const titleElem = document.createElement('h3');
         titleElem.textContent = node.getAttribute('value') || 'Unbenannt';
+
+        const contentWrapper = document.createElement('div');
+        contentWrapper.classList.add('card-content-wrapper');
         contentWrapper.appendChild(titleElem);
 
         const deleteBtn = document.createElement('button');
@@ -644,11 +704,10 @@ function renderView(xmlNode) {
         if (svgTemplateDelete) {
             deleteBtn.appendChild(svgTemplateDelete.cloneNode(true));
         }
-        cardContent.appendChild(deleteBtn);
+        card.appendChild(deleteBtn);
 
         if (isFolder) {
-            card.classList.add('folder-card');
-            card.setAttribute('data-type', 'folder');
+            card.classList.add('folder-card'); card.setAttribute('data-type', 'folder');
             if (svgTemplateFolder) {
                 const folderIconSvg = svgTemplateFolder.cloneNode(true);
                 const folderIconId = `icon-folder-${nodeGuid}`;
@@ -659,44 +718,27 @@ function renderView(xmlNode) {
         } else {
             card.setAttribute('data-type', 'prompt');
             card.classList.add('prompt-card');
-            const btnContainer = document.createElement('div');
-            btnContainer.classList.add('card-buttons');
+            const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
             if (svgTemplateExpand) {
-                const expandBtn = document.createElement('button');
-                expandBtn.classList.add('button');
-                expandBtn.setAttribute('aria-label', 'Details anzeigen');
-                expandBtn.setAttribute('data-action', 'expand');
-                expandBtn.appendChild(svgTemplateExpand.cloneNode(true));
-                btnContainer.appendChild(expandBtn);
+                const expandBtn = document.createElement('button'); expandBtn.classList.add('button'); expandBtn.setAttribute('aria-label', 'Details anzeigen'); expandBtn.setAttribute('data-action', 'expand'); expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); btnContainer.appendChild(expandBtn);
             }
             if (svgTemplateCopy) {
-                const copyBtn = document.createElement('button');
-                copyBtn.classList.add('button');
-                copyBtn.setAttribute('aria-label', 'Prompt kopieren');
-                copyBtn.setAttribute('data-action', 'copy');
-                copyBtn.appendChild(svgTemplateCopy.cloneNode(true));
-                btnContainer.appendChild(copyBtn);
+                const copyBtn = document.createElement('button'); copyBtn.classList.add('button'); copyBtn.setAttribute('aria-label', 'Prompt kopieren'); copyBtn.setAttribute('data-action', 'copy'); copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); btnContainer.appendChild(copyBtn);
             }
             contentWrapper.appendChild(btnContainer);
         }
-        cardContent.appendChild(contentWrapper);
-        card.appendChild(cardContent);
+        card.appendChild(contentWrapper);
         containerEl.appendChild(card);
         
         addCardLongPressListener(card);
+        cardObserver.observe(card);
     });
     
-    setTimeout(() => {
-        initOrDestroyGrid(isEditMode);
-        if (grid) {
-            grid.refreshItems().layout();
-        }
-        vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
-    }, 0);
+    vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
 
-
-    if (childNodes.length === 0 && containerEl.innerHTML === '') {
+    if (childNodes.length === 0) {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
+        gsap.to(containerEl.firstChild, {opacity: 1, duration: 0.5});
     }
 }
 
@@ -705,9 +747,9 @@ function addCardLongPressListener(card) {
         if ((e.type === 'mousedown' && e.button !== 0)) return;
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
-            if (!isEditMode && !modalEl.classList.contains('visible')) {
-                toggleEditMode(true);
-            }
+             if (!isEditMode && !modalEl.classList.contains('visible')) {
+                 toggleEditMode(true);
+             }
         }, 500);
     };
     const cancelPress = () => clearTimeout(longPressTimer);
@@ -732,12 +774,12 @@ function navigateToNode(node) {
     }, 'forward');
 
     if (isMobile() && !modalEl.classList.contains('visible')) {
-        let historyPath = pathStack.map(n => n.getAttribute('guid'));
-        if (currentNode && currentNode !== xmlData.documentElement) {
-            historyPath.push(currentNode.getAttribute('guid'));
-        }
-        window.history.pushState({ path: historyPath, modalOpen: false }, '', window.location.href);
-    }
+         let historyPath = pathStack.map(n => n.getAttribute('guid'));
+         if (currentNode && currentNode !== xmlData.documentElement) {
+             historyPath.push(currentNode.getAttribute('guid'));
+         }
+         window.history.pushState({ path: historyPath, modalOpen: false }, '', window.location.href);
+     }
 }
 
 function updateBreadcrumb() {
@@ -752,7 +794,7 @@ function updateBreadcrumb() {
         allActive.forEach(el => {
             el.classList.remove('current-level-active');
             if (el === homeLink && !homeLink.classList.contains('breadcrumb-link')) {
-                homeLink.classList.add('breadcrumb-link');
+                 homeLink.classList.add('breadcrumb-link');
             }
         });
     };
@@ -773,10 +815,8 @@ function updateBreadcrumb() {
             if (isEditMode) toggleEditMode(false);
             if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
             performViewTransition(() => {
-                currentNode = xmlData.documentElement;
-                pathStack = [];
-                renderView(currentNode);
-                updateBreadcrumb();
+                currentNode = xmlData.documentElement; pathStack = [];
+                renderView(currentNode); updateBreadcrumb();
             }, 'backward');
             if (isMobile()) window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
         });
@@ -805,8 +845,7 @@ function updateBreadcrumb() {
                         performViewTransition(() => {
                             pathStack = pathStack.slice(0, index + 1);
                             currentNode = nodeInPath;
-                            renderView(currentNode);
-                            updateBreadcrumb();
+                            renderView(currentNode); updateBreadcrumb();
                         }, 'backward');
                         if (isMobile()) window.history.pushState({ path: pathStack.map(n => n.getAttribute('guid')), modalOpen: false }, '', window.location.href);
                     });
@@ -820,27 +859,27 @@ function updateBreadcrumb() {
 
         if (!isAtHome && currentNode !== parentOfCurrentNode && currentNode !== xmlData.documentElement) {
             clearAllActiveBreadcrumbs();
-            if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement)) {
+            if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement )) {
                 const separator = document.createElement('span');
                 separator.textContent = ' > ';
                 breadcrumbEl.appendChild(separator);
             }
-            const currentSpan = document.createElement('span');
-            currentSpan.textContent = currentNode.getAttribute('value');
-            currentSpan.classList.add('current-level-active');
-            breadcrumbEl.appendChild(currentSpan);
+             const currentSpan = document.createElement('span');
+             currentSpan.textContent = currentNode.getAttribute('value');
+             currentSpan.classList.add('current-level-active');
+             breadcrumbEl.appendChild(currentSpan);
         }
     }
-
+    
     addPromptBtn.style.display = (isEditMode || (currentNode !== xmlData.documentElement && !Array.from(currentNode.children).some(child => child.tagName === 'TreeViewNode'))) ? 'none' : 'flex';
 
     const isModalVisible = modalEl.classList.contains('visible');
     const isTrulyAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
-
+    
     const showFixedBack = !isTrulyAtHome || isModalVisible || isEditMode;
     fixedBackBtn.classList.toggle('hidden', !showFixedBack);
 
-    if (mobileBackBtn) {
+    if(mobileBackBtn) {
         const showMobileBack = !isTrulyAtHome || isModalVisible || isEditMode;
         mobileBackBtn.classList.toggle('hidden', !showMobileBack);
     }
@@ -855,6 +894,7 @@ function adjustTextareaHeight(element) {
 
 function openNewPromptModal() {
     modalEl.dataset.mode = 'new';
+    
     promptTitleInputEl.value = '';
     promptFullTextEl.value = '';
     promptTitleInputEl.style.display = 'block';
@@ -880,9 +920,9 @@ function openModal(node, calledFromPopstate = false) {
 
     modalEl.classList.remove('hidden');
     requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+         requestAnimationFrame(() => {
             modalEl.classList.add('visible');
-        });
+         });
     });
 
     if (isMobile() && !calledFromPopstate && node) {
@@ -955,13 +995,13 @@ function toggleEditModeInModal(isEditing) {
     modalSaveBtn.classList.toggle('hidden', !isEditing);
     copyModalButton.classList.toggle('hidden', isEditing);
     modalCloseBtn.classList.toggle('hidden', isEditing);
-
+    
     const isNewMode = modalEl.dataset.mode === 'new';
     promptTitleInputEl.style.display = 'block';
 
     if (isEditing) {
         if (!isNewMode) {
-            promptTitleInputEl.focus();
+             promptTitleInputEl.focus();
         } else {
             promptTitleInputEl.focus();
         }
@@ -971,7 +1011,7 @@ function toggleEditModeInModal(isEditing) {
 
 function savePromptChanges() {
     const mode = modalEl.dataset.mode;
-
+    
     if (mode === 'new') {
         const title = promptTitleInputEl.value.trim();
         if (!title) {
@@ -988,12 +1028,12 @@ function savePromptChanges() {
         newPromptNode.setAttribute('image', '1');
 
         currentNode.appendChild(newPromptNode);
-
+        
         persistXmlData('Prompt hinzugefügt!', 'Hinzufügen fehlgeschlagen!');
         renderView(currentNode);
         closeModal();
 
-    } else {
+    } else { 
         const guid = modalEl.getAttribute('data-guid');
         if (!guid || !xmlData) return;
         const nodeToUpdate = findNodeByGuid(xmlData.documentElement, guid);
@@ -1010,7 +1050,7 @@ function savePromptChanges() {
 function persistXmlData(successMsg, errorMsg) {
     const serializer = new XMLSerializer();
     const xmlString = serializer.serializeToString(xmlData);
-
+    
     try {
         localStorage.setItem(localStorageKey, xmlString);
         showNotification(successMsg, 'success');
