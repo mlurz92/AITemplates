@@ -202,6 +202,7 @@ function handleDragOver(e) {
     if (!isEditMode || !draggedElement) return;
 
     const target = e.target.closest('.card');
+    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
     if (target && target !== draggedElement) {
         target.classList.add('drop-target');
     }
@@ -232,17 +233,16 @@ function handleDrop(e) {
     if (!draggedNode) return;
     
     const parentNode = draggedNode.parentNode;
-    parentNode.removeChild(draggedNode);
 
     if (targetGuid) {
         const targetNode = findNodeByGuid(xmlData.documentElement, targetGuid);
-        if(targetNode) {
+        if(targetNode && targetNode.parentNode === parentNode) {
             targetNode.parentNode.insertBefore(draggedNode, targetNode);
         } else {
-             currentNode.appendChild(draggedNode);
+             parentNode.appendChild(draggedNode);
         }
     } else {
-        currentNode.appendChild(draggedNode);
+        parentNode.appendChild(draggedNode);
     }
     
     persistXmlData('Reihenfolge gespeichert!', 'Speichern fehlgeschlagen!');
@@ -266,6 +266,7 @@ function setupMobileSpecificFeatures() {
             const isCurrentlyAtHome = (currentNode === xmlData.documentElement && pathStack.length === 0);
 
             if (!isCurrentlyAtHome || modalWasVisible) {
+                if (isEditMode) toggleEditMode(false);
                 performViewTransition(() => {
                     currentNode = xmlData.documentElement;
                     pathStack = [];
@@ -365,6 +366,7 @@ function handleCardContainerClick(e) {
 function handleTouchStart(e) {
     const card = e.target.closest('.card');
     if (card) {
+        clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
             if (!isEditMode && !modalEl.classList.contains('visible')) {
                 toggleEditMode(true);
@@ -385,9 +387,11 @@ function handleTouchMove(e) {
     let diffX = touchEndX - touchStartX;
 
     if (Math.abs(diffX) > Math.abs(touchEndY - touchStartY) && diffX > swipeFeedbackThreshold) {
-        containerEl.classList.add('swiping-right');
-        let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.1);
-        containerEl.style.transform = `translateX(${moveX}px)`;
+        if (!isEditMode) {
+            containerEl.classList.add('swiping-right');
+            let moveX = Math.min(diffX - swipeFeedbackThreshold, window.innerWidth * 0.1);
+            containerEl.style.transform = `translateX(${moveX}px)`;
+        }
     } else {
         containerEl.classList.remove('swiping-right');
         containerEl.style.transform = '';
@@ -750,6 +754,12 @@ function renderView(xmlNode) {
         addCard3DHoverEffect(card);
         addCardLongPressListener(card);
     });
+    
+    if (isEditMode) {
+        containerEl.classList.add('edit-mode');
+        cardsToObserve.forEach(c => c.setAttribute('draggable', true));
+    }
+
 
     vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
     if (cardsToObserve.length > 0) {
