@@ -193,25 +193,33 @@ function setupEventListeners() {
     });
 
     containerEl.addEventListener('dragover', handleDragOver);
-    containerEl.addEventListener('dragleave', handleDragLeave);
     containerEl.addEventListener('drop', handleDrop);
 }
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.card:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
 
 function handleDragOver(e) {
     e.preventDefault();
     if (!isEditMode || !draggedElement) return;
 
-    const target = e.target.closest('.card');
-    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-    if (target && target !== draggedElement) {
-        target.classList.add('drop-target');
-    }
-}
-
-function handleDragLeave(e) {
-    const target = e.target.closest('.card');
-    if (target) {
-        target.classList.remove('drop-target');
+    const afterElement = getDragAfterElement(containerEl, e.clientY);
+    if (afterElement == null) {
+        containerEl.appendChild(draggedElement);
+    } else {
+        containerEl.insertBefore(draggedElement, afterElement);
     }
 }
 
@@ -221,32 +229,33 @@ function handleDrop(e) {
 
     if (!isEditMode || !draggedElement) return;
 
-    const targetCard = e.target.closest('.card');
-    const draggedGuid = draggedElement.getAttribute('data-guid');
-    const targetGuid = targetCard ? targetCard.getAttribute('data-guid') : null;
-
-    if (draggedGuid === targetGuid) return;
+    const newGuidOrder = [...containerEl.querySelectorAll('.card')].map(card => card.getAttribute('data-guid'));
+    const parentNode = currentNode;
     
-    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-
-    const draggedNode = findNodeByGuid(xmlData.documentElement, draggedGuid);
-    if (!draggedNode) return;
-    
-    const parentNode = draggedNode.parentNode;
-
-    if (targetGuid) {
-        const targetNode = findNodeByGuid(xmlData.documentElement, targetGuid);
-        if(targetNode && targetNode.parentNode === parentNode) {
-            targetNode.parentNode.insertBefore(draggedNode, targetNode);
-        } else {
-             parentNode.appendChild(draggedNode);
+    const fragment = document.createDocumentFragment();
+    newGuidOrder.forEach(guid => {
+        const nodeToMove = findNodeByGuid(parentNode, guid);
+        if (nodeToMove) {
+            fragment.appendChild(nodeToMove.cloneNode(true));
         }
-    } else {
-        parentNode.appendChild(draggedNode);
+    });
+    
+    while (parentNode.firstChild) {
+        if(parentNode.firstChild.nodeName === 'TreeViewNode') {
+            parentNode.removeChild(parentNode.firstChild);
+        } else {
+            break;
+        }
     }
     
+    const childrenOfFragment = Array.from(fragment.children);
+    childrenOfFragment.forEach(child => {
+         if (child.nodeName === 'TreeViewNode') {
+              parentNode.appendChild(child);
+         }
+    });
+
     persistXmlData('Reihenfolge gespeichert!', 'Speichern fehlgeschlagen!');
-    renderView(currentNode);
 }
 
 
