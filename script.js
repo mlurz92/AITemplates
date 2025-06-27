@@ -199,20 +199,21 @@ function initSortable() {
     }
     sortableInstance = new Sortable(containerEl, {
         animation: 150,
-        ghostClass: 'drop-target',
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
         onEnd: (evt) => {
-            const newGuidOrder = [...containerEl.querySelectorAll('.card')].map(card => card.getAttribute('data-guid'));
+            const newGuidOrder = [...evt.to.children].map(card => card.getAttribute('data-guid'));
             const parentNode = currentNode;
-            
-            const relevantChildren = Array.from(parentNode.children).filter(c => c.tagName === 'TreeViewNode');
-            
-            newGuidOrder.forEach((guid, index) => {
+
+            const fragment = document.createDocumentFragment();
+            newGuidOrder.forEach(guid => {
                 const nodeToMove = findNodeByGuid(parentNode, guid);
-                if (nodeToMove && relevantChildren[index] !== nodeToMove) {
-                    const referenceNode = index + 1 < relevantChildren.length ? findNodeByGuid(parentNode, newGuidOrder[index + 1]) : null;
-                    parentNode.insertBefore(nodeToMove, referenceNode);
+                if (nodeToMove) {
+                    fragment.appendChild(nodeToMove);
                 }
             });
+            
+            parentNode.append(fragment);
             
             persistXmlData('Reihenfolge gespeichert!', 'Speichern fehlgeschlagen!');
         }
@@ -731,6 +732,7 @@ function renderView(xmlNode) {
     
     if (isEditMode) {
         containerEl.classList.add('edit-mode');
+        initSortable();
     }
 
 
@@ -809,10 +811,10 @@ function addCard3DHoverEffect(card) {
 
 function addCardLongPressListener(card) {
     const startPress = (e) => {
-        if ((e.type === 'mousedown' && e.button !== 0) || isEditMode) return;
+        if ((e.type === 'mousedown' && e.button !== 0)) return;
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
-             if (!modalEl.classList.contains('visible')) {
+             if (!isEditMode && !modalEl.classList.contains('visible')) {
                  toggleEditMode(true);
              }
         }, 500);
@@ -822,10 +824,14 @@ function addCardLongPressListener(card) {
     card.addEventListener('mousedown', startPress);
     card.addEventListener('mouseup', cancelPress);
     card.addEventListener('mouseleave', cancelPress);
+    card.addEventListener('touchstart', startPress, { passive: true });
+    card.addEventListener('touchend', cancelPress);
+    card.addEventListener('touchcancel', cancelPress);
 }
 
 
 function navigateToNode(node) {
+    if (isEditMode) return;
     performViewTransition(() => {
         if (currentNode !== node) {
             pathStack.push(currentNode);
@@ -849,7 +855,7 @@ function updateBreadcrumb() {
     if (!xmlData || !xmlData.documentElement) return;
 
     const homeLink = document.createElement('span');
-    homeLink.textContent = 'Home';
+    homeLink.textContent = isEditMode ? 'Bearbeitung beenden' : 'Home';
 
     const clearAllActiveBreadcrumbs = () => {
         const allActive = breadcrumbEl.querySelectorAll('.current-level-active');
@@ -864,8 +870,13 @@ function updateBreadcrumb() {
     clearAllActiveBreadcrumbs();
 
     if (pathStack.length === 0 && currentNode === xmlData.documentElement) {
-        homeLink.classList.add('current-level-active');
-        homeLink.classList.remove('breadcrumb-link');
+        if (!isEditMode) {
+            homeLink.classList.add('current-level-active');
+            homeLink.classList.remove('breadcrumb-link');
+        } else {
+            homeLink.classList.add('breadcrumb-link');
+            homeLink.addEventListener('click', () => toggleEditMode(false));
+        }
     } else {
         homeLink.classList.add('breadcrumb-link');
         homeLink.addEventListener('click', () => {
@@ -880,53 +891,55 @@ function updateBreadcrumb() {
     }
     breadcrumbEl.appendChild(homeLink);
 
-    pathStack.forEach((nodeInPath, index) => {
-        const nodeValue = nodeInPath.getAttribute('value');
-        if (nodeValue) {
-            const separator = document.createElement('span');
-            separator.textContent = ' > ';
-            breadcrumbEl.appendChild(separator);
+    if (!isEditMode) {
+        pathStack.forEach((nodeInPath, index) => {
+            const nodeValue = nodeInPath.getAttribute('value');
+            if (nodeValue) {
+                const separator = document.createElement('span');
+                separator.textContent = ' > ';
+                breadcrumbEl.appendChild(separator);
 
-            const link = document.createElement('span');
-            link.textContent = nodeValue;
+                const link = document.createElement('span');
+                link.textContent = nodeValue;
 
-            if (nodeInPath === currentNode) {
-                clearAllActiveBreadcrumbs();
-                link.classList.add('current-level-active');
-            } else {
-                link.classList.add('breadcrumb-link');
-                link.addEventListener('click', () => {
-                    if (isEditMode) toggleEditMode(false);
-                    if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
-                    performViewTransition(() => {
-                        pathStack = pathStack.slice(0, index + 1);
-                        currentNode = nodeInPath;
-                        renderView(currentNode); updateBreadcrumb();
-                    }, 'backward');
-                    if (isMobile()) window.history.pushState({ path: pathStack.map(n => n.getAttribute('guid')), modalOpen: false }, '', window.location.href);
-                });
+                if (nodeInPath === currentNode) {
+                    clearAllActiveBreadcrumbs();
+                    link.classList.add('current-level-active');
+                } else {
+                    link.classList.add('breadcrumb-link');
+                    link.addEventListener('click', () => {
+                        if (isEditMode) toggleEditMode(false);
+                        if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
+                        performViewTransition(() => {
+                            pathStack = pathStack.slice(0, index + 1);
+                            currentNode = nodeInPath;
+                            renderView(currentNode); updateBreadcrumb();
+                        }, 'backward');
+                        if (isMobile()) window.history.pushState({ path: pathStack.map(n => n.getAttribute('guid')), modalOpen: false }, '', window.location.href);
+                    });
+                }
+                breadcrumbEl.appendChild(link);
             }
-            breadcrumbEl.appendChild(link);
-        }
-    });
+        });
 
-    const isAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
-    const parentOfCurrentNode = pathStack.length > 0 ? pathStack[pathStack.length - 1] : null;
+        const isAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
+        const parentOfCurrentNode = pathStack.length > 0 ? pathStack[pathStack.length - 1] : null;
 
-    if (!isAtHome && currentNode !== parentOfCurrentNode && currentNode !== xmlData.documentElement) {
-        clearAllActiveBreadcrumbs();
-        if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement )) {
-            const separator = document.createElement('span');
-            separator.textContent = ' > ';
-            breadcrumbEl.appendChild(separator);
+        if (!isAtHome && currentNode !== parentOfCurrentNode && currentNode !== xmlData.documentElement) {
+            clearAllActiveBreadcrumbs();
+            if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement )) {
+                const separator = document.createElement('span');
+                separator.textContent = ' > ';
+                breadcrumbEl.appendChild(separator);
+            }
+             const currentSpan = document.createElement('span');
+             currentSpan.textContent = currentNode.getAttribute('value');
+             currentSpan.classList.add('current-level-active');
+             breadcrumbEl.appendChild(currentSpan);
         }
-         const currentSpan = document.createElement('span');
-         currentSpan.textContent = currentNode.getAttribute('value');
-         currentSpan.classList.add('current-level-active');
-         breadcrumbEl.appendChild(currentSpan);
     }
     
-    addPromptBtn.style.display = (currentNode === xmlData.documentElement || Array.from(currentNode.children).some(child => child.tagName === 'TreeViewNode')) ? 'flex' : 'none';
+    addPromptBtn.style.display = (isEditMode || (currentNode !== xmlData.documentElement && !Array.from(currentNode.children).some(child => child.tagName === 'TreeViewNode'))) ? 'none' : 'flex';
 
     const isModalVisible = modalEl.classList.contains('visible');
     const isTrulyAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
@@ -966,7 +979,11 @@ function openModal(node, calledFromPopstate = false) {
         modalEl.setAttribute('data-guid', guid);
         promptTitleInputEl.value = node.getAttribute('value');
         promptFullTextEl.value = node.getAttribute('beschreibung') || '';
+    } else {
+        promptTitleInputEl.value = '';
+        promptFullTextEl.value = '';
     }
+    toggleEditModeInModal(false);
 
     requestAnimationFrame(() => adjustTextareaHeight(promptFullTextEl));
 
@@ -1047,21 +1064,24 @@ function toggleEditMode(enable) {
 function toggleEditModeInModal(isEditing) {
     promptFullTextEl.classList.toggle('is-editing', isEditing);
     promptFullTextEl.readOnly = !isEditing;
+    
+    promptTitleInputEl.classList.toggle('is-editing', isEditing);
+    promptTitleInputEl.readOnly = !isEditing;
+
     modalEditBtn.classList.toggle('hidden', isEditing);
     modalSaveBtn.classList.toggle('hidden', !isEditing);
     copyModalButton.classList.toggle('hidden', isEditing);
-    modalCloseBtn.classList.toggle('hidden', isEditing);
-
+    
     const isNewMode = modalEl.dataset.mode === 'new';
     promptTitleInputEl.style.display = 'block';
-    promptTitleInputEl.readOnly = !isEditing && !isNewMode;
-
 
     if (isEditing) {
         if (!isNewMode) {
             promptFullTextEl.focus();
             const textLength = promptFullTextEl.value.length;
             promptFullTextEl.setSelectionRange(textLength, textLength);
+        } else {
+            promptTitleInputEl.focus();
         }
     }
     adjustTextareaHeight(promptFullTextEl);
