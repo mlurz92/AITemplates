@@ -7,13 +7,15 @@ const currentXmlFile = "Templates.xml";
 const localStorageKey = 'customTemplatesXml';
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addPromptBtn;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addPromptBtn, editModeDoneBtn;
 let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
 
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark;
 
 let cardObserver;
+let sortableInstance = null;
+let isEditMode = false;
 
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 const swipeThreshold = 50;
@@ -21,6 +23,9 @@ const swipeFeedbackThreshold = 5;
 
 const MAX_ROTATION = 6;
 let currentTransitionDurationMediumMs = 300;
+let longPressTimer = null;
+const longPressDuration = 700;
+
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -37,6 +42,7 @@ function initApp() {
     downloadBtn = document.getElementById('download-button');
     resetBtn = document.getElementById('reset-button');
     addPromptBtn = document.getElementById('add-prompt-button');
+    editModeDoneBtn = document.getElementById('edit-mode-done-button');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
@@ -120,12 +126,20 @@ function setupEventListeners() {
     topbarBackBtn.addEventListener('click', () => {
         if (modalEl.classList.contains('visible')) {
             closeModal({ fromBackdrop: true });
+        } else if (isEditMode) {
+            toggleEditMode(false);
         } else if (pathStack.length > 0) {
             navigateOneLevelUp();
         }
     });
 
+    editModeDoneBtn.addEventListener('click', () => toggleEditMode(false));
+
     fixedBackBtn.addEventListener('click', () => {
+        if (isEditMode) {
+            toggleEditMode(false);
+            return;
+        }
         if (modalEl.classList.contains('visible')) {
             closeModal();
         }
@@ -172,6 +186,13 @@ function setupEventListeners() {
 
     containerEl.addEventListener('click', handleCardContainerClick);
     promptFullTextEl.addEventListener('input', () => adjustTextareaHeight(promptFullTextEl));
+
+    containerEl.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if(!isEditMode) {
+            toggleEditMode(true);
+        }
+    });
 }
 
 function setupMobileSpecificFeatures() {
@@ -182,6 +203,10 @@ function setupMobileSpecificFeatures() {
 
     if (mobileHomeBtn) {
         mobileHomeBtn.addEventListener('click', () => {
+            if (isEditMode) {
+                toggleEditMode(false);
+                return;
+            }
             const modalWasVisible = modalEl.classList.contains('visible');
             if (modalWasVisible) {
                 closeModal({ fromBackdrop: true });
@@ -204,6 +229,10 @@ function setupMobileSpecificFeatures() {
 
     if (mobileBackBtn) {
         mobileBackBtn.addEventListener('click', () => {
+             if (isEditMode) {
+                toggleEditMode(false);
+                return;
+            }
             if (modalEl.classList.contains('visible')) {
                 closeModal({ fromBackdrop: true });
             } else if (pathStack.length > 0) {
@@ -239,37 +268,61 @@ function navigateOneLevelUp() {
 }
 
 function handleCardContainerClick(e) {
+    const card = e.target.closest('.card');
+    if (!card) {
+        if (pathStack.length > 0 && !isEditMode) {
+            navigateOneLevelUp();
+        }
+        return;
+    }
+    
+    if (isEditMode) {
+        const deleteButton = e.target.closest('.delete-button');
+        if(deleteButton) {
+            e.stopPropagation();
+            handleDeleteCard(card);
+        }
+        return;
+    }
+    
     if (modalEl.classList.contains('visible') || e.target.closest('.modal-content')) {
         return;
     }
 
-    const card = e.target.closest('.card');
     const button = e.target.closest('button[data-action]');
-
-    if (card) {
-        const guid = card.getAttribute('data-guid');
-        const node = findNodeByGuid(xmlData.documentElement, guid);
-        if (!node) return;
-        const cardType = card.getAttribute('data-type');
-
-        if (button) {
-            e.stopPropagation();
-            const action = button.getAttribute('data-action');
-            if (action === 'expand') openModal(node);
-            else if (action === 'copy') copyPromptTextForCard(node, e.target.closest('button'));
-        } else {
-            if (cardType === 'folder') {
-                navigateToNode(node);
-            } else if (cardType === 'prompt') {
-                openModal(node);
-            }
+    const guid = card.getAttribute('data-guid');
+    const node = findNodeByGuid(xmlData.documentElement, guid);
+    if (!node) return;
+    
+    const cardType = card.getAttribute('data-type');
+    
+    if (button) {
+        e.stopPropagation();
+        const action = button.getAttribute('data-action');
+        if (action === 'expand') openModal(node);
+        else if (action === 'copy') copyPromptTextForCard(node, e.target.closest('button'));
+    } else {
+        if (cardType === 'folder') {
+            navigateToNode(node);
+        } else if (cardType === 'prompt') {
+            openModal(node);
         }
-    } else if (e.target === containerEl && pathStack.length > 0) {
-         navigateOneLevelUp();
     }
 }
 
 function handleTouchStart(e) {
+    const targetIsCard = e.target.closest('.card');
+
+    if (longPressTimer) clearTimeout(longPressTimer);
+    if(targetIsCard) {
+        longPressTimer = setTimeout(() => {
+            if (!isEditMode && !modalEl.classList.contains('visible')) {
+                toggleEditMode(true);
+            }
+            longPressTimer = null;
+        }, longPressDuration);
+    }
+
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     touchEndX = touchStartX;
@@ -277,7 +330,11 @@ function handleTouchStart(e) {
 }
 
 function handleTouchMove(e) {
-    if (!touchStartX || modalEl.classList.contains('visible')) return;
+    if (longPressTimer) clearTimeout(longPressTimer);
+    longPressTimer = null;
+
+    if (!touchStartX || modalEl.classList.contains('visible') || isEditMode) return;
+
     touchEndX = e.touches[0].clientX;
     touchEndY = e.touches[0].clientY;
     let diffX = touchEndX - touchStartX;
@@ -293,7 +350,10 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd() {
-    if (!touchStartX || modalEl.classList.contains('visible')) return;
+    if (longPressTimer) clearTimeout(longPressTimer);
+    longPressTimer = null;
+
+    if (!touchStartX || modalEl.classList.contains('visible') || isEditMode) return;
     let diffX = touchEndX - touchStartX;
     let diffY = touchEndY - touchStartY;
 
@@ -499,10 +559,10 @@ function setupVivusAnimation(parentElement, svgId) {
         svgElement.style.opacity = '1';
     };
 
-    parentElement.addEventListener('mouseenter', () => { if (!isTouchStarted) playAnimation(false); });
-    parentElement.addEventListener('mouseleave', () => { if (!isTouchStarted) finishAnimation(); });
-    parentElement.addEventListener('touchstart', () => { isTouchStarted = true; playAnimation(true); }, { passive: true });
-    const touchEndHandler = () => { if (isTouchStarted) { isTouchStarted = false; finishAnimation(); } };
+    parentElement.addEventListener('mouseenter', () => { if (!isTouchStarted && !isEditMode) playAnimation(false); });
+    parentElement.addEventListener('mouseleave', () => { if (!isTouchStarted && !isEditMode) finishAnimation(); });
+    parentElement.addEventListener('touchstart', () => { isTouchStarted = true; if (!isEditMode) playAnimation(true); }, { passive: true });
+    const touchEndHandler = () => { if (isTouchStarted && !isEditMode) { isTouchStarted = false; finishAnimation(); } };
     parentElement.addEventListener('touchend', touchEndHandler);
     parentElement.addEventListener('touchcancel', touchEndHandler);
 }
@@ -580,55 +640,17 @@ function renderView(xmlNode) {
     const cardsToObserve = [];
 
     childNodes.forEach(node => {
-        const card = document.createElement('div');
-        card.classList.add('card');
-        const isFolder = Array.from(node.children).some(child => child.tagName === 'TreeViewNode');
-        let nodeGuid = node.getAttribute('guid');
-        if (!nodeGuid) {
-            nodeGuid = generateGuid();
-            node.setAttribute('guid', nodeGuid);
-        }
-        card.setAttribute('data-guid', nodeGuid);
-
-        const titleElem = document.createElement('h3');
-        titleElem.textContent = node.getAttribute('value') || 'Unbenannt';
-
-        const contentWrapper = document.createElement('div');
-        contentWrapper.classList.add('card-content-wrapper');
-        contentWrapper.appendChild(titleElem);
-
-
-        if (isFolder) {
-            card.classList.add('folder-card'); card.setAttribute('data-type', 'folder');
-            if (svgTemplateFolder) {
-                const folderIconSvg = svgTemplateFolder.cloneNode(true);
-                const folderIconId = `icon-folder-${nodeGuid}`;
-                folderIconSvg.id = folderIconId;
-                contentWrapper.appendChild(folderIconSvg);
-                vivusSetups.push({ parent: card, svgId: folderIconId });
-            }
-        } else {
-            card.setAttribute('data-type', 'prompt');
-            card.classList.add('prompt-card');
-            const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
-            if (svgTemplateExpand) {
-                const expandBtn = document.createElement('button'); expandBtn.classList.add('button'); expandBtn.setAttribute('aria-label', 'Details anzeigen'); expandBtn.setAttribute('data-action', 'expand'); expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); btnContainer.appendChild(expandBtn);
-            }
-            if (svgTemplateCopy) {
-                const copyBtn = document.createElement('button'); copyBtn.classList.add('button'); copyBtn.setAttribute('aria-label', 'Prompt kopieren'); copyBtn.setAttribute('data-action', 'copy'); copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); btnContainer.appendChild(copyBtn);
-            }
-            contentWrapper.appendChild(btnContainer);
-        }
-        card.appendChild(contentWrapper);
+        const card = createCardElement(node);
         containerEl.appendChild(card);
         cardsToObserve.push(card);
-        addCard3DHoverEffect(card);
     });
 
     vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
+    
     if (cardsToObserve.length > 0) {
         cardsToObserve.forEach(c => cardObserver.observe(c));
     }
+
     if(childNodes.length > 0) {
         containerEl.scrollTop = currentScroll;
         adjustCardHeights();
@@ -636,6 +658,74 @@ function renderView(xmlNode) {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
         gsap.to(containerEl.firstChild, {opacity: 1, duration: 0.5});
     }
+
+    if(isEditMode) {
+        initSortable();
+    }
+}
+
+function createCardElement(node) {
+    const card = document.createElement('div');
+    card.classList.add('card');
+    const isFolder = Array.from(node.children).some(child => child.tagName === 'TreeViewNode');
+    let nodeGuid = node.getAttribute('guid');
+    if (!nodeGuid) {
+        nodeGuid = generateGuid();
+        node.setAttribute('guid', nodeGuid);
+    }
+    card.setAttribute('data-guid', nodeGuid);
+
+    const titleElem = document.createElement('h3');
+    titleElem.textContent = node.getAttribute('value') || 'Unbenannt';
+
+    const contentWrapper = document.createElement('div');
+    contentWrapper.classList.add('card-content-wrapper');
+    contentWrapper.appendChild(titleElem);
+
+    if (isFolder) {
+        card.classList.add('folder-card'); 
+        card.setAttribute('data-type', 'folder');
+        if (svgTemplateFolder) {
+            const folderIconSvg = svgTemplateFolder.cloneNode(true);
+            const folderIconId = `icon-folder-${nodeGuid}`;
+            folderIconSvg.id = folderIconId;
+            contentWrapper.appendChild(folderIconSvg);
+            if (document.body.contains(card)) {
+                setupVivusAnimation(card, folderIconId);
+            }
+        }
+    } else {
+        card.setAttribute('data-type', 'prompt');
+        card.classList.add('prompt-card');
+        const btnContainer = document.createElement('div'); 
+        btnContainer.classList.add('card-buttons');
+        if (svgTemplateExpand) {
+            const expandBtn = document.createElement('button'); 
+            expandBtn.classList.add('button'); 
+            expandBtn.setAttribute('aria-label', 'Details anzeigen'); 
+            expandBtn.setAttribute('data-action', 'expand'); 
+            expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); 
+            btnContainer.appendChild(expandBtn);
+        }
+        if (svgTemplateCopy) {
+            const copyBtn = document.createElement('button'); 
+            copyBtn.classList.add('button'); 
+            copyBtn.setAttribute('aria-label', 'Prompt kopieren'); 
+            copyBtn.setAttribute('data-action', 'copy'); 
+            copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); 
+            btnContainer.appendChild(copyBtn);
+        }
+        contentWrapper.appendChild(btnContainer);
+    }
+    card.appendChild(contentWrapper);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.classList.add('delete-button');
+    deleteBtn.setAttribute('aria-label', 'Löschen');
+    card.appendChild(deleteBtn);
+
+    addCard3DHoverEffect(card);
+    return card;
 }
 
 function adjustCardHeights() {
@@ -655,11 +745,7 @@ function adjustCardHeights() {
         });
         targetHeight = Math.max(targetHeight, maxFolderHeight);
     }
-
-    const promptCards = allCards.filter(card => card.classList.contains('prompt-card'));
-     if (promptCards.length > 0 && folderCards.length === 0) {
-    }
-
+    
     allCards.forEach(card => {
         card.style.height = `${targetHeight}px`;
     });
@@ -669,7 +755,7 @@ function adjustCardHeights() {
 function addCard3DHoverEffect(card) {
     let frameRequested = false;
     card.addEventListener('mousemove', (e) => {
-        if (frameRequested || isMobile()) return;
+        if (frameRequested || isMobile() || isEditMode) return;
         frameRequested = true;
         requestAnimationFrame(() => {
             const rect = card.getBoundingClientRect();
@@ -742,6 +828,7 @@ function updateBreadcrumb() {
     } else {
         homeLink.classList.add('breadcrumb-link');
         homeLink.addEventListener('click', () => {
+            if (isEditMode) return;
             if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
             performViewTransition(() => {
                 currentNode = xmlData.documentElement; pathStack = [];
@@ -768,6 +855,7 @@ function updateBreadcrumb() {
             } else {
                 link.classList.add('breadcrumb-link');
                 link.addEventListener('click', () => {
+                    if (isEditMode) return;
                     if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
                     performViewTransition(() => {
                         pathStack = pathStack.slice(0, index + 1);
@@ -801,9 +889,10 @@ function updateBreadcrumb() {
 
     const isModalVisible = modalEl.classList.contains('visible');
     const isTrulyAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
-    fixedBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
-    if(mobileBackBtn) mobileBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
-    topbarBackBtn.style.visibility = (isTrulyAtHome && !isModalVisible) ? 'hidden' : 'visible';
+    fixedBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible && !isEditMode);
+    if(mobileBackBtn) mobileBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible && !isEditMode);
+    topbarBackBtn.style.visibility = (isTrulyAtHome && !isModalVisible && !isEditMode) ? 'hidden' : 'visible';
+    editModeDoneBtn.classList.toggle('hidden', !isEditMode);
 }
 
 function adjustTextareaHeight(element) {
@@ -894,26 +983,41 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
     }
 }
 
-function toggleEditMode(isEditing) {
-    promptFullTextEl.classList.toggle('is-editing', isEditing);
-    promptFullTextEl.readOnly = !isEditing;
-    modalEditBtn.classList.toggle('hidden', isEditing);
-    modalSaveBtn.classList.toggle('hidden', !isEditing);
-    copyModalButton.classList.toggle('hidden', isEditing);
-    modalCloseBtn.classList.toggle('hidden', isEditing);
+function toggleEditMode(enable) {
+    isEditMode = enable;
+    containerEl.classList.toggle('edit-mode', enable);
 
-    const isNewMode = modalEl.dataset.mode === 'new';
-    promptTitleInputEl.style.display = isEditing && isNewMode ? 'block' : 'none';
-
-    if (isEditing) {
-        if (!isNewMode) {
-            promptFullTextEl.focus();
-            const textLength = promptFullTextEl.value.length;
-            promptFullTextEl.setSelectionRange(textLength, textLength);
+    const isNewPromptMode = modalEl.dataset.mode === 'new';
+    
+    if (isNewPromptMode) {
+        promptFullTextEl.classList.toggle('is-editing', enable);
+        promptFullTextEl.readOnly = !enable;
+        modalEditBtn.classList.toggle('hidden', enable);
+        modalSaveBtn.classList.toggle('hidden', !enable);
+        copyModalButton.classList.toggle('hidden', enable);
+        modalCloseBtn.classList.toggle('hidden', enable);
+        promptTitleInputEl.style.display = enable ? 'block' : 'none';
+        if (enable) {
+             promptTitleInputEl.focus();
+        }
+    } else {
+        if (enable) {
+            initSortable();
+        } else {
+            if(sortableInstance) {
+                sortableInstance.destroy();
+                sortableInstance = null;
+            }
         }
     }
-    adjustTextareaHeight(promptFullTextEl);
+
+    const allButtons = [addPromptBtn, downloadBtn, resetBtn, fullscreenBtn, themeToggleButton, topbarBackBtn];
+    allButtons.forEach(btn => btn.style.display = enable ? 'none' : 'flex');
+    
+    updateBreadcrumb();
+    if(isNewPromptMode) adjustTextareaHeight(promptFullTextEl);
 }
+
 
 function savePromptChanges() {
     const mode = modalEl.dataset.mode;
@@ -959,14 +1063,14 @@ function persistXmlData(successMsg, errorMsg) {
     
     try {
         localStorage.setItem(localStorageKey, xmlString);
-        showNotification(successMsg, 'success');
+        if (successMsg) showNotification(successMsg, 'success');
         if (downloadBtn) {
             downloadBtn.style.display = 'flex';
             resetBtn.style.display = 'flex';
         }
     } catch (e) {
         console.error("Fehler beim Speichern im Local Storage:", e);
-        showNotification(errorMsg, 'error');
+        if (errorMsg) showNotification(errorMsg, 'error');
     }
 }
 
@@ -1057,4 +1161,93 @@ function showNotification(message, type = 'info', buttonElement = null) {
         }, { once: true });
         notificationTimeoutId = null;
     }, 2800);
+}
+
+function initSortable() {
+    if (sortableInstance) {
+        sortableInstance.destroy();
+    }
+    sortableInstance = new Sortable(containerEl, {
+        animation: 250,
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        onEnd: handleSortEnd,
+        onAdd: handleSortAdd, 
+        group: 'shared-cards',
+        forceFallback: true,
+    });
+}
+
+function handleSortEnd(evt) {
+    const { newIndex, oldIndex, to, from } = evt;
+    if (from === to && newIndex === oldIndex) return;
+
+    const parentNode = findNodeByGuid(xmlData.documentElement, from.dataset.guid || currentNode.getAttribute('guid')) || currentNode;
+    
+    const children = Array.from(from.children);
+    const movedItemGuid = children[newIndex].getAttribute('data-guid');
+    const movedNode = findNodeByGuid(xmlData.documentElement, movedItemGuid);
+    if (!movedNode) return;
+    
+    const referenceNodeGuid = (newIndex + 1 < children.length) ? children[newIndex + 1].getAttribute('data-guid') : null;
+    const referenceNode = referenceNodeGuid ? findNodeByGuid(xmlData.documentElement, referenceNodeGuid) : null;
+    
+    parentNode.removeChild(movedNode);
+    if (referenceNode) {
+        parentNode.insertBefore(movedNode, referenceNode);
+    } else {
+        parentNode.appendChild(movedNode);
+    }
+
+    persistXmlData("Reihenfolge gespeichert", "Speichern fehlgeschlagen");
+}
+
+function handleSortAdd(evt) {
+    const { item, to, from, newIndex } = evt;
+    const draggedNodeGuid = item.getAttribute('data-guid');
+    const targetFolderGuid = to.getAttribute('data-guid');
+
+    const draggedNode = findNodeByGuid(xmlData.documentElement, draggedNodeGuid);
+    const targetFolderNode = findNodeByGuid(xmlData.documentElement, targetFolderGuid);
+
+    if (!draggedNode || !targetFolderNode) return;
+
+    if (draggedNode.parentElement === targetFolderNode) return;
+
+    draggedNode.parentElement.removeChild(draggedNode);
+    
+    const childrenInTarget = Array.from(targetFolderNode.children).filter(n => n.tagName === 'TreeViewNode');
+    if (newIndex < childrenInTarget.length) {
+        targetFolderNode.insertBefore(draggedNode, childrenInTarget[newIndex]);
+    } else {
+        targetFolderNode.appendChild(draggedNode);
+    }
+
+    persistXmlData('In Ordner verschoben', 'Verschieben fehlgeschlagen');
+}
+
+
+function handleDeleteCard(card) {
+    const guid = card.getAttribute('data-guid');
+    if(!guid) return;
+
+    const nodeToDelete = findNodeByGuid(xmlData.documentElement, guid);
+    if(!nodeToDelete) return;
+    
+    const parent = nodeToDelete.parentNode;
+    if(!parent) return;
+
+    const nodeName = nodeToDelete.getAttribute('value') || 'dieses Element';
+    const isFolder = Array.from(nodeToDelete.children).some(child => child.tagName === 'TreeViewNode');
+
+    let confirmationMessage = `Möchten Sie "${nodeName}" wirklich löschen?`;
+    if(isFolder) {
+        confirmationMessage += " Alle darin enthaltenen Elemente gehen dabei verloren.";
+    }
+
+    if (confirm(confirmationMessage)) {
+        parent.removeChild(nodeToDelete);
+        card.remove();
+        persistXmlData('Element gelöscht', 'Löschen fehlgeschlagen');
+    }
 }
