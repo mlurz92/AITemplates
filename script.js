@@ -28,6 +28,8 @@ const longPressDuration = 700;
 
 
 function initApp() {
+    gsap.registerPlugin(Flip);
+
     modalEl = document.getElementById('prompt-modal');
     breadcrumbEl = document.getElementById('breadcrumb');
     containerEl = document.getElementById('cards-container');
@@ -174,7 +176,7 @@ function setupEventListeners() {
       copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
     }
 
-    modalEditBtn.addEventListener('click', () => toggleEditMode(true));
+    modalEditBtn.addEventListener('click', () => toggleEditMode(true, true));
     modalSaveBtn.addEventListener('click', savePromptChanges);
 
     modalEl.addEventListener('click', (e) => {
@@ -241,7 +243,7 @@ function setupMobileSpecificFeatures() {
         });
     }
 
-    containerEl.addEventListener('touchstart', handleTouchStart, { passive: true });
+    containerEl.addEventListener('touchstart', handleTouchStart, { passive: false });
     containerEl.addEventListener('touchmove', handleTouchMove, { passive: true });
     containerEl.addEventListener('touchend', handleTouchEnd, { passive: true });
 
@@ -270,8 +272,8 @@ function navigateOneLevelUp() {
 function handleCardContainerClick(e) {
     const card = e.target.closest('.card');
     if (!card) {
-        if (pathStack.length > 0 && !isEditMode) {
-            navigateOneLevelUp();
+        if (e.target === containerEl && !isEditMode && pathStack.length > 0) {
+             navigateOneLevelUp();
         }
         return;
     }
@@ -312,17 +314,17 @@ function handleCardContainerClick(e) {
 
 function handleTouchStart(e) {
     const targetIsCard = e.target.closest('.card');
-
+    
     if (longPressTimer) clearTimeout(longPressTimer);
-    if(targetIsCard) {
+    
+    if (targetIsCard && !isEditMode && !modalEl.classList.contains('visible')) {
+        e.preventDefault(); 
         longPressTimer = setTimeout(() => {
-            if (!isEditMode && !modalEl.classList.contains('visible')) {
-                toggleEditMode(true);
-            }
+            toggleEditMode(true);
             longPressTimer = null;
         }, longPressDuration);
     }
-
+    
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     touchEndX = touchStartX;
@@ -330,8 +332,10 @@ function handleTouchStart(e) {
 }
 
 function handleTouchMove(e) {
-    if (longPressTimer) clearTimeout(longPressTimer);
-    longPressTimer = null;
+    if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+    }
 
     if (!touchStartX || modalEl.classList.contains('visible') || isEditMode) return;
 
@@ -350,10 +354,13 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd() {
-    if (longPressTimer) clearTimeout(longPressTimer);
-    longPressTimer = null;
+    if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+    }
 
     if (!touchStartX || modalEl.classList.contains('visible') || isEditMode) return;
+    
     let diffX = touchEndX - touchStartX;
     let diffY = touchEndY - touchStartY;
 
@@ -628,6 +635,9 @@ function loadXmlDocument(filename) {
 
 function renderView(xmlNode) {
     const currentScroll = containerEl.scrollTop;
+    
+    const state = Flip.getState(containerEl.querySelectorAll(".card"));
+
     containerEl.innerHTML = '';
     if (!xmlNode) {
          containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
@@ -644,8 +654,15 @@ function renderView(xmlNode) {
         containerEl.appendChild(card);
         cardsToObserve.push(card);
     });
-
-    vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
+    
+    Flip.from(state, {
+        duration: 0.5,
+        stagger: 0.05,
+        ease: "power2.out",
+        absolute: true,
+        onEnter: elements => gsap.from(elements, {opacity: 0, scale: 0.9, y: 30}),
+        onLeave: elements => gsap.to(elements, {opacity: 0, scale: 0.9, y: -30, onComplete: () => elements.forEach(el => el.remove())})
+    });
     
     if (cardsToObserve.length > 0) {
         cardsToObserve.forEach(c => cardObserver.observe(c));
@@ -690,9 +707,11 @@ function createCardElement(node) {
             const folderIconId = `icon-folder-${nodeGuid}`;
             folderIconSvg.id = folderIconId;
             contentWrapper.appendChild(folderIconSvg);
-            if (document.body.contains(card)) {
-                setupVivusAnimation(card, folderIconId);
-            }
+            setTimeout(() => {
+                if (document.body.contains(card)) {
+                    setupVivusAnimation(card, folderIconId);
+                }
+            }, 0);
         }
     } else {
         card.setAttribute('data-type', 'prompt');
@@ -892,7 +911,10 @@ function updateBreadcrumb() {
     fixedBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible && !isEditMode);
     if(mobileBackBtn) mobileBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible && !isEditMode);
     topbarBackBtn.style.visibility = (isTrulyAtHome && !isModalVisible && !isEditMode) ? 'hidden' : 'visible';
+    
     editModeDoneBtn.classList.toggle('hidden', !isEditMode);
+    const regularButtons = [addPromptBtn, downloadBtn, resetBtn, fullscreenBtn, themeToggleButton];
+    regularButtons.forEach(btn => btn.style.display = isEditMode ? 'none' : (btn.id === 'download-button' || btn.id === 'reset-button' ? (localStorage.getItem(localStorageKey) ? 'flex' : 'none') : 'flex'));
 }
 
 function adjustTextareaHeight(element) {
@@ -909,8 +931,7 @@ function openNewPromptModal() {
     promptTitleInputEl.style.display = 'block';
 
     openModal(null);
-    toggleEditMode(true);
-    promptTitleInputEl.focus();
+    toggleEditMode(true, true);
 }
 
 
@@ -952,9 +973,11 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
     }
 
     if (!modalEl.classList.contains('visible')) return;
-
-    if (promptFullTextEl.classList.contains('is-editing')) {
-        toggleEditMode(false);
+    
+    const isNewPromptMode = modalEl.dataset.mode === 'new';
+    
+    if (promptFullTextEl.classList.contains('is-editing') || isNewPromptMode) {
+        toggleEditMode(false, true);
     }
 
     modalEl.classList.remove('visible');
@@ -983,39 +1006,42 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
     }
 }
 
-function toggleEditMode(enable) {
-    isEditMode = enable;
-    containerEl.classList.toggle('edit-mode', enable);
-
-    const isNewPromptMode = modalEl.dataset.mode === 'new';
-    
-    if (isNewPromptMode) {
+function toggleEditMode(enable, isModalEdit = false) {
+    if (isModalEdit) {
         promptFullTextEl.classList.toggle('is-editing', enable);
         promptFullTextEl.readOnly = !enable;
         modalEditBtn.classList.toggle('hidden', enable);
         modalSaveBtn.classList.toggle('hidden', !enable);
         copyModalButton.classList.toggle('hidden', enable);
         modalCloseBtn.classList.toggle('hidden', enable);
-        promptTitleInputEl.style.display = enable ? 'block' : 'none';
+        
+        const isNewMode = modalEl.dataset.mode === 'new';
+        promptTitleInputEl.style.display = enable && isNewMode ? 'block' : 'none';
+
         if (enable) {
-             promptTitleInputEl.focus();
-        }
-    } else {
-        if (enable) {
-            initSortable();
-        } else {
-            if(sortableInstance) {
-                sortableInstance.destroy();
-                sortableInstance = null;
+            if (isNewMode) promptTitleInputEl.focus();
+            else {
+                promptFullTextEl.focus();
+                const textLength = promptFullTextEl.value.length;
+                promptFullTextEl.setSelectionRange(textLength, textLength);
             }
         }
+        adjustTextareaHeight(promptFullTextEl);
+        return;
     }
-
-    const allButtons = [addPromptBtn, downloadBtn, resetBtn, fullscreenBtn, themeToggleButton, topbarBackBtn];
-    allButtons.forEach(btn => btn.style.display = enable ? 'none' : 'flex');
     
+    isEditMode = enable;
+    containerEl.classList.toggle('edit-mode', enable);
+
+    if (enable) {
+        initSortable();
+    } else {
+        if(sortableInstance) {
+            sortableInstance.destroy();
+            sortableInstance = null;
+        }
+    }
     updateBreadcrumb();
-    if(isNewPromptMode) adjustTextareaHeight(promptFullTextEl);
 }
 
 
@@ -1040,8 +1066,8 @@ function savePromptChanges() {
         currentNode.appendChild(newPromptNode);
         
         persistXmlData('Prompt hinzugefügt!', 'Hinzufügen fehlgeschlagen!');
-        renderView(currentNode);
         closeModal();
+        renderView(currentNode);
 
     } else { 
         const guid = modalEl.getAttribute('data-guid');
@@ -1052,7 +1078,7 @@ function savePromptChanges() {
             nodeToUpdate.setAttribute('beschreibung', newText);
             persistXmlData('Prompt gespeichert!', 'Speichern fehlgeschlagen!');
         }
-        toggleEditMode(false);
+        toggleEditMode(false, true);
     }
 }
 
@@ -1168,38 +1194,62 @@ function initSortable() {
         sortableInstance.destroy();
     }
     sortableInstance = new Sortable(containerEl, {
-        animation: 250,
+        animation: 350,
         ghostClass: 'sortable-ghost',
         dragClass: 'sortable-drag',
         onEnd: handleSortEnd,
         onAdd: handleSortAdd, 
-        group: 'shared-cards',
+        group: {
+            name: 'shared-cards',
+            pull: true,
+            put: true
+        },
         forceFallback: true,
     });
 }
 
 function handleSortEnd(evt) {
-    const { newIndex, oldIndex, to, from } = evt;
-    if (from === to && newIndex === oldIndex) return;
-
-    const parentNode = findNodeByGuid(xmlData.documentElement, from.dataset.guid || currentNode.getAttribute('guid')) || currentNode;
+    const { to, from, oldIndex, newIndex, item } = evt;
     
-    const children = Array.from(from.children);
-    const movedItemGuid = children[newIndex].getAttribute('data-guid');
-    const movedNode = findNodeByGuid(xmlData.documentElement, movedItemGuid);
+    if (from === to && oldIndex === newIndex) return;
+
+    const state = Flip.getState(containerEl.querySelectorAll(".card"));
+    
+    const parentNode = findNodeByGuid(xmlData.documentElement, from.dataset.guid || currentNode.getAttribute('guid')) || currentNode;
+    const movedNode = findNodeByGuid(xmlData.documentElement, item.getAttribute('data-guid'));
+
     if (!movedNode) return;
     
-    const referenceNodeGuid = (newIndex + 1 < children.length) ? children[newIndex + 1].getAttribute('data-guid') : null;
-    const referenceNode = referenceNodeGuid ? findNodeByGuid(xmlData.documentElement, referenceNodeGuid) : null;
-    
-    parentNode.removeChild(movedNode);
-    if (referenceNode) {
-        parentNode.insertBefore(movedNode, referenceNode);
+    if (from !== to) {
+        const targetParentNode = findNodeByGuid(xmlData.documentElement, to.dataset.guid || currentNode.getAttribute('guid')) || currentNode;
+        if (draggedNode.parentElement !== targetParentNode) {
+            draggedNode.parentElement.removeChild(draggedNode);
+            const childrenInTarget = Array.from(targetParentNode.children).filter(n => n.tagName === 'TreeViewNode');
+             if (newIndex < childrenInTarget.length) {
+                targetParentNode.insertBefore(draggedNode, childrenInTarget[newIndex]);
+            } else {
+                targetParentNode.appendChild(draggedNode);
+            }
+        }
     } else {
-        parentNode.appendChild(movedNode);
-    }
+        const childrenInFrom = Array.from(parentNode.children).filter(n => n.tagName === 'TreeViewNode');
+        parentNode.removeChild(movedNode);
 
-    persistXmlData("Reihenfolge gespeichert", "Speichern fehlgeschlagen");
+        if (newIndex < childrenInFrom.length) {
+             const referenceNode = childrenInFrom[newIndex];
+             parentNode.insertBefore(movedNode, referenceNode);
+        } else {
+            parentNode.appendChild(movedNode);
+        }
+    }
+    
+    Flip.from(state, {
+        duration: 0.4,
+        ease: "power2.inOut",
+        absolute: true,
+    });
+    
+    persistXmlData(null, "Fehler beim Speichern der Reihenfolge");
 }
 
 function handleSortAdd(evt) {
@@ -1210,9 +1260,11 @@ function handleSortAdd(evt) {
     const draggedNode = findNodeByGuid(xmlData.documentElement, draggedNodeGuid);
     const targetFolderNode = findNodeByGuid(xmlData.documentElement, targetFolderGuid);
 
-    if (!draggedNode || !targetFolderNode) return;
+    if (!draggedNode || !targetFolderNode || draggedNode.parentElement === targetFolderNode) {
+        return;
+    }
 
-    if (draggedNode.parentElement === targetFolderNode) return;
+    const state = Flip.getState(containerEl.querySelectorAll(".card, .delete-button"));
 
     draggedNode.parentElement.removeChild(draggedNode);
     
@@ -1222,6 +1274,16 @@ function handleSortAdd(evt) {
     } else {
         targetFolderNode.appendChild(draggedNode);
     }
+    
+    item.remove();
+    
+    Flip.from(state, {
+        duration: 0.5,
+        ease: "power3.inOut",
+        absolute: true,
+        onEnter: elements => gsap.fromTo(elements, { scale: 0.9, opacity: 0}, {scale: 1, opacity: 1, duration: 0.3}),
+        onLeave: elements => gsap.to(elements, {scale: 0.9, opacity: 0, duration: 0.3})
+    });
 
     persistXmlData('In Ordner verschoben', 'Verschieben fehlgeschlagen');
 }
@@ -1241,13 +1303,29 @@ function handleDeleteCard(card) {
     const isFolder = Array.from(nodeToDelete.children).some(child => child.tagName === 'TreeViewNode');
 
     let confirmationMessage = `Möchten Sie "${nodeName}" wirklich löschen?`;
-    if(isFolder) {
+    if(isFolder && nodeToDelete.children.length > 1) {
         confirmationMessage += " Alle darin enthaltenen Elemente gehen dabei verloren.";
     }
 
     if (confirm(confirmationMessage)) {
+        const state = Flip.getState(containerEl.querySelectorAll(".card"));
+        
         parent.removeChild(nodeToDelete);
-        card.remove();
-        persistXmlData('Element gelöscht', 'Löschen fehlgeschlagen');
+        
+        gsap.to(card, {
+            opacity: 0,
+            scale: 0.8,
+            duration: 0.3,
+            onComplete: () => {
+                card.remove();
+                Flip.from(state, {
+                    duration: 0.5,
+                    ease: "power2.out",
+                    absolute: true,
+                });
+            }
+        });
+        
+        persistXmlData(null, 'Löschen fehlgeschlagen');
     }
 }
