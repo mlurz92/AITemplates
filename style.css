@@ -21,8 +21,9 @@
   --glow-color-end: rgba(50, 180, 255, 0.15);
   --logo-line-color: #f0f0f5;
   --logo-accent-color: #00aaff;
-  --delete-icon-bg: #dc3545;
+  --delete-icon-bg: rgba(40, 40, 40, 0.8);
   --delete-icon-color: #ffffff;
+  --delete-icon-border: rgba(255, 255, 255, 0.2);
   --done-button-bg: #007bff;
   --done-button-text: #ffffff;
   --done-button-hover-bg: #0056b3;
@@ -62,6 +63,9 @@ body.light-mode {
   --glow-color-end: rgba(0, 95, 163, 0.1);
   --logo-line-color: #181c20;
   --logo-accent-color: #0077cc;
+  --delete-icon-bg: rgba(230, 230, 230, 0.85);
+  --delete-icon-color: #333;
+  --delete-icon-border: rgba(0, 0, 0, 0.1);
   --done-button-bg: #0069d9;
   --done-button-hover-bg: #005cbf;
 }
@@ -267,22 +271,24 @@ body.light-mode #app-logo-svg .icon-accent {
 .card.is-visible {
 }
 
-.card:hover:not(.edit-mode .card) {
+.card:hover:not(.edit-mode .card):not(.sortable-ghost) {
   transform: perspective(1200px) rotateX(var(--rotateX, 0deg)) rotateY(var(--rotateY, 0deg)) translateY(-8px) scale(1.03) translateZ(0);
   box-shadow: 0 12px 25px var(--shadow-color-heavy);
   border-color: var(--accent);
   animation: glow 2s var(--timing-function-ease-out) infinite alternate;
   z-index: 10;
 }
-body.light-mode .card:hover:not(.edit-mode .card) {
+body.light-mode .card:hover:not(.edit-mode .card):not(.sortable-ghost) {
     border-color: var(--accent-hover);
 }
+
 
 .card-content-wrapper {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
   overflow: hidden;
+  pointer-events: none;
 }
 
 .card h3 {
@@ -331,6 +337,7 @@ body.light-mode .card:hover:not(.edit-mode .card) {
 .prompt-card h3 {
    margin-bottom: 1.2rem;
 }
+
 
 .card-buttons {
   display: flex;
@@ -407,6 +414,7 @@ body.light-mode .card:hover:not(.edit-mode .card) {
     transform-origin: center;
     transition: transform var(--transition-duration-fast) var(--timing-function-ease);
 }
+
 
 .button:hover .icon-fullscreen-enter path,
 .button:hover .icon-fullscreen-exit path,
@@ -709,23 +717,19 @@ body.light-mode .notification.error svg.icon {
 
 
 /* === Edit Mode (Jiggle Mode) Styles === */
-@keyframes jiggle {
-  0% { transform: translate(1px, 1px) rotate(0deg); }
-  10% { transform: translate(-1px, -2px) rotate(-1deg); }
-  20% { transform: translate(-2px, 0px) rotate(1deg); }
-  30% { transform: translate(2px, 2px) rotate(0deg); }
-  40% { transform: translate(1px, -1px) rotate(1deg); }
-  50% { transform: translate(-1px, 2px) rotate(-1deg); }
-  60% { transform: translate(-2px, 1px) rotate(0deg); }
-  70% { transform: translate(2px, 1px) rotate(-1deg); }
-  80% { transform: translate(-1px, -1px) rotate(1deg); }
-  90% { transform: translate(1px, 2px) rotate(0deg); }
-  100% { transform: translate(1px, -2px) rotate(-1deg); }
+@keyframes subtle-jiggle {
+    0% { transform: rotate(-0.2deg); }
+    50% { transform: rotate(0.2deg); }
+    100% { transform: rotate(-0.2deg); }
 }
 
 .edit-mode .card {
-  animation: jiggle 0.4s infinite;
+  animation: subtle-jiggle 0.8s ease-in-out infinite;
   cursor: grab;
+}
+
+.edit-mode .card:nth-child(even) {
+    animation-delay: -0.4s;
 }
 
 .edit-mode .card:active {
@@ -734,14 +738,14 @@ body.light-mode .notification.error svg.icon {
 
 .card .delete-button {
     position: absolute;
-    top: -10px;
-    left: -10px;
-    width: 28px;
-    height: 28px;
+    top: -8px;
+    left: -8px;
+    width: 26px;
+    height: 26px;
     background-color: var(--delete-icon-bg);
     color: var(--delete-icon-color);
     border-radius: 50%;
-    border: 2px solid var(--bg-surface);
+    border: 1px solid var(--delete-icon-border);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -750,6 +754,8 @@ body.light-mode .notification.error svg.icon {
     opacity: 0;
     transform: scale(0.5);
     transition: opacity 0.2s ease, transform 0.2s var(--timing-function-bounce);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 
 .edit-mode .card .delete-button {
@@ -758,30 +764,30 @@ body.light-mode .notification.error svg.icon {
 }
 
 .card .delete-button:hover {
-    transform: scale(1.15);
-    background-color: #c82333;
-}
-body.light-mode .card .delete-button:hover {
-    background-color: #a71d2a;
+    transform: scale(1.15) !important;
+    background-color: var(--delete-icon-bg);
 }
 
 .card .delete-button::before {
-    content: '−'; /* Minus sign */
-    font-size: 20px;
-    font-weight: bold;
+    content: '−';
+    font-family: 'Arial Black', Gadget, sans-serif;
+    font-size: 18px;
+    font-weight: 900;
     line-height: 1;
-    margin-top: -2px;
+    color: var(--delete-icon-color);
+    padding-bottom: 2px;
 }
 
 /* === SortableJS Styles === */
 .sortable-ghost {
   opacity: 0.4;
   background: var(--accent);
+  border: 1px dashed var(--accent);
 }
 
 .sortable-drag {
   opacity: 0.95 !important;
-  transform: scale(1.05) rotate(3deg) !important;
+  transform: scale(1.05) rotate(2deg) !important;
   box-shadow: 0 15px 30px var(--shadow-color-heavy) !important;
   z-index: 100 !important;
   cursor: grabbing !important;
@@ -790,6 +796,10 @@ body.light-mode .card .delete-button:hover {
 
 .sortable-fallback {
   opacity: 1 !important;
+}
+
+.card.is-moving {
+    transition: transform 0.25s ease;
 }
 
 
