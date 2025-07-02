@@ -30,10 +30,10 @@ Diese am oberen Bildschirmrand fixierte Leiste ist die zentrale Steuerungseinhei
     * **Funktion:** Öffnet das Detail-Modal in einem speziellen "Erstellen"-Modus, um eine neue Prompt-Karte im aktuell angezeigten Verzeichnis anzulegen.
     * **Sichtbarkeit:** Der Button ist in allen Ordneransichten und im Hauptverzeichnis sichtbar.
 * **Änderungen zurücksetzen Button:**
-    * **Funktion:** Ermöglicht das Verwerfen aller im Local Storage gespeicherten Änderungen. Nach einer Bestätigungsabfrage wird der lokale Speicher geleert und die Anwendung mit den ursprünglichen Daten aus der `Templates.xml`-Datei neu geladen.
+    * **Funktion:** Ermöglicht das Verwerfen aller im Local Storage gespeicherten Änderungen. Nach einer Bestätigungsabfrage wird der lokale Speicher geleert und die Anwendung mit den ursprünglichen Daten aus der `templates.json`-Datei neu geladen.
     * **Sichtbarkeit:** Nur sichtbar, wenn Änderungen im Local Storage vorhanden sind.
 * **Download-Button:**
-    * **Funktion:** Startet den Download der aktuell im Browser gespeicherten Vorlagensammlung als `Templates_modified.xml`-Datei.
+    * **Funktion:** Startet den Download der aktuell im Browser gespeicherten Vorlagensammlung als `templates_modified.json`-Datei.
     * **Sichtbarkeit:** Nur sichtbar, wenn Änderungen im Local Storage vorhanden sind.
 * **Fullscreen-Button:** Schaltet die Anwendung in den nativen Vollbildmodus des Browsers und wieder zurück.
 * **Theme-Toggle-Button (App-Logo):** Wechselt auf Klick zwischen dem Dark- und Light-Theme.
@@ -56,11 +56,11 @@ Ein überlagerndes Fenster, das den Kern der Interaktion mit einzelnen Prompts d
 * **Bearbeitungsmodus:**
     * **Aktivierung:** Durch Klick auf den "Bearbeiten"-Button.
     * **Änderungen:** Das Textfeld wird editierbar, und der "Speichern"-Button ersetzt die anderen Aktionsbuttons.
-    * **Speichern:** Ein Klick auf den "Speichern"-Button persistiert die Änderungen im XML-Datenmodell und im Local Storage.
+    * **Speichern:** Ein Klick auf den "Speichern"-Button persistiert die Änderungen im JSON-Datenmodell und im Local Storage.
 * **Erstellen-Modus:**
     * **Aktivierung:** Durch Klick auf den "Hinzufügen"-Button in der Top-Bar.
     * **Änderungen:** Das Modal öffnet sich leer. Ein zusätzliches Eingabefeld für den **Titel** der neuen Karte wird sichtbar. Das Textfeld für den Inhalt ist direkt editierbar.
-    * **Speichern:** Ein Klick auf "Speichern" validiert, ob ein Titel eingegeben wurde. Anschließend wird ein neuer `<TreeViewNode>` im aktuellen Verzeichnis der XML-Datenstruktur erzeugt, und die Änderungen werden gespeichert. Die Ansicht im Hintergrund wird aktualisiert.
+    * **Speichern:** Ein Klick auf "Speichern" validiert, ob ein Titel eingegeben wurde. Anschließend wird ein neues JSON-Objekt mit dem Typ "prompt" im aktuellen Verzeichnis der Datenstruktur erzeugt, und die Änderungen werden gespeichert. Die Ansicht im Hintergrund wird aktualisiert.
 
 ### 3.4. Mobile Navigation & Fixierter "Zurück"-Button
 * **Mobile Navigationsleiste:** Eine am unteren Bildschirmrand fixierte Leiste (nur auf mobilen Geräten sichtbar) mit "Home"- und "Zurück"-Buttons für eine einfache Einhand-Bedienung.
@@ -73,26 +73,27 @@ Nach Aktionen wie dem Kopieren eines Prompts oder dem Speichern von Änderungen 
 
 ### 4.1. Daten-Lade-Logik und Persistenz
 Die Anwendung folgt einer klaren Priorisierung:
-1.  **Local Storage zuerst:** Beim Start wird geprüft, ob eine bearbeitete Version der Vorlagen im Local Storage des Browsers unter dem Schlüssel `customTemplatesXml` gespeichert ist. Wenn ja, wird diese geparst und verwendet. Dies stellt sicher, dass Nutzer ihre Sitzung mit ihren letzten Änderungen fortsetzen können.
-2.  **Fallback auf `Templates.xml`:** Ist der Local Storage leer, wird die originale `Templates.xml`-Datei per `fetch` als Fallback geladen.
+1.  **Local Storage zuerst:** Beim Start wird geprüft, ob eine bearbeitete Version der Vorlagen im Local Storage des Browsers unter dem Schlüssel `customTemplatesJson` gespeichert ist. Wenn ja, wird dieser JSON-String geparst und verwendet. Dies stellt sicher, dass Nutzer ihre Sitzung mit ihren letzten Änderungen fortsetzen können.
+2.  **Fallback auf `templates.json`:** Ist der Local Storage leer, wird die originale `templates.json`-Datei per `fetch` als Fallback geladen.
 
 ### 4.2. Navigation und Zustandsverwaltung
-Die Navigation durch die Ordnerhierarchie wird durch einen `pathStack` (ein Array von Knoten) verwaltet. Dies ermöglicht die Breadcrumb-Navigation und die "Zurück"-Funktionalität. Auf mobilen Geräten wird zusätzlich die Browser History API genutzt, um die physische Zurück-Taste des Geräts zu unterstützen und ein natives App-Gefühl zu erzeugen.
+Die Navigation durch die Ordnerhierarchie wird durch einen `pathStack` (ein Array von JSON-Objekten) verwaltet. Dies ermöglicht die Breadcrumb-Navigation und die "Zurück"-Funktionalität. Auf mobilen Geräten wird zusätzlich die Browser History API genutzt, um die physische Zurück-Taste des Geräts zu unterstützen und ein natives App-Gefühl zu erzeugen.
 
 ### 4.3. Erstellen, Bearbeiten und Speichern von Prompts
-Jede Änderung an den Daten – sei es das Bearbeiten eines bestehenden Prompts oder das Hinzufügen eines neuen – modifiziert das im Arbeitsspeicher gehaltene XML-Dokument-Objektmodell (DOM).
+Jede Änderung an den Daten – sei es das Bearbeiten eines bestehenden Prompts oder das Hinzufügen eines neuen – modifiziert das im Arbeitsspeicher gehaltene JavaScript-Objekt (das JSON-Datenmodell).
 
-* **Bearbeiten:** Der `beschreibung`-Attributwert des entsprechenden XML-Knotens wird aktualisiert.
-* **Erstellen:** Ein komplett neuer `<TreeViewNode>` wird mit allen notwendigen Attributen (`guid`, `value`, `beschreibung`, `image`) erzeugt und an den aktuell angezeigten Knoten angehängt. Eine neue, einzigartige GUID wird dabei dynamisch generiert.
-* **Persistierung:** Nach jeder dieser Modifikationen wird das gesamte XML-DOM mittels `XMLSerializer` in einen String umgewandelt und im Local Storage gespeichert. Dieser Ansatz stellt die Datenkonsistenz sicher.
+* **Bearbeiten:** Die `content`-Eigenschaft des entsprechenden Prompt-Objekts wird aktualisiert.
+* **Erstellen:** Ein komplett neues JSON-Objekt mit `type: "prompt"` wird mit allen notwendigen Eigenschaften (`id`, `title`, `content`) erzeugt und an das `items`-Array des aktuell angezeigten Ordner-Objekts angehängt. Eine neue, einzigartige ID wird dabei dynamisch generiert.
+* **Persistierung:** Nach jeder dieser Modifikationen wird das gesamte JavaScript-Objekt mittels `JSON.stringify()` in einen String umgewandelt und im Local Storage gespeichert. Dieser Ansatz stellt die Datenkonsistenz sicher.
 
-## 5. Datenquelle: `Templates.xml`
-Die Struktur und der Inhalt der Anwendung werden durch diese XML-Datei definiert.
+## 5. Datenquelle: `templates.json`
+Die Struktur und der Inhalt der Anwendung werden durch diese JSON-Datei definiert.
 
-* **`<TreeViewNode>`:** Das fundamentale Element für Ordner und Prompts.
-    * **Hierarchie:** Verschachtelte `<TreeViewNode>`-Elemente erzeugen die Ordnerstruktur. Ein Knoten mit Kind-Knoten ist ein Ordner, einer ohne ist ein Prompt.
-    * **Attribute:**
-        * `value`: Der sichtbare Titel der Karte.
-        * `beschreibung`: Der vollständige Text des Prompts.
-        * `guid`: Ein global eindeutiger Identifikator, essentiell für alle Operationen.
-        * `image`: Ein numerischer Wert, der intern zur Unterscheidung (z.B. für Icons) genutzt werden kann. Für Prompts sollte hier "1" stehen.
+* **Objektstruktur:** Das fundamentale Element für Ordner und Prompts ist ein JSON-Objekt.
+    * **Hierarchie:** Verschachtelte Objekte innerhalb eines `items`-Arrays erzeugen die Ordnerstruktur.
+    * **Eigenschaften:**
+        * `id`: Ein eindeutiger Identifikator (String), essentiell für alle Operationen.
+        * `type`: Definiert den Typ des Knotens. Muss entweder `"folder"` oder `"prompt"` sein.
+        * `title`: Der sichtbare Titel der Karte.
+        * `content`: (Nur für `type: "prompt"`) Der vollständige Text des Prompts.
+        * `items`: (Nur für `type: "folder"`) Ein Array, das weitere Ordner- oder Prompt-Objekte enthält.

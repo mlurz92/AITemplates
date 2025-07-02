@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', initApp);
 
-let xmlData = null;
+let jsonData = null;
 let currentNode = null;
 let pathStack = [];
-const currentXmlFile = "Templates.xml";
-const localStorageKey = 'customTemplatesXml';
+const currentJsonFile = "templates.json";
+const localStorageKey = 'customTemplatesJson';
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addPromptBtn;
@@ -64,7 +64,7 @@ function initApp() {
         setupMobileSpecificFeatures();
     }
 
-    loadXmlDocument(currentXmlFile);
+    loadJsonData(currentJsonFile);
 }
 
 function updateDynamicDurations() {
@@ -129,9 +129,9 @@ function setupEventListeners() {
         if (modalEl.classList.contains('visible')) {
             closeModal();
         }
-        if (pathStack.length > 0 || currentNode !== xmlData.documentElement) {
+        if (pathStack.length > 0 || currentNode !== jsonData) {
             performViewTransition(() => {
-                currentNode = xmlData.documentElement;
+                currentNode = jsonData;
                 pathStack = [];
                 renderView(currentNode);
                 updateBreadcrumb();
@@ -143,7 +143,7 @@ function setupEventListeners() {
     });
 
     addPromptBtn.addEventListener('click', openNewPromptModal);
-    downloadBtn.addEventListener('click', downloadCustomXml);
+    downloadBtn.addEventListener('click', downloadCustomJson);
     resetBtn.addEventListener('click', resetLocalStorage);
 
     if (fullscreenBtn) {
@@ -187,11 +187,11 @@ function setupMobileSpecificFeatures() {
                 closeModal({ fromBackdrop: true });
             }
 
-            const isCurrentlyAtHome = (currentNode === xmlData.documentElement && pathStack.length === 0);
+            const isCurrentlyAtHome = (currentNode === jsonData && pathStack.length === 0);
 
             if (!isCurrentlyAtHome || modalWasVisible) {
                 performViewTransition(() => {
-                    currentNode = xmlData.documentElement;
+                    currentNode = jsonData;
                     pathStack = [];
                     renderView(currentNode);
                     updateBreadcrumb();
@@ -232,8 +232,8 @@ function navigateOneLevelUp() {
         updateBreadcrumb();
 
         if (isMobile()) {
-            let historyPathGuids = pathStack.map(n => n.getAttribute('guid'));
-            window.history.pushState({ path: historyPathGuids, modalOpen: false }, '', window.location.href);
+            let historyPathIds = pathStack.map(n => n.id);
+            window.history.pushState({ path: historyPathIds, modalOpen: false }, '', window.location.href);
         }
     }, 'backward');
 }
@@ -247,10 +247,9 @@ function handleCardContainerClick(e) {
     const button = e.target.closest('button[data-action]');
 
     if (card) {
-        const guid = card.getAttribute('data-guid');
-        const node = findNodeByGuid(xmlData.documentElement, guid);
+        const id = card.getAttribute('data-id');
+        const node = findNodeById(jsonData, id);
         if (!node) return;
-        const cardType = card.getAttribute('data-type');
 
         if (button) {
             e.stopPropagation();
@@ -258,9 +257,9 @@ function handleCardContainerClick(e) {
             if (action === 'expand') openModal(node);
             else if (action === 'copy') copyPromptTextForCard(node, e.target.closest('button'));
         } else {
-            if (cardType === 'folder') {
+            if (node.type === 'folder') {
                 navigateToNode(node);
-            } else if (cardType === 'prompt') {
+            } else if (node.type === 'prompt') {
                 openModal(node);
             }
         }
@@ -331,15 +330,15 @@ function handlePopState(event) {
     if (currentlyModalOpen && !state.modalOpen) {
         closeModal({ fromPopstate: true });
     } else if (!currentlyModalOpen && state.modalOpen) {
-        const promptGuidForModal = state.promptGuid;
-        const nodeToOpen = promptGuidForModal ? findNodeByGuid(xmlData.documentElement, promptGuidForModal) : null;
+        const promptIdForModal = state.promptId;
+        const nodeToOpen = promptIdForModal ? findNodeById(jsonData, promptIdForModal) : null;
 
-        if (nodeToOpen && nodeToOpen.getAttribute('beschreibung')) {
-            pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
-            if (state.path.length > 0 && pathStack.length > 0 && pathStack[pathStack.length-1].getAttribute('guid') === promptGuidForModal) {
+        if (nodeToOpen && nodeToOpen.type === 'prompt') {
+            pathStack = state.path.map(id => findNodeById(jsonData, id)).filter(Boolean);
+            if (state.path.length > 0 && pathStack.length > 0 && pathStack[pathStack.length-1].id === promptIdForModal) {
                  pathStack.pop();
             }
-            currentNode = pathStack.length > 0 ? pathStack[pathStack.length-1] : xmlData.documentElement;
+            currentNode = pathStack.length > 0 ? pathStack[pathStack.length-1] : jsonData;
             openModal(nodeToOpen, true);
         } else {
              handleNavigationFromState(state, direction);
@@ -352,14 +351,14 @@ function handlePopState(event) {
 function handleNavigationFromState(state, direction) {
      const targetPathLength = state.path.length;
      const updateDOM = () => {
-        pathStack = state.path.map(guid => findNodeByGuid(xmlData.documentElement, guid)).filter(Boolean);
+        pathStack = state.path.map(id => findNodeById(jsonData, id)).filter(Boolean);
         if(pathStack.length !== targetPathLength && state.path.length > 0) {
              pathStack = [];
         } else if (targetPathLength === 0) {
             pathStack = [];
         }
-        currentNode = targetPathLength === 0 ? xmlData.documentElement : pathStack[pathStack.length - 1];
-        if (!currentNode && xmlData) currentNode = xmlData.documentElement;
+        currentNode = targetPathLength === 0 ? jsonData : pathStack[pathStack.length - 1];
+        if (!currentNode && jsonData) currentNode = jsonData;
 
         renderView(currentNode);
         updateBreadcrumb();
@@ -440,23 +439,20 @@ function updateFullscreenButton() {
     if(fullscreenBtn) fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Vollbildmodus beenden' : 'Vollbildmodus aktivieren');
 }
 
-function findNodeByGuid(startNode, targetGuid) {
-    if (!startNode || !targetGuid) return null;
-    if (startNode.nodeType !== 1) return null;
-    if (startNode.getAttribute('guid') === targetGuid) return startNode;
+function findNodeById(startNode, targetId) {
+    if (!startNode || !targetId) return null;
+    if (startNode.id === targetId) return startNode;
 
-    const children = startNode.children;
-    for (let i = 0; i < children.length; i++) {
-        const child = children[i];
-        if (child.tagName === 'TreeViewNode') {
-            const found = findNodeByGuid(child, targetGuid);
+    if (startNode.type === 'folder' && startNode.items) {
+        for (const child of startNode.items) {
+            const found = findNodeById(child, targetId);
             if (found) return found;
         }
     }
     return null;
 }
 
-function generateGuid() {
+function generateId() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
@@ -507,9 +503,9 @@ function setupVivusAnimation(parentElement, svgId) {
     parentElement.addEventListener('touchcancel', touchEndHandler);
 }
 
-function processXml(xmlDoc) {
-    xmlData = xmlDoc;
-    currentNode = xmlData.documentElement;
+function processJson(data) {
+    jsonData = data;
+    currentNode = jsonData;
     pathStack = [];
     performViewTransition(() => {
         renderView(currentNode);
@@ -520,22 +516,17 @@ function processXml(xmlDoc) {
     }
 }
 
-function loadXmlDocument(filename) {
-    const storedXml = localStorage.getItem(localStorageKey);
-    if (storedXml) {
+function loadJsonData(filename) {
+    const storedJson = localStorage.getItem(localStorageKey);
+    if (storedJson) {
         try {
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(storedXml, "application/xml");
-            const parserError = xmlDoc.getElementsByTagName("parsererror");
-            if (parserError.length > 0) {
-                throw new Error("Fehler beim Parsen der lokalen XML-Daten.");
-            }
-            processXml(xmlDoc);
+            const parsedData = JSON.parse(storedJson);
+            processJson(parsedData);
             downloadBtn.style.display = 'flex';
             resetBtn.style.display = 'flex';
             return;
         } catch (error) {
-            console.error("Fehler beim Laden der XML aus dem Local Storage, lade Originaldatei:", error);
+            console.error("Fehler beim Laden der JSON aus dem Local Storage, lade Originaldatei:", error);
             localStorage.removeItem(localStorageKey);
         }
     }
@@ -543,21 +534,12 @@ function loadXmlDocument(filename) {
     downloadBtn.style.display = 'none';
     resetBtn.style.display = 'none';
     fetch(filename)
-        .then(response => { if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`); return response.text(); })
-        .then(str => {
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(str, "application/xml");
-            const parserError = xmlDoc.getElementsByTagName("parsererror");
-            if (parserError.length > 0) {
-                let errorMessage = "XML Parse Error.";
-                if (parserError[0] && parserError[0].childNodes.length > 0 && parserError[0].childNodes[0].textContent) {
-                     errorMessage = parserError[0].childNodes[0].textContent.trim().split('\n')[0];
-                } else if (parserError[0] && parserError[0].textContent) {
-                     errorMessage = parserError[0].textContent.trim().split('\n')[0];
-                }
-                throw new Error(errorMessage);
-            }
-            processXml(xmlDoc);
+        .then(response => { 
+            if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`); 
+            return response.json(); 
+        })
+        .then(data => {
+            processJson(data);
         })
         .catch(error => {
             console.error(`Load/Parse Error for ${filename}:`, error);
@@ -566,49 +548,48 @@ function loadXmlDocument(filename) {
         });
 }
 
-function renderView(xmlNode) {
+function renderView(node) {
     const currentScroll = containerEl.scrollTop;
     containerEl.innerHTML = '';
-    if (!xmlNode) {
+    if (!node) {
          containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
          gsap.to(containerEl, {opacity: 1, duration: 0.3});
          return;
      }
 
-    const childNodes = Array.from(xmlNode.children).filter(node => node.tagName === 'TreeViewNode');
+    const childNodes = node.items || [];
     const vivusSetups = [];
     const cardsToObserve = [];
 
-    childNodes.forEach(node => {
+    childNodes.forEach(childNode => {
         const card = document.createElement('div');
         card.classList.add('card');
-        const isFolder = Array.from(node.children).some(child => child.tagName === 'TreeViewNode');
-        let nodeGuid = node.getAttribute('guid');
-        if (!nodeGuid) {
-            nodeGuid = generateGuid();
-            node.setAttribute('guid', nodeGuid);
+        
+        let nodeId = childNode.id;
+        if (!nodeId) {
+            nodeId = generateId();
+            childNode.id = nodeId;
         }
-        card.setAttribute('data-guid', nodeGuid);
+        card.setAttribute('data-id', nodeId);
+        card.setAttribute('data-type', childNode.type);
 
         const titleElem = document.createElement('h3');
-        titleElem.textContent = node.getAttribute('value') || 'Unbenannt';
+        titleElem.textContent = childNode.title || 'Unbenannt';
 
         const contentWrapper = document.createElement('div');
         contentWrapper.classList.add('card-content-wrapper');
         contentWrapper.appendChild(titleElem);
 
-
-        if (isFolder) {
-            card.classList.add('folder-card'); card.setAttribute('data-type', 'folder');
+        if (childNode.type === 'folder') {
+            card.classList.add('folder-card');
             if (svgTemplateFolder) {
                 const folderIconSvg = svgTemplateFolder.cloneNode(true);
-                const folderIconId = `icon-folder-${nodeGuid}`;
+                const folderIconId = `icon-folder-${nodeId}`;
                 folderIconSvg.id = folderIconId;
                 contentWrapper.appendChild(folderIconSvg);
                 vivusSetups.push({ parent: card, svgId: folderIconId });
             }
         } else {
-            card.setAttribute('data-type', 'prompt');
             card.classList.add('prompt-card');
             const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
             if (svgTemplateExpand) {
@@ -709,9 +690,9 @@ function navigateToNode(node) {
     }, 'forward');
 
     if (isMobile() && !modalEl.classList.contains('visible')) {
-         let historyPath = pathStack.map(n => n.getAttribute('guid'));
-         if (currentNode && currentNode !== xmlData.documentElement) {
-             historyPath.push(currentNode.getAttribute('guid'));
+         let historyPath = pathStack.map(n => n.id);
+         if (currentNode && currentNode !== jsonData) {
+             historyPath.push(currentNode.id);
          }
          window.history.pushState({ path: historyPath, modalOpen: false }, '', window.location.href);
      }
@@ -719,7 +700,7 @@ function navigateToNode(node) {
 
 function updateBreadcrumb() {
     breadcrumbEl.innerHTML = '';
-    if (!xmlData || !xmlData.documentElement) return;
+    if (!jsonData) return;
 
     const homeLink = document.createElement('span');
     homeLink.textContent = 'Home';
@@ -736,7 +717,7 @@ function updateBreadcrumb() {
 
     clearAllActiveBreadcrumbs();
 
-    if (pathStack.length === 0 && currentNode === xmlData.documentElement) {
+    if (pathStack.length === 0 && currentNode === jsonData) {
         homeLink.classList.add('current-level-active');
         homeLink.classList.remove('breadcrumb-link');
     } else {
@@ -744,7 +725,7 @@ function updateBreadcrumb() {
         homeLink.addEventListener('click', () => {
             if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
             performViewTransition(() => {
-                currentNode = xmlData.documentElement; pathStack = [];
+                currentNode = jsonData; pathStack = [];
                 renderView(currentNode); updateBreadcrumb();
             }, 'backward');
             if (isMobile()) window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
@@ -753,14 +734,14 @@ function updateBreadcrumb() {
     breadcrumbEl.appendChild(homeLink);
 
     pathStack.forEach((nodeInPath, index) => {
-        const nodeValue = nodeInPath.getAttribute('value');
-        if (nodeValue) {
+        const nodeTitle = nodeInPath.title;
+        if (nodeTitle && nodeInPath.id !== 'root') {
             const separator = document.createElement('span');
             separator.textContent = ' > ';
             breadcrumbEl.appendChild(separator);
 
             const link = document.createElement('span');
-            link.textContent = nodeValue;
+            link.textContent = nodeTitle;
 
             if (nodeInPath === currentNode) {
                 clearAllActiveBreadcrumbs();
@@ -774,33 +755,33 @@ function updateBreadcrumb() {
                         currentNode = nodeInPath;
                         renderView(currentNode); updateBreadcrumb();
                     }, 'backward');
-                    if (isMobile()) window.history.pushState({ path: pathStack.map(n => n.getAttribute('guid')), modalOpen: false }, '', window.location.href);
+                    if (isMobile()) window.history.pushState({ path: pathStack.map(n => n.id), modalOpen: false }, '', window.location.href);
                 });
             }
             breadcrumbEl.appendChild(link);
         }
     });
 
-    const isAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
+    const isAtHome = pathStack.length === 0 && currentNode === jsonData;
     const parentOfCurrentNode = pathStack.length > 0 ? pathStack[pathStack.length - 1] : null;
 
-    if (!isAtHome && currentNode !== parentOfCurrentNode && currentNode !== xmlData.documentElement) {
+    if (!isAtHome && currentNode !== parentOfCurrentNode && currentNode !== jsonData) {
         clearAllActiveBreadcrumbs();
-        if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== xmlData.documentElement )) {
+        if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== jsonData )) {
             const separator = document.createElement('span');
             separator.textContent = ' > ';
             breadcrumbEl.appendChild(separator);
         }
          const currentSpan = document.createElement('span');
-         currentSpan.textContent = currentNode.getAttribute('value');
+         currentSpan.textContent = currentNode.title;
          currentSpan.classList.add('current-level-active');
          breadcrumbEl.appendChild(currentSpan);
     }
     
-    addPromptBtn.style.display = (currentNode === xmlData.documentElement || Array.from(currentNode.children).some(child => child.tagName === 'TreeViewNode')) ? 'flex' : 'none';
+    addPromptBtn.style.display = (currentNode && currentNode.type === 'folder') ? 'flex' : 'none';
 
     const isModalVisible = modalEl.classList.contains('visible');
-    const isTrulyAtHome = pathStack.length === 0 && currentNode === xmlData.documentElement;
+    const isTrulyAtHome = pathStack.length === 0 && currentNode === jsonData;
     fixedBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
     if(mobileBackBtn) mobileBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
     topbarBackBtn.style.visibility = (isTrulyAtHome && !isModalVisible) ? 'hidden' : 'visible';
@@ -827,9 +808,9 @@ function openNewPromptModal() {
 
 function openModal(node, calledFromPopstate = false) {
     if (node) {
-        const guid = node.getAttribute('guid');
-        modalEl.setAttribute('data-guid', guid);
-        promptFullTextEl.value = node.getAttribute('beschreibung') || '';
+        const id = node.id;
+        modalEl.setAttribute('data-id', id);
+        promptFullTextEl.value = node.content || '';
     }
 
     requestAnimationFrame(() => adjustTextareaHeight(promptFullTextEl));
@@ -844,8 +825,8 @@ function openModal(node, calledFromPopstate = false) {
     if (isMobile() && !calledFromPopstate && node) {
         const currentState = window.history.state || { path: [], modalOpen: false };
         if (!currentState.modalOpen) {
-            const currentViewPathGuids = pathStack.map(n => n.getAttribute('guid'));
-            window.history.pushState({ path: currentViewPathGuids, modalOpen: true, promptGuid: node.getAttribute('guid') }, '', window.location.href);
+            const currentViewPathIds = pathStack.map(n => n.id);
+            window.history.pushState({ path: currentViewPathIds, modalOpen: true, promptId: node.id }, '', window.location.href);
         }
     }
     updateBreadcrumb();
@@ -871,7 +852,7 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
     modalEl.classList.remove('visible');
     setTimeout(() => {
         modalEl.classList.add('hidden');
-        modalEl.removeAttribute('data-guid');
+        modalEl.removeAttribute('data-id');
         modalEl.removeAttribute('data-mode');
         promptTitleInputEl.style.display = 'none';
         promptFullTextEl.style.height = 'auto';
@@ -879,11 +860,11 @@ function closeModal(optionsOrCalledFromPopstate = {}) {
 
     if (fromBackdrop) {
         if (isMobile() && window.history.state?.modalOpen && !calledFromPopstate) {
-            const LrpmtGuid = window.history.state.promptGuid;
+            const LrpmtId = window.history.state.promptId;
             window.history.replaceState({
                 path: window.history.state.path,
                 modalOpen: false,
-                promptGuid: LrpmtGuid
+                promptId: LrpmtId
             }, '', window.location.href);
         }
         updateBreadcrumb();
@@ -926,39 +907,40 @@ function savePromptChanges() {
             return;
         }
 
-        const newPromptNode = xmlData.createElement('TreeViewNode');
-        const newGuid = generateGuid();
-        newPromptNode.setAttribute('guid', newGuid);
-        newPromptNode.setAttribute('value', title);
-        newPromptNode.setAttribute('beschreibung', promptFullTextEl.value);
-        newPromptNode.setAttribute('image', '1');
+        const newPromptNode = {
+            id: generateId(),
+            type: 'prompt',
+            title: title,
+            content: promptFullTextEl.value
+        };
 
-        currentNode.appendChild(newPromptNode);
+        if (!currentNode.items) {
+            currentNode.items = [];
+        }
+        currentNode.items.push(newPromptNode);
         
-        persistXmlData('Prompt hinzugefügt!', 'Hinzufügen fehlgeschlagen!');
+        persistJsonData('Prompt hinzugefügt!', 'Hinzufügen fehlgeschlagen!');
         renderView(currentNode);
         closeModal();
 
     } else { 
-        const guid = modalEl.getAttribute('data-guid');
-        if (!guid || !xmlData) return;
-        const nodeToUpdate = findNodeByGuid(xmlData.documentElement, guid);
+        const id = modalEl.getAttribute('data-id');
+        if (!id || !jsonData) return;
+        const nodeToUpdate = findNodeById(jsonData, id);
         if (nodeToUpdate) {
             const newText = promptFullTextEl.value;
-            nodeToUpdate.setAttribute('beschreibung', newText);
-            persistXmlData('Prompt gespeichert!', 'Speichern fehlgeschlagen!');
+            nodeToUpdate.content = newText;
+            persistJsonData('Prompt gespeichert!', 'Speichern fehlgeschlagen!');
         }
         toggleEditMode(false);
     }
 }
 
 
-function persistXmlData(successMsg, errorMsg) {
-    const serializer = new XMLSerializer();
-    const xmlString = serializer.serializeToString(xmlData);
-    
+function persistJsonData(successMsg, errorMsg) {
     try {
-        localStorage.setItem(localStorageKey, xmlString);
+        const jsonString = JSON.stringify(jsonData, null, 2);
+        localStorage.setItem(localStorageKey, jsonString);
         showNotification(successMsg, 'success');
         if (downloadBtn) {
             downloadBtn.style.display = 'flex';
@@ -971,18 +953,18 @@ function persistXmlData(successMsg, errorMsg) {
 }
 
 
-function downloadCustomXml() {
-    const xmlString = localStorage.getItem(localStorageKey);
-    if (!xmlString) {
+function downloadCustomJson() {
+    const jsonString = localStorage.getItem(localStorageKey);
+    if (!jsonString) {
         showNotification('Keine Änderungen zum Herunterladen vorhanden.', 'info');
         return;
     }
 
-    const blob = new Blob([xmlString], { type: 'application/xml;charset=utf-8' });
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Templates_modified.xml';
+    a.download = 'templates_modified.json';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1001,7 +983,7 @@ function resetLocalStorage() {
 }
 
 function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button')); }
-function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.getAttribute('beschreibung') || '', buttonElement); }
+function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.content || '', buttonElement); }
 
 function copyToClipboard(text, buttonElement = null) {
     if (navigator.clipboard && window.isSecureContext) {
