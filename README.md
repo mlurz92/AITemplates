@@ -1,49 +1,105 @@
-# Nodal Staging Analysis Tool (v5.1.0)
+# Prompt-Template Browser
 
-Dieses Repository enthält den Quellcode für das Analysewerkzeug **"Nodal Staging: Avocado Sign vs. T2 Criteria"**. Hierbei handelt es sich um eine eigenständige, clientseitige Webanwendung, die für die fortgeschrittene und reproduzierbare Forschung im Bereich der medizinischen Bildgebung, speziell für das Nodal-Staging des Rektumkarzinoms, entwickelt wurde.
+Ein moderner, interaktiver Browser zum Anzeigen, Navigieren, Kopieren und Bearbeiten von hierarchisch organisierten Textbausteinen (Prompts). Die Anwendung lädt ihre Daten aus einer lokalen XML-Datei, ermöglicht die dynamische Bearbeitung und das Hinzufügen neuer Prompts direkt im Browser und speichert alle Änderungen lokal, um eine personalisierte Vorlagensammlung zu erstellen.
 
-Für eine umfassende Anleitung zum wissenschaftlichen Hintergrund, den Anwendungsfunktionen, dem Benutzer-Workflow und den technischen Details lesen Sie bitte den detaillierten **[Anwendungsleitfaden](./docs/Application_Guide.md)**.
+## Features
 
-## 1. Projektübersicht
+* **Hierarchische Navigation:** Intuitives Durchsuchen von Ordnerstrukturen, die in `Templates.xml` definiert sind.
+* **Dynamische Inhaltsverwaltung:**
+    * **Prompts bearbeiten:** Bestehende Prompt-Texte können direkt in der Anwendung geändert werden.
+    * **Prompts hinzufügen:** Neue Prompt-Karten können in jedem beliebigen Ordner oder im Hauptverzeichnis erstellt werden.
+* **Lokale Persistenz:** Alle Änderungen (Bearbeitungen, neue Prompts) werden automatisch im Local Storage des Browsers gespeichert.
+* **Daten-Export:** Die personalisierte Sammlung von Vorlagen kann jederzeit als XML-Datei heruntergeladen werden.
+* **Kartenansicht:** Responsive Darstellung von Ordnern und Prompts als Karten mit 3D-Hover-Effekt auf dem Desktop.
+* **Detailansicht (Modal):** Anzeige des vollständigen Prompt-Textes in einem eleganten, überlagernden Modal-Fenster.
+* **Kopieren in Zwischenablage:** Einfaches Kopieren von Prompts mit einem Klick, inklusive visuellem Feedback.
+* **Responsives Design & PWA:** Optimiert für Desktop und mobile Endgeräte, inklusive PWA-Unterstützung ("Zum Startbildschirm hinzufügen").
+* **Moderne UI/UX:** Umschaltbares Dark/Light-Theme, Glassmorphism-Effekte, flüssige Seitenübergänge und Animationen.
+* **Mobile Optimierungen:** Eigene Navigationsleiste, Wischgesten und Integration der Browser-History für ein natives Gefühl.
 
-### 1.1. Zweck
-Diese Anwendung dient als spezialisiertes Forschungsinstrument für die tiefgehende Analyse und den Vergleich der diagnostischen Leistungsfähigkeit verschiedener MRT-basierter Kriterien zur Beurteilung des mesorektalen Lymphknotenstatus (N-Status). Ihr primäres wissenschaftliches Ziel ist die rigorose Evaluierung eines neuartigen, kontrastmittelbasierten Markers – des **Avocado Signs (AS)** – im Vergleich zu einem umfassenden Spektrum morphologischer Kriterien aus T2-gewichteten (T2w) Sequenzen. Diese Vergleichsstandards umfassen sowohl etablierte, literaturbasierte Richtlinien (z.B. ESGAR, SAR) als auch datengestützte, rechnerisch optimierte Benchmarks.
+## Technology Stack
 
-### 1.2. Kernfunktionen
-*   **Interaktive Datenexploration:** Eine hochperformante, sortierbare und filterbare Tabellenansicht des vollständigen Patientendatensatzes mit erweiterbaren Details zu den Merkmalen einzelner Lymphknoten.
-*   **Dynamische Kriteriendefinition:** Ein interaktives Bedienfeld ermöglicht die Echtzeit-Definition und Kombination von T2w-Malignitätskriterien (Größe, Form, Rand, Homogenität) und den sie verbindenden logischen Operatoren (AND/OR).
-*   **Methodisch fundierte Vergleiche:** Ein robustes "Analyse-Kontext"-System stellt sicher, dass alle statistischen Vergleiche zwischen diagnostischen Methoden ausschließlich auf den korrekten, identischen Patientenkohorten durchgeführt werden – eine entscheidende Voraussetzung für die wissenschaftliche Validität.
-*   **Automatisierte Kriterienoptimierung:** Ein integrierter Brute-Force-Algorithmus, der in einem dedizierten Web Worker läuft, identifiziert systematisch die mathematisch optimale Kombination von T2w-Kriterien für eine vom Benutzer ausgewählte diagnostische Metrik (z.B. Balanced Accuracy, F1-Score).
-*   **Fortgeschrittene Analysen:** Ein dedizierter "Insights"-Tab bietet tiefere Einblicke durch erweiterte statistische Methoden, einschließlich Post-hoc-Power-Analyse, prospektiver Stichprobenschätzung, Diskrepanz-Analysen (Mismatch) und einer Untersuchung der prädiktiven Wichtigkeit einzelner T2-Merkmale.
-*   **Umfassende statistische Analyse:** Automatisierte Berechnung aller relevanten Metriken zur diagnostischen Leistungsfähigkeit (Sensitivität, Spezifität, PPV, NPV, Genauigkeit, AUC) einschließlich 95%-Konfidenzintervallen und geeigneten statistischen Vergleichstests (z.B. DeLong, McNemar).
-*   **Automatisierter Publikationsassistent:** Ein dediziertes Modul, das einen vollständigen, formatierten, englischsprachigen Manuskriptentwurf (einschließlich Text, Tabellen und Abbildungen) generiert, der sich präzise an die wissenschaftlichen Stilrichtlinien des Journals *Radiology* hält. Dies beinhaltet eine manuelle Bearbeitungsfunktion, um den Text vor dem Export zu finalisieren.
-*   **Vielseitige Exportfunktionalität:** Ermöglicht den Export des vollständigen Manuskripts als Markdown, einzelner Tabellen als Markdown und aller gerenderten Diagramme (Histogramme, Tortendiagramme, Balkendiagramme, ROC-Kurven, Flussdiagramme) als hochwertige Scalable Vector Graphics (SVG)-Dateien.
+* **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES6+)
+* **Datenformat:** XML
+* **APIs:** Fetch, DOMParser, XMLSerializer, Clipboard, Fullscreen, History, Local Storage, View Transitions
+* **Animation:** GSAP, Vivus.js, Intersection Observer API
+* **PWA:** Web App Manifest
 
-### 1.3. Haftungsausschluss: Nur für Forschungszwecke
-**Diese Anwendung ist ausschließlich für Forschungs- und Bildungszwecke konzipiert.** Die dargestellten Daten, Statistiken und generierten Texte basieren auf einem statischen, pseudonymisierten Forschungsdatensatz. **Die Ergebnisse dürfen unter keinen Umständen für die klinische Diagnosestellung, direkte Behandlungsentscheidungen oder andere primäre medizinische Anwendungen verwendet werden.** Die wissenschaftliche und klinische Verantwortung für die Interpretation und Nutzung der generierten Ergebnisse liegt allein beim Anwender.
+## File Structure
 
-## 2. Setup und Nutzung
+```
 
-### 2.1. Systemanforderungen
-*   Ein moderner Desktop-Webbrowser (z.B. die neuesten Versionen von Google Chrome, Mozilla Firefox, Microsoft Edge oder Safari).
-*   Web-Worker-Unterstützung ist für die Brute-Force-Optimierungsfunktion erforderlich.
+.
+├── icons/                 \# Ordner für PWA Icons
+│   ├── icon-192x192.png
+│   └── icon-512x512.png
+├── index.html             \# Haupt-HTML-Datei
+├── style.css              \# CSS für Styling, Layout, Animationen
+├── script.js              \# JavaScript für Logik und Interaktionen
+├── Templates.xml          \# Standard-Datenquelle für Ordner & Prompts
+├── manifest.json          \# Web App Manifest für PWA
+├── favicon.ico            \# Favicon
+└── README.md              \# Diese Datei
 
-### 2.2. Installation
-Es ist keine Installation oder serverseitige Einrichtung erforderlich. Die Anwendung ist ein in sich geschlossenes Projekt, das vollständig im Browser des Clients ausgeführt wird.
+````
 
-1.  Klonen oder laden Sie dieses Repository auf Ihren lokalen Rechner herunter.
-2.  Öffnen Sie die Datei `index.html` in einem kompatiblen Webbrowser.
-3.  Beim ersten Start ist eine Internetverbindung erforderlich, um externe Bibliotheken (z.B. Bootstrap, D3.js) von ihren jeweiligen Content Delivery Networks (CDNs) zu laden.
+## Setup & Usage
 
-## 3. Technische Architektur
+### Voraussetzungen
 
-Die Anwendung wurde mit Vanilla JavaScript (ES2020+) erstellt und folgt einer modularen Architektur, die Datenlogik, Servicefunktionen und UI-Rendering voneinander trennt. Dies gewährleistet Wartbarkeit und Skalierbarkeit.
+Ein moderner Webbrowser, der aktuelle Webstandards unterstützt (z.B. Chrome, Firefox, Edge, Safari). Für die Ausführung wird ein lokaler Webserver empfohlen.
 
-*   **App Controller (`js/app/main.js`):** Der zentrale Orchestrator, der den Lebenszyklus der Anwendung, den Datenfluss und die UI-Updates verwaltet.
-*   **State Manager (`js/app/state.js`):** Ein zentralisiertes Modul zur Verwaltung des globalen Anwendungszustands, einschließlich der aktiven Kohorte, der Sortierpräferenzen und des entscheidenden "Analyse-Kontexts" zur Gewährleistung methodisch fundierter Vergleiche.
-*   **Kernmodule (`js/core/`):** Behandeln die grundlegende Datenverarbeitung, die Verwaltung der benutzerdefinierten T2-Kriterien und die Verwaltung der vordefinierten, literaturbasierten Kriterien.
-*   **Service-Schicht (`js/services/`):** Enthält die komplexe Geschäftslogik für statistische Berechnungen, die Brute-Force-Optimierung (die die Berechnung an einen Web Worker auslagert) und den umfassenden Dienst zur Publikationserstellung.
-*   **UI-Schicht (`js/ui/`):** Verantwortlich für das Rendern aller UI-Komponenten und Tabs. Sie generiert dynamisch HTML-Inhalte basierend auf dem aktuellen Anwendungszustand und den Daten.
-*   **Web Worker (`workers/`):** Die Datei `brute_force_worker.js` führt den rechenintensiven Optimierungsprozess in einem separaten Thread aus, um die Haupt-UI reaktionsschnell zu halten.
+### Datenquelle anpassen (`Templates.xml`)
 
-Für eine detaillierte Aufschlüsselung jeder Datei und Funktion konsultieren Sie bitte den **[Anwendungsleitfaden](./docs/Application_Guide.md)**.
+Die initiale Struktur und der Inhalt der Anwendung werden durch die Datei `Templates.xml` definiert.
+
+* **Struktur:** Die Hierarchie wird durch verschachtelte `<TreeViewNode>`-Elemente aufgebaut.
+    * Ein `<TreeViewNode>`, der weitere `<TreeViewNode>`-Elemente enthält, wird als **Ordner** dargestellt.
+    * Ein `<TreeViewNode>` ohne untergeordnete `<TreeViewNode>`-Elemente wird als **Prompt** dargestellt.
+* **Wichtige Attribute:**
+    * `value="Titel"`: Der Titel des Ordners oder Prompts.
+    * `beschreibung="Inhalt..."`: Der vollständige Text des Prompts. Bei Ordnern leer lassen.
+    * `guid="EINE-EINZIGARTIGE-GUID"`: Ein **global eindeutiger Identifikator** für jeden Knoten. Dies ist **entscheidend** für die Funktion der Anwendung. Nutzen Sie einen Online-GUID-Generator.
+    * `image="1"`: Dieses Attribut sollte für Prompt-Knoten gesetzt sein.
+
+### Ausführen der Anwendung (Empfohlen)
+
+Da Browser `fetch`-Anfragen an lokale Dateien (`file://`) blockieren, ist die Verwendung eines lokalen Webservers die beste Methode.
+
+1.  **Stellen Sie sicher, dass Sie Node.js installiert haben.**
+2.  Öffnen Sie ein Terminal im Projektverzeichnis.
+3.  Führen Sie den folgenden Befehl aus, um einen einfachen Webserver zu starten:
+    ```bash
+    npx serve .
+    ```
+4.  Öffnen Sie die angezeigte `http://localhost:....`-Adresse in Ihrem Browser.
+
+*Alternative (Python):*
+```bash
+# Für Python 3
+python -m http.server
+````
+
+Öffnen Sie dann `http://localhost:8000` in Ihrem Browser.
+
+## Personalisierung und Datenmanagement
+
+### Prompts bearbeiten
+
+1.  Klicken Sie auf eine Prompt-Karte, um die Detailansicht zu öffnen.
+2.  Klicken Sie auf den **Bearbeiten-Button** (Stift-Icon).
+3.  Ändern Sie den Text im Textfeld.
+4.  Klicken Sie auf den **Speichern-Button** (Disketten-Icon). Die Änderungen werden sofort im Browser gespeichert.
+
+### Prompts hinzufügen
+
+1.  Navigieren Sie in den Ordner, in dem Sie einen neuen Prompt erstellen möchten.
+2.  Klicken Sie auf den **Hinzufügen-Button** (+) in der oberen Navigationsleiste.
+3.  Das Detail-Modal öffnet sich im "Erstellen"-Modus.
+4.  Geben Sie einen Titel und den Inhalt für den neuen Prompt ein.
+5.  Klicken Sie auf den **Speichern-Button**. Die neue Karte erscheint in der aktuellen Ansicht und die Änderungen werden gespeichert.
+
+### Änderungen herunterladen & zurücksetzen
+
+  * **Herunterladen:** Sobald Sie eine Änderung gespeichert haben, erscheint der **Download-Button**. Klicken Sie darauf, um Ihre gesamte personalisierte `Templates.xml`-Datei zu sichern.
+  * **Zurücksetzen:** Der **Zurücksetzen-Button** (erscheint ebenfalls nach Änderungen) ermöglicht es Ihnen, alle lokalen Anpassungen zu verwerfen und zum Zustand der ursprünglichen `Templates.xml`-Datei zurückzukehren.
