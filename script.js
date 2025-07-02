@@ -7,13 +7,14 @@ const currentJsonFile = "templates.json";
 const localStorageKey = 'customTemplatesJson';
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addPromptBtn;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addPromptBtn, organizeBtn, organizeIcon, doneIcon;
 let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
 
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark;
+let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete;
 
 let cardObserver;
+let sortableInstance = null;
 
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 const swipeThreshold = 50;
@@ -37,10 +38,15 @@ function initApp() {
     downloadBtn = document.getElementById('download-button');
     resetBtn = document.getElementById('reset-button');
     addPromptBtn = document.getElementById('add-prompt-button');
+    organizeBtn = document.getElementById('organize-button');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
         fullscreenExitIcon = fullscreenBtn.querySelector('.icon-fullscreen-exit');
+    }
+    if (organizeBtn) {
+        organizeIcon = organizeBtn.querySelector('.icon-organize');
+        doneIcon = organizeBtn.querySelector('.icon-done');
     }
     mobileNavEl = document.getElementById('mobile-nav');
 
@@ -53,6 +59,7 @@ function initApp() {
     svgTemplateExpand = document.getElementById('svg-template-expand');
     svgTemplateCopy = document.getElementById('svg-template-copy');
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
+    svgTemplateDelete = document.getElementById('svg-template-delete');
 
     updateDynamicDurations();
     setupTheme();
@@ -126,6 +133,7 @@ function setupEventListeners() {
     });
 
     fixedBackBtn.addEventListener('click', () => {
+        exitOrganizeMode();
         if (modalEl.classList.contains('visible')) {
             closeModal();
         }
@@ -142,6 +150,7 @@ function setupEventListeners() {
         }
     });
 
+    organizeBtn.addEventListener('click', toggleOrganizeMode);
     addPromptBtn.addEventListener('click', openNewPromptModal);
     downloadBtn.addEventListener('click', downloadCustomJson);
     resetBtn.addEventListener('click', resetLocalStorage);
@@ -182,6 +191,7 @@ function setupMobileSpecificFeatures() {
 
     if (mobileHomeBtn) {
         mobileHomeBtn.addEventListener('click', () => {
+            exitOrganizeMode();
             const modalWasVisible = modalEl.classList.contains('visible');
             if (modalWasVisible) {
                 closeModal({ fromBackdrop: true });
@@ -224,7 +234,7 @@ function navigateOneLevelUp() {
     if (pathStack.length === 0) {
         return;
     }
-
+    exitOrganizeMode();
     performViewTransition(() => {
         const parentNode = pathStack.pop();
         currentNode = parentNode;
@@ -238,37 +248,91 @@ function navigateOneLevelUp() {
     }, 'backward');
 }
 
+function findParentOfNode(targetId, startNode = jsonData) {
+    if (!startNode.items) return null;
+
+    for (const child of startNode.items) {
+        if (child.id === targetId) {
+            return startNode;
+        }
+        if (child.type === 'folder') {
+            const foundParent = findParentOfNode(targetId, child);
+            if (foundParent) return foundParent;
+        }
+    }
+    return null;
+}
+
+function handleDeleteClick(id, cardElement) {
+    const nodeToDelete = findNodeById(jsonData, id);
+    if (!nodeToDelete) return;
+
+    const confirmation = confirm(`Möchten Sie "${nodeToDelete.title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`);
+    if (confirmation) {
+        gsap.to(cardElement, {
+            opacity: 0,
+            scale: 0.8,
+            duration: 0.3,
+            ease: "expo.in",
+            onComplete: () => {
+                const parentNode = findParentOfNode(id);
+                if (parentNode && parentNode.items) {
+                    const index = parentNode.items.findIndex(item => item.id === id);
+                    if (index > -1) {
+                        parentNode.items.splice(index, 1);
+                        persistJsonData('Element gelöscht!', 'Löschen fehlgeschlagen!');
+                        renderView(currentNode);
+                        updateBreadcrumb();
+                    }
+                }
+            }
+        });
+    }
+}
+
 function handleCardContainerClick(e) {
     if (modalEl.classList.contains('visible') || e.target.closest('.modal-content')) {
         return;
     }
 
     const card = e.target.closest('.card');
-    const button = e.target.closest('button[data-action]');
-
-    if (card) {
-        const id = card.getAttribute('data-id');
-        const node = findNodeById(jsonData, id);
-        if (!node) return;
-
-        if (button) {
-            e.stopPropagation();
-            const action = button.getAttribute('data-action');
-            if (action === 'expand') openModal(node);
-            else if (action === 'copy') copyPromptTextForCard(node, e.target.closest('button'));
-        } else {
-            if (node.type === 'folder') {
-                navigateToNode(node);
-            } else if (node.type === 'prompt') {
-                openModal(node);
-            }
+    if (!card) {
+        if (e.target === containerEl && pathStack.length > 0) {
+            navigateOneLevelUp();
         }
-    } else if (e.target === containerEl && pathStack.length > 0) {
-         navigateOneLevelUp();
+        return;
+    }
+
+    const button = e.target.closest('button[data-action]');
+    
+    if (containerEl.classList.contains('edit-mode')) {
+        if (button && button.getAttribute('data-action') === 'delete') {
+            const id = card.getAttribute('data-id');
+            handleDeleteClick(id, card);
+        }
+        return;
+    }
+
+    const id = card.getAttribute('data-id');
+    const node = findNodeById(jsonData, id);
+    if (!node) return;
+
+    if (button) {
+        e.stopPropagation();
+        const action = button.getAttribute('data-action');
+        if (action === 'expand') openModal(node);
+        else if (action === 'copy') copyPromptTextForCard(node, e.target.closest('button'));
+    } else {
+        if (node.type === 'folder') {
+            navigateToNode(node);
+        } else if (node.type === 'prompt') {
+            openModal(node);
+        }
     }
 }
 
 function handleTouchStart(e) {
+    if(containerEl.classList.contains('edit-mode')) return;
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
     touchEndX = touchStartX;
@@ -276,7 +340,7 @@ function handleTouchStart(e) {
 }
 
 function handleTouchMove(e) {
-    if (!touchStartX || modalEl.classList.contains('visible')) return;
+    if (!touchStartX || modalEl.classList.contains('visible') || containerEl.classList.contains('edit-mode')) return;
     touchEndX = e.touches[0].clientX;
     touchEndY = e.touches[0].clientY;
     let diffX = touchEndX - touchStartX;
@@ -292,7 +356,7 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd() {
-    if (!touchStartX || modalEl.classList.contains('visible')) return;
+    if (!touchStartX || modalEl.classList.contains('visible') || containerEl.classList.contains('edit-mode')) return;
     let diffX = touchEndX - touchStartX;
     let diffY = touchEndY - touchStartY;
 
@@ -311,6 +375,7 @@ function navigateHistory(direction) {
     if (isMobile() && pathStack.length > 0) {
         window.history.back();
     } else if (!isMobile() && pathStack.length > 0) {
+        exitOrganizeMode();
         performViewTransition(() => {
             if (pathStack.length > 0) {
                 const parentNode = pathStack.pop();
@@ -323,6 +388,7 @@ function navigateHistory(direction) {
 }
 
 function handlePopState(event) {
+    exitOrganizeMode();
     const state = event.state || { path: [], modalOpen: false };
     const currentlyModalOpen = modalEl.classList.contains('visible');
     const direction = state.path.length < pathStack.length ? 'backward' : 'forward';
@@ -549,6 +615,7 @@ function loadJsonData(filename) {
 }
 
 function renderView(node) {
+    exitOrganizeMode();
     const currentScroll = containerEl.scrollTop;
     containerEl.innerHTML = '';
     if (!node) {
@@ -572,6 +639,15 @@ function renderView(node) {
         }
         card.setAttribute('data-id', nodeId);
         card.setAttribute('data-type', childNode.type);
+
+        if (svgTemplateDelete) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.classList.add('card-delete-btn');
+            deleteBtn.setAttribute('aria-label', 'Element löschen');
+            deleteBtn.setAttribute('data-action', 'delete');
+            deleteBtn.appendChild(svgTemplateDelete.cloneNode(true));
+            card.appendChild(deleteBtn);
+        }
 
         const titleElem = document.createElement('h3');
         titleElem.textContent = childNode.title || 'Unbenannt';
@@ -650,7 +726,7 @@ function adjustCardHeights() {
 function addCard3DHoverEffect(card) {
     let frameRequested = false;
     card.addEventListener('mousemove', (e) => {
-        if (frameRequested || isMobile()) return;
+        if (frameRequested || isMobile() || containerEl.classList.contains('edit-mode')) return;
         frameRequested = true;
         requestAnimationFrame(() => {
             const rect = card.getBoundingClientRect();
@@ -680,6 +756,7 @@ function addCard3DHoverEffect(card) {
 }
 
 function navigateToNode(node) {
+    exitOrganizeMode();
     performViewTransition(() => {
         if (currentNode !== node) {
             pathStack.push(currentNode);
@@ -723,6 +800,7 @@ function updateBreadcrumb() {
     } else {
         homeLink.classList.add('breadcrumb-link');
         homeLink.addEventListener('click', () => {
+            exitOrganizeMode();
             if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
             performViewTransition(() => {
                 currentNode = jsonData; pathStack = [];
@@ -749,6 +827,7 @@ function updateBreadcrumb() {
             } else {
                 link.classList.add('breadcrumb-link');
                 link.addEventListener('click', () => {
+                    exitOrganizeMode();
                     if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
                     performViewTransition(() => {
                         pathStack = pathStack.slice(0, index + 1);
@@ -778,7 +857,8 @@ function updateBreadcrumb() {
          breadcrumbEl.appendChild(currentSpan);
     }
     
-    addPromptBtn.style.display = (currentNode && currentNode.type === 'folder') ? 'flex' : 'none';
+    addPromptBtn.style.display = (currentNode && currentNode.type === 'folder' && !containerEl.classList.contains('edit-mode')) ? 'flex' : 'none';
+    organizeBtn.style.display = (currentNode && currentNode.items && currentNode.items.length > 0) ? 'flex' : 'none';
 
     const isModalVisible = modalEl.classList.contains('visible');
     const isTrulyAtHome = pathStack.length === 0 && currentNode === jsonData;
@@ -794,6 +874,7 @@ function adjustTextareaHeight(element) {
 }
 
 function openNewPromptModal() {
+    exitOrganizeMode();
     modalEl.dataset.mode = 'new';
     
     promptTitleInputEl.value = '';
@@ -1039,4 +1120,41 @@ function showNotification(message, type = 'info', buttonElement = null) {
         }, { once: true });
         notificationTimeoutId = null;
     }, 2800);
+}
+
+function toggleOrganizeMode() {
+    const isEditing = !containerEl.classList.contains('edit-mode');
+    containerEl.classList.toggle('edit-mode', isEditing);
+    organizeBtn.classList.toggle('is-active', isEditing);
+    organizeIcon.classList.toggle('hidden', isEditing);
+    doneIcon.classList.toggle('hidden', !isEditing);
+    
+    addPromptBtn.style.display = isEditing ? 'none' : 'flex';
+
+    if (isEditing) {
+        sortableInstance = new Sortable(containerEl, {
+            animation: 200,
+            ghostClass: 'sortable-ghost',
+            onEnd: (evt) => {
+                const { oldIndex, newIndex } = evt;
+                if (oldIndex === newIndex) return;
+
+                const item = currentNode.items.splice(oldIndex, 1)[0];
+                currentNode.items.splice(newIndex, 0, item);
+
+                persistJsonData('Reihenfolge gespeichert!', 'Fehler beim Speichern!');
+            },
+        });
+    } else {
+        if (sortableInstance) {
+            sortableInstance.destroy();
+            sortableInstance = null;
+        }
+    }
+}
+
+function exitOrganizeMode() {
+    if (containerEl.classList.contains('edit-mode')) {
+        toggleOrganizeMode();
+    }
 }

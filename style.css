@@ -19,6 +19,8 @@
   --shadow-color-heavy: rgba(0, 0, 0, 0.5);
   --glow-color-start: rgba(0, 170, 255, 0.25);
   --glow-color-end: rgba(50, 180, 255, 0.15);
+  --delete-color: #ff3b30;
+  --delete-hover-bg: rgba(255, 59, 48, 0.15);
   --logo-line-color: #f0f0f5;
   --logo-accent-color: #00aaff;
 
@@ -54,6 +56,8 @@ body.light-mode {
   --shadow-color-heavy: rgba(30, 40, 50, 0.12);
   --glow-color-start: rgba(0, 119, 204, 0.2);
   --glow-color-end: rgba(0, 95, 163, 0.1);
+  --delete-color: #d90429;
+  --delete-hover-bg: rgba(217, 4, 41, 0.1);
   --logo-line-color: #181c20;
   --logo-accent-color: #0077cc;
 }
@@ -179,8 +183,18 @@ body.light-mode #app-logo-svg .icon-accent {
     white-space: nowrap; 
 }
 
-.add-prompt {
+.organize-toggle {
     margin-left: auto;
+    flex-shrink: 0;
+}
+.organize-toggle .icon-done.hidden,
+.organize-toggle:not(.is-active) .icon-done,
+.organize-toggle.is-active .icon-organize {
+    display: none;
+}
+
+.add-prompt {
+    margin-left: 0.2rem;
     flex-shrink: 0;
 }
 
@@ -270,6 +284,70 @@ body.light-mode .card:hover {
     border-color: var(--accent-hover);
 }
 
+.cards-container.edit-mode .card {
+    cursor: grab;
+    animation: jiggle 0.4s infinite;
+}
+.cards-container.edit-mode .card:hover {
+    transform: translateY(-5px) scale(1.02);
+    animation-name: jiggle, glow;
+}
+.cards-container.edit-mode .card.sortable-ghost {
+    background: var(--hover-bg);
+    border: 2px dashed var(--accent);
+    opacity: 0.7;
+}
+.cards-container.edit-mode .card.sortable-drag {
+    cursor: grabbing;
+    opacity: 0.85;
+    transform: scale(1.05);
+    box-shadow: 0 15px 30px var(--shadow-color-heavy);
+    z-index: 999;
+    animation: none;
+}
+
+@keyframes jiggle {
+  0% { transform: rotate(-0.5deg) translateY(0px); }
+  50% { transform: rotate(0.5deg) translateY(-1px); }
+  100% { transform: rotate(-0.5deg) translateY(0px); }
+}
+
+.card-delete-btn {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.2s ease, transform 0.2s var(--timing-function-bounce);
+    z-index: 15;
+}
+
+.cards-container.edit-mode .card-delete-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.card-delete-btn:hover {
+    transform: scale(1.15);
+    background: var(--delete-hover-bg);
+    color: var(--delete-color);
+}
+.card-delete-btn .icon-delete {
+    stroke: var(--text-color-muted);
+    transition: stroke 0.2s ease;
+}
+.card-delete-btn:hover .icon-delete {
+    stroke: var(--delete-color);
+}
 
 .card-content-wrapper {
   display: flex;
@@ -418,12 +496,17 @@ body.light-mode .card:hover {
 .icon-download polyline,
 .icon-download line,
 .icon-reset path,
-.icon-reset polyline {
+.icon-reset polyline,
+.organize-toggle .icon {
   transition-property: transform, stroke;
   transition-duration: var(--transition-duration-fast);
   transition-timing-function: var(--timing-function-ease);
   transform-origin: center center;
 }
+.button:hover .organize-toggle .icon {
+    transform: scale(0.92) rotate(45deg);
+}
+
 
 .mobile-nav {
   position: fixed;
@@ -793,7 +876,7 @@ body.light-mode .notification.error svg.icon {
     }
 
     @media (max-width: 360px) {
-        #theme-toggle-button, #download-button, #reset-button { display: none; }
+        #theme-toggle-button, #download-button, #reset-button, #organize-button { display: none; }
         #fullscreen-button { margin-left: auto; }
         .cards-container {
             grid-template-columns: 1fr;
