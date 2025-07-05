@@ -283,6 +283,12 @@
           "title": "Suno AI Musikgenerierung",
           "items": [
             {
+              "id": "1a18fd67-b185-45be-bcd9-1687f2426b92",
+              "type": "prompt",
+              "title": "Suno V4.5 Song erstellen",
+              "content": "Der Song muss optimiert sein für die Text zu Song KI Suno V4.5. Ich will den Song im individual-Modus von Suno erstellen. Der Song soll das Thema optimal vermitteln und intelligenten wissenschaftlichen Witz und Charme besitzen. Die Reime sollen nicht plump und erzwungen klingen, sondern perfekt in den Satz- und Wortfluss passen und vollständig im Gesamtkontext sein. Der Song soll in jeder Hinsicht absolutes Ohrwurmpotenzial haben und super eingängig sein. Gib jeweils in einem eigenen codeblock an, was ich in die einzelnen Felder eingeben muss, also Songtext (ggf. mit Metatags in eckigen Klammern um die Songerstellung optimal zu leiten), Style of Music, Titel usw. Suche auch nach Tipps und Tricks die Song Erstellung durch die KI nach eigenen Vorstellungen zu leiten und nutze dies in deinen Eingaben."
+            },
+            {
               "id": "5-1-1",
               "type": "prompt",
               "title": "Suno AI Song Optimierung",
