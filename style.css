@@ -25,8 +25,8 @@
   --logo-accent-color: #00aaff;
   --edit-color: #4caf50;
   --edit-hover-bg: rgba(76, 175, 80, 0.15);
-  --rename-color: #ff9800;
-  --rename-hover-bg: rgba(255, 152, 0, 0.15);
+  --move-color: #ff9800;
+  --move-hover-bg: rgba(255, 152, 0, 0.15);
 
   --transition-duration-fast: 0.2s;
   --transition-duration-medium: 0.3s;
@@ -77,8 +77,8 @@ body.light-mode {
   --logo-accent-color: #0077cc;
   --edit-color: #2e7d32;
   --edit-hover-bg: rgba(46, 125, 50, 0.1);
-  --rename-color: #ef6c00;
-  --rename-hover-bg: rgba(239, 108, 0, 0.1);
+  --move-color: #ef6c00;
+  --move-hover-bg: rgba(239, 108, 0, 0.1);
 }
 
 html, body {
@@ -209,9 +209,59 @@ body.light-mode #app-logo-svg .icon-accent {
     display: none;
 }
 
-.add-prompt {
+.add-container {
+    position: relative;
     margin-left: 0.2rem;
     flex-shrink: 0;
+}
+
+.add-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.5rem;
+    box-shadow: 0 8px 16px var(--shadow-color-heavy);
+    backdrop-filter: blur(16px) saturate(120%);
+    -webkit-backdrop-filter: blur(16px) saturate(120%);
+    z-index: 1000;
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    width: max-content;
+}
+
+.add-menu:not(.hidden) {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    pointer-events: all;
+}
+
+.add-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.add-menu-item:hover {
+    background-color: var(--hover-bg);
+    color: var(--accent);
 }
 
 .reset-toggle,
@@ -323,6 +373,17 @@ body.light-mode .card:hover {
     animation: none;
 }
 
+.card.drop-target-folder {
+    transform: scale(1.05);
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 15px 5px var(--glow-color-start);
+}
+
+.card.drop-target-combine {
+    border: 2px dashed var(--accent);
+    background: var(--hover-bg);
+}
+
 @keyframes jiggle {
   0% { transform: rotate(-0.5deg) translateY(0px); }
   50% { transform: rotate(0.5deg) translateY(-1px); }
@@ -401,43 +462,6 @@ body.light-mode .card:hover {
 }
 .card-edit-btn:hover .icon-edit {
     stroke: var(--edit-color);
-}
-
-.card-rename-btn {
-    position: absolute;
-    top: -8px;
-    right: 56px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    width: clamp(28px, 3vw, 32px);
-    height: clamp(28px, 3vw, 32px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transform: scale(0.5);
-    transition: opacity 0.2s ease, transform 0.2s var(--timing-function-bounce);
-    z-index: 15;
-}
-
-.cards-container.edit-mode .card-rename-btn {
-    opacity: 1;
-    transform: scale(1);
-}
-
-.card-rename-btn:hover {
-    transform: scale(1.15);
-    background: var(--rename-hover-bg);
-    color: var(--rename-color);
-}
-.card-rename-btn .icon-rename {
-    stroke: var(--text-color-muted);
-    transition: stroke 0.2s ease;
-}
-.card-rename-btn:hover .icon-rename {
-    stroke: var(--rename-color);
 }
 
 .card-content-wrapper {
@@ -525,6 +549,11 @@ body.light-mode .card:hover {
 }
 .button:active {
   transform: scale(0.96);
+}
+.button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 .button.hidden {
     display: none;
@@ -705,6 +734,17 @@ body.light-mode .modal {
   transition-duration: var(--transition-duration-medium);
   transition-timing-function: var(--timing-function-bounce);
   box-shadow: 0 10px 30px var(--shadow-color-heavy);
+}
+
+.modal .modal-content.small-modal {
+    max-width: 450px;
+    padding: 1.5rem;
+}
+
+.modal .modal-content h2 {
+    font-size: 1.4rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
 }
 
 body.light-mode .modal .modal-content {
@@ -897,6 +937,21 @@ body.light-mode .notification.error svg.icon {
     color: var(--accent);
 }
 
+.context-menu-item[data-action="delete"]:hover {
+    background-color: var(--delete-hover-bg);
+    color: var(--delete-color);
+}
+
+.context-menu-item[data-action="rename"]:hover {
+    background-color: var(--edit-hover-bg);
+    color: var(--edit-color);
+}
+
+.context-menu-item[data-action="move"]:hover {
+    background-color: var(--move-hover-bg);
+    color: var(--move-color);
+}
+
 .context-menu-item svg {
     margin-right: 0.6rem;
     width: 18px;
@@ -944,6 +999,40 @@ body.light-mode .notification.error svg.icon {
     padding: 0.2rem 0;
     width: 100%;
     outline: none;
+}
+
+.folder-tree {
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.folder-tree-item {
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.folder-tree-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.folder-tree-item.selected {
+    background-color: var(--accent);
+    color: var(--bg-surface);
+}
+
+.folder-tree-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: transparent;
 }
 
 @keyframes pulse {
@@ -1008,10 +1097,6 @@ body.light-mode .notification.error svg.icon {
   .card-edit-btn {
       right: 20px;
   }
-  
-  .card-rename-btn {
-      right: 48px;
-  }
 }
 
 @media (max-width: 576px) {
@@ -1051,12 +1136,6 @@ body.light-mode .notification.error svg.icon {
       width: 24px;
       height: 24px;
   }
-  
-  .card-rename-btn {
-      right: 40px;
-      width: 24px;
-      height: 24px;
-  }
 }
 
 @media (max-width: 400px) {
@@ -1075,7 +1154,7 @@ body.light-mode .notification.error svg.icon {
     max-height: 2.4em;
   }
   
-  .card-edit-btn, .card-rename-btn {
+  .card-edit-btn {
       display: none;
   }
 }

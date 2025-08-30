@@ -7,11 +7,13 @@ const currentJsonFile = "templates.json";
 const localStorageKey = 'customTemplatesJson';
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addPromptBtn, organizeBtn, organizeIcon, doneIcon;
+let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCancelBtn;
+let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, themeToggleButton, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon;
 let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
 
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateRename;
+let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
 let cardObserver;
 let sortableInstance = null;
@@ -20,6 +22,7 @@ let dragOverlay = null;
 let dragIndicator = null;
 let dragSource = null;
 let dragTarget = null;
+let springLoadTimeout = null;
 
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 const swipeThreshold = 50;
@@ -35,6 +38,17 @@ function initApp() {
     promptFullTextEl = document.getElementById('prompt-fulltext');
     promptTitleInputEl = document.getElementById('prompt-title-input');
     notificationAreaEl = document.getElementById('notification-area');
+    
+    createFolderModalEl = document.getElementById('create-folder-modal');
+    folderTitleInputEl = document.getElementById('folder-title-input');
+    createFolderSaveBtn = document.getElementById('create-folder-save-button');
+    createFolderCancelBtn = document.getElementById('create-folder-cancel-button');
+
+    moveItemModalEl = document.getElementById('move-item-modal');
+    moveItemFolderTreeEl = document.getElementById('move-item-folder-tree');
+    moveItemConfirmBtn = document.getElementById('move-item-confirm-button');
+    moveItemCancelBtn = document.getElementById('move-item-cancel-button');
+
     topBarEl = document.getElementById('top-bar');
     topbarBackBtn = document.getElementById('topbar-back-button');
     fixedBackBtn = document.getElementById('fixed-back');
@@ -42,7 +56,8 @@ function initApp() {
     themeToggleButton = document.getElementById('theme-toggle-button');
     downloadBtn = document.getElementById('download-button');
     resetBtn = document.getElementById('reset-button');
-    addPromptBtn = document.getElementById('add-prompt-button');
+    addBtn = document.getElementById('add-button');
+    addMenu = document.getElementById('add-menu');
     organizeBtn = document.getElementById('organize-button');
 
     if (fullscreenBtn) {
@@ -65,6 +80,8 @@ function initApp() {
     svgTemplateCopy = document.getElementById('svg-template-copy');
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
     svgTemplateDelete = document.getElementById('svg-template-delete');
+    svgTemplateEdit = document.getElementById('svg-template-edit');
+    svgTemplateMove = document.getElementById('svg-template-move');
 
     updateDynamicDurations();
     setupTheme();
@@ -140,6 +157,12 @@ function createContextMenu() {
             </svg>
             Umbenennen
         </div>
+        <div class="context-menu-item" data-action="move">
+             <svg class="icon icon-move" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+            Verschieben...
+        </div>
         <div class="context-menu-divider"></div>
         <div class="context-menu-item" data-action="delete">
             <svg class="icon icon-delete" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -164,6 +187,8 @@ function createContextMenu() {
             startRenamingCard(card);
         } else if (action === 'delete') {
             handleDeleteClick(cardId, card);
+        } else if (action === 'move') {
+            openMoveItemModal(cardId);
         }
         
         hideContextMenu();
@@ -191,11 +216,13 @@ function showContextMenu(x, y, cardId) {
         if (!contextMenu.contains(e.target)) {
             hideContextMenu();
             document.removeEventListener('click', hideMenu);
+            document.removeEventListener('contextmenu', hideMenu);
         }
     };
     
     setTimeout(() => {
         document.addEventListener('click', hideMenu);
+        document.addEventListener('contextmenu', hideMenu);
     }, 10);
 }
 
@@ -231,7 +258,30 @@ function setupEventListeners() {
     });
 
     organizeBtn.addEventListener('click', toggleOrganizeMode);
-    addPromptBtn.addEventListener('click', openNewPromptModal);
+    
+    addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        addMenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!addBtn.contains(e.target) && !addMenu.contains(e.target)) {
+            addMenu.classList.add('hidden');
+        }
+    });
+
+    addMenu.addEventListener('click', (e) => {
+        const menuItem = e.target.closest('.add-menu-item');
+        if (!menuItem) return;
+        const action = menuItem.dataset.action;
+        if (action === 'add-prompt') {
+            openNewPromptModal();
+        } else if (action === 'add-folder') {
+            openCreateFolderModal();
+        }
+        addMenu.classList.add('hidden');
+    });
+
     downloadBtn.addEventListener('click', downloadCustomJson);
     resetBtn.addEventListener('click', resetLocalStorage);
 
@@ -259,6 +309,18 @@ function setupEventListeners() {
         }
     });
 
+    createFolderCancelBtn.addEventListener('click', () => closeModal(createFolderModalEl));
+    createFolderSaveBtn.addEventListener('click', saveNewFolder);
+    createFolderModalEl.addEventListener('click', (e) => {
+        if (e.target === createFolderModalEl) closeModal(createFolderModalEl);
+    });
+
+    moveItemCancelBtn.addEventListener('click', () => closeModal(moveItemModalEl));
+    moveItemConfirmBtn.addEventListener('click', confirmMoveItem);
+    moveItemModalEl.addEventListener('click', (e) => {
+        if (e.target === moveItemModalEl) closeModal(moveItemModalEl);
+    });
+
     containerEl.addEventListener('click', handleCardContainerClick);
     containerEl.addEventListener('contextmenu', handleContextMenu);
     containerEl.addEventListener('dragstart', handleDragStart);
@@ -278,6 +340,12 @@ function handleKeyDown(e) {
             hideContextMenu();
         } else if (document.activeElement.classList.contains('rename-input')) {
             exitRenameMode(document.activeElement.closest('.card'));
+        } else if (modalEl.classList.contains('visible')) {
+            closeModal();
+        } else if (createFolderModalEl.classList.contains('visible')) {
+            closeModal(createFolderModalEl);
+        } else if (moveItemModalEl.classList.contains('visible')) {
+            closeModal(moveItemModalEl);
         }
     }
 }
@@ -314,135 +382,144 @@ function handleDragStart(e) {
 }
 
 function handleDragOver(e) {
-    if (!containerEl.classList.contains('edit-mode')) {
-        return;
-    }
-    
+    if (!containerEl.classList.contains('edit-mode')) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    
-    const card = e.target.closest('.card');
-    if (card && card !== dragSource) {
-        dragTarget = card;
-        
-        const rect = card.getBoundingClientRect();
-        const verticalMiddle = rect.top + rect.height / 2;
-        
-        if (e.clientY > verticalMiddle) {
-            dragIndicator.style.top = `${rect.bottom}px`;
-            dragIndicator.style.left = `${rect.left}px`;
-            dragIndicator.style.width = `${rect.width}px`;
-            dragIndicator.style.height = '4px';
-        } else {
-            dragIndicator.style.top = `${rect.top}px`;
-            dragIndicator.style.left = `${rect.left}px`;
-            dragIndicator.style.width = `${rect.width}px`;
-            dragIndicator.style.height = '4px';
-        }
-        
-        dragIndicator.classList.add('visible');
-    } else if (e.target === containerEl) {
-        dragTarget = containerEl;
-        
-        const rect = containerEl.getBoundingClientRect();
-        dragIndicator.style.top = `${rect.bottom - 20}px`;
-        dragIndicator.style.left = `${rect.left}px`;
-        dragIndicator.style.width = `${rect.width}px`;
-        dragIndicator.style.height = '4px';
-        dragIndicator.classList.add('visible');
-    }
 }
 
 function handleDragEnter(e) {
-    if (!containerEl.classList.contains('edit-mode')) {
-        return;
-    }
-    
+    if (!containerEl.classList.contains('edit-mode')) return;
     e.preventDefault();
+    const targetCard = e.target.closest('.card');
+    if (targetCard && targetCard !== dragSource) {
+        clearTimeout(springLoadTimeout);
+        dragTarget = targetCard;
+        const targetType = targetCard.getAttribute('data-type');
+        if (targetType === 'folder') {
+            targetCard.classList.add('drop-target-folder');
+            springLoadTimeout = setTimeout(() => {
+                const nodeId = targetCard.getAttribute('data-id');
+                const node = findNodeById(jsonData, nodeId);
+                if (node) navigateToNode(node);
+            }, 800);
+        } else {
+            targetCard.classList.add('drop-target-combine');
+        }
+    }
 }
 
 function handleDragLeave(e) {
-    if (!containerEl.classList.contains('edit-mode')) {
-        return;
+    if (!containerEl.classList.contains('edit-mode')) return;
+    const targetCard = e.target.closest('.card');
+    if (targetCard) {
+        clearTimeout(springLoadTimeout);
+        targetCard.classList.remove('drop-target-folder', 'drop-target-combine');
     }
-    
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-        dragIndicator.classList.remove('visible');
+    if (dragTarget === targetCard) {
         dragTarget = null;
     }
 }
 
 function handleDrop(e) {
-    if (!containerEl.classList.contains('edit-mode')) {
-        return;
-    }
-    
+    if (!containerEl.classList.contains('edit-mode')) return;
     e.preventDefault();
-    dragIndicator.classList.remove('visible');
-    
-    const id = e.dataTransfer.getData('text/plain');
-    if (!id) return;
-    
-    const sourceNode = findNodeById(jsonData, id);
+    clearTimeout(springLoadTimeout);
+
+    const droppedOnCard = e.target.closest('.card');
+    const sourceId = e.dataTransfer.getData('text/plain');
+    if (!sourceId) return;
+
+    const sourceNode = findNodeById(jsonData, sourceId);
     if (!sourceNode) return;
-    
-    let targetParent = currentNode;
-    let targetIndex = -1;
-    
-    if (dragTarget && dragTarget !== containerEl) {
-        const targetId = dragTarget.getAttribute('data-id');
+
+    if (droppedOnCard && droppedOnCard !== dragSource) {
+        const targetId = droppedOnCard.getAttribute('data-id');
         const targetNode = findNodeById(jsonData, targetId);
-        
-        if (targetNode && targetNode.type === 'folder') {
-            targetParent = targetNode;
+        if (!targetNode) return;
+
+        if (targetNode.type === 'folder') {
+            moveNode(sourceId, targetNode.id);
         } else {
-            targetParent = findParentOfNode(targetId);
-        }
-        
-        const rect = dragTarget.getBoundingClientRect();
-        const verticalMiddle = rect.top + rect.height / 2;
-        targetIndex = Array.from(targetParent.items || []).findIndex(item => item.id === targetId);
-        
-        if (e.clientY > verticalMiddle) {
-            targetIndex += 1;
-        }
-    }
-    
-    if (targetParent && sourceNode !== targetParent) {
-        const sourceParent = findParentOfNode(id);
-        if (sourceParent && sourceParent.items) {
-            const sourceIndex = sourceParent.items.findIndex(item => item.id === id);
-            if (sourceIndex > -1) {
-                sourceParent.items.splice(sourceIndex, 1);
+            if (confirm(`Möchten Sie "${sourceNode.title}" und "${targetNode.title}" in einem neuen Ordner zusammenfassen?`)) {
+                combineIntoNewFolder(sourceId, targetId);
             }
         }
-        
-        if (!targetParent.items) {
-            targetParent.items = [];
-        }
-        
-        if (targetIndex > -1) {
-            targetParent.items.splice(targetIndex, 0, sourceNode);
-        } else {
-            targetParent.items.push(sourceNode);
-        }
-        
-        persistJsonData('Element verschoben!', 'Verschieben fehlgeschlagen!');
-        renderView(currentNode);
     }
     
-    dragSource.classList.remove('dragging');
+    if (dragSource) dragSource.classList.remove('dragging');
+    document.querySelectorAll('.drop-target-folder, .drop-target-combine').forEach(el => {
+        el.classList.remove('drop-target-folder', 'drop-target-combine');
+    });
     dragSource = null;
     dragTarget = null;
 }
 
 function handleDragEnd(e) {
-    dragIndicator.classList.remove('visible');
+    clearTimeout(springLoadTimeout);
     if (dragSource) {
         dragSource.classList.remove('dragging');
     }
+    document.querySelectorAll('.drop-target-folder, .drop-target-combine').forEach(el => {
+        el.classList.remove('drop-target-folder', 'drop-target-combine');
+    });
     dragSource = null;
     dragTarget = null;
+}
+
+function moveNode(sourceId, targetFolderId, newIndex = -1) {
+    const sourceNode = findNodeById(jsonData, sourceId);
+    const targetFolderNode = findNodeById(jsonData, targetFolderId);
+    if (!sourceNode || !targetFolderNode || targetFolderNode.type !== 'folder') {
+        showNotification('Verschieben fehlgeschlagen: Ungültiges Ziel.', 'error');
+        return;
+    }
+
+    const sourceParent = findParentOfNode(sourceId);
+    if (!sourceParent) return;
+
+    const sourceIndex = sourceParent.items.findIndex(item => item.id === sourceId);
+    if (sourceIndex > -1) {
+        sourceParent.items.splice(sourceIndex, 1);
+    }
+
+    if (!targetFolderNode.items) {
+        targetFolderNode.items = [];
+    }
+
+    if (newIndex > -1) {
+        targetFolderNode.items.splice(newIndex, 0, sourceNode);
+    } else {
+        targetFolderNode.items.push(sourceNode);
+    }
+
+    persistJsonData('Element verschoben!', 'Verschieben fehlgeschlagen!');
+    renderView(currentNode);
+}
+
+function combineIntoNewFolder(sourceId, targetId) {
+    const sourceNode = findNodeById(jsonData, sourceId);
+    const targetNode = findNodeById(jsonData, targetId);
+    const parentNode = findParentOfNode(sourceId);
+
+    if (!sourceNode || !targetNode || !parentNode) return;
+
+    const newFolder = {
+        id: generateId(),
+        type: 'folder',
+        title: 'Neuer Ordner',
+        items: [sourceNode, targetNode]
+    };
+
+    const sourceIndex = parentNode.items.findIndex(item => item.id === sourceId);
+    const targetIndex = parentNode.items.findIndex(item => item.id === targetId);
+
+    parentNode.items = parentNode.items.filter(item => item.id !== sourceId && item.id !== targetId);
+    
+    const insertIndex = Math.min(sourceIndex, targetIndex);
+    parentNode.items.splice(insertIndex, 0, newFolder);
+
+    persistJsonData('Neuer Ordner erstellt!', 'Erstellen fehlgeschlagen!');
+    renderView(currentNode);
 }
 
 function setupMobileSpecificFeatures() {
@@ -640,13 +717,13 @@ function handleCardContainerClick(e) {
     if (button) {
         e.stopPropagation();
         const action = button.getAttribute('data-action');
-        if (action === 'expand') openModal(node);
+        if (action === 'expand') openPromptModal(node);
         else if (action === 'copy') copyPromptTextForCard(node, e.target.closest('button'));
     } else {
         if (node.type === 'folder') {
             navigateToNode(node);
         } else if (node.type === 'prompt') {
-            openModal(node);
+            openPromptModal(node);
         }
     }
 }
@@ -725,7 +802,7 @@ function handlePopState(event) {
                  pathStack.pop();
             }
             currentNode = pathStack.length > 0 ? pathStack[pathStack.length-1] : jsonData;
-            openModal(nodeToOpen, true);
+            openPromptModal(nodeToOpen, true);
         } else {
              handleNavigationFromState(state, direction);
         }
@@ -1186,7 +1263,7 @@ function updateBreadcrumb() {
          breadcrumbEl.appendChild(currentSpan);
     }
     
-    addPromptBtn.style.display = (currentNode && currentNode.type === 'folder' && !containerEl.classList.contains('edit-mode')) ? 'flex' : 'none';
+    addBtn.style.display = (currentNode && currentNode.type === 'folder' && !containerEl.classList.contains('edit-mode')) ? 'flex' : 'none';
     organizeBtn.style.display = (currentNode && currentNode.items && currentNode.items.length > 0) ? 'flex' : 'none';
 
     const isModalVisible = modalEl.classList.contains('visible');
@@ -1205,32 +1282,21 @@ function adjustTextareaHeight(element) {
 function openNewPromptModal() {
     exitOrganizeMode();
     modalEl.dataset.mode = 'new';
-    
     promptTitleInputEl.value = '';
     promptFullTextEl.value = '';
     promptTitleInputEl.style.display = 'block';
-
-    openModal(null);
+    openModal(modalEl);
     toggleEditMode(true);
     promptTitleInputEl.focus();
 }
 
-function openModal(node, calledFromPopstate = false) {
+function openPromptModal(node, calledFromPopstate = false) {
     if (node) {
-        const id = node.id;
-        modalEl.setAttribute('data-id', id);
+        modalEl.setAttribute('data-id', node.id);
         promptFullTextEl.value = node.content || '';
+        requestAnimationFrame(() => adjustTextareaHeight(promptFullTextEl));
     }
-
-    requestAnimationFrame(() => adjustTextareaHeight(promptFullTextEl));
-
-    modalEl.classList.remove('hidden');
-    requestAnimationFrame(() => {
-         requestAnimationFrame(() => {
-            modalEl.classList.add('visible');
-         });
-    });
-
+    openModal(modalEl);
     if (isMobile() && !calledFromPopstate && node) {
         const currentState = window.history.state || { path: [], modalOpen: false };
         if (!currentState.modalOpen) {
@@ -1238,49 +1304,121 @@ function openModal(node, calledFromPopstate = false) {
             window.history.pushState({ path: currentViewPathIds, modalOpen: true, promptId: node.id }, '', window.location.href);
         }
     }
+}
+
+function openCreateFolderModal() {
+    folderTitleInputEl.value = '';
+    openModal(createFolderModalEl);
+    folderTitleInputEl.focus();
+}
+
+function openMoveItemModal(itemId) {
+    moveItemModalEl.dataset.itemId = itemId;
+    renderFolderTree(itemId);
+    openModal(moveItemModalEl);
+}
+
+function renderFolderTree(itemIdToMove) {
+    moveItemFolderTreeEl.innerHTML = '';
+    const createTree = (node, parentElement, level = 0) => {
+        if (node.type !== 'folder') return;
+
+        const item = document.createElement('div');
+        item.classList.add('folder-tree-item');
+        item.dataset.folderId = node.id;
+        item.style.paddingLeft = `${0.8 + level * 1.5}rem`;
+        
+        const icon = svgTemplateFolder.cloneNode(true);
+        icon.style.width = '20px';
+        icon.style.height = '20px';
+        icon.style.flexShrink = '0';
+        item.appendChild(icon);
+
+        const name = document.createElement('span');
+        name.textContent = node.title;
+        item.appendChild(name);
+
+        const parentOfItemToMove = findParentOfNode(itemIdToMove);
+        if (node.id === itemIdToMove || node.id === parentOfItemToMove?.id) {
+            item.classList.add('disabled');
+        } else {
+            item.addEventListener('click', () => {
+                const selected = moveItemFolderTreeEl.querySelector('.selected');
+                if (selected) selected.classList.remove('selected');
+                item.classList.add('selected');
+                moveItemConfirmBtn.disabled = false;
+            });
+        }
+
+        parentElement.appendChild(item);
+
+        if (node.items) {
+            node.items.forEach(child => createTree(child, parentElement, level + 1));
+        }
+    };
+    createTree(jsonData, moveItemFolderTreeEl);
+}
+
+function confirmMoveItem() {
+    const itemId = moveItemModalEl.dataset.itemId;
+    const selectedFolderEl = moveItemFolderTreeEl.querySelector('.selected');
+    if (!itemId || !selectedFolderEl) return;
+
+    const targetFolderId = selectedFolderEl.dataset.folderId;
+    moveNode(itemId, targetFolderId);
+    closeModal(moveItemModalEl);
+}
+
+function openModal(element) {
+    element.classList.remove('hidden');
+    requestAnimationFrame(() => {
+         requestAnimationFrame(() => {
+            element.classList.add('visible');
+         });
+    });
     updateBreadcrumb();
 }
 
-function closeModal(optionsOrCalledFromPopstate = {}) {
+function closeModal(elementOrOptions = {}) {
+    let element = modalEl;
     let calledFromPopstate = false;
     let fromBackdrop = false;
 
-    if (typeof optionsOrCalledFromPopstate === 'boolean') {
-        calledFromPopstate = optionsOrCalledFromPopstate;
-    } else if (typeof optionsOrCalledFromPopstate === 'object' && optionsOrCalledFromPopstate !== null) {
-        calledFromPopstate = !!optionsOrCalledFromPopstate.fromPopstate;
-        fromBackdrop = !!optionsOrCalledFromPopstate.fromBackdrop;
+    if (elementOrOptions.nodeType === 1) {
+        element = elementOrOptions;
+    } else if (typeof elementOrOptions === 'object' && elementOrOptions !== null) {
+        calledFromPopstate = !!elementOrOptions.fromPopstate;
+        fromBackdrop = !!elementOrOptions.fromBackdrop;
     }
 
-    if (!modalEl.classList.contains('visible')) return;
+    if (!element.classList.contains('visible')) return;
 
-    if (promptFullTextEl.classList.contains('is-editing')) {
+    if (element === modalEl && promptFullTextEl.classList.contains('is-editing')) {
         toggleEditMode(false);
     }
 
-    modalEl.classList.remove('visible');
+    element.classList.remove('visible');
     setTimeout(() => {
-        modalEl.classList.add('hidden');
-        modalEl.removeAttribute('data-id');
-        modalEl.removeAttribute('data-mode');
-        promptTitleInputEl.style.display = 'none';
-        promptFullTextEl.style.height = 'auto';
+        element.classList.add('hidden');
+        if (element === modalEl) {
+            element.removeAttribute('data-id');
+            element.removeAttribute('data-mode');
+            promptTitleInputEl.style.display = 'none';
+            promptFullTextEl.style.height = 'auto';
+        }
     }, currentTransitionDurationMediumMs);
 
-    if (fromBackdrop) {
-        if (isMobile() && window.history.state?.modalOpen && !calledFromPopstate) {
-            const LrpmtId = window.history.state.promptId;
-            window.history.replaceState({
-                path: window.history.state.path,
-                modalOpen: false,
-                promptId: LrpmtId
-            }, '', window.location.href);
+    if (element === modalEl) {
+        if (fromBackdrop) {
+            if (isMobile() && window.history.state?.modalOpen && !calledFromPopstate) {
+                window.history.back();
+            }
+            updateBreadcrumb();
+        } else if (isMobile() && !calledFromPopstate && window.history.state?.modalOpen) {
+            window.history.back();
+        } else {
+            updateBreadcrumb();
         }
-        updateBreadcrumb();
-    } else if (isMobile() && !calledFromPopstate && window.history.state?.modalOpen) {
-        window.history.back();
-    } else {
-        updateBreadcrumb();
     }
 }
 
@@ -1303,6 +1441,31 @@ function toggleEditMode(isEditing) {
         }
     }
     adjustTextareaHeight(promptFullTextEl);
+}
+
+function saveNewFolder() {
+    const title = folderTitleInputEl.value.trim();
+    if (!title) {
+        showNotification('Der Titel darf nicht leer sein.', 'error');
+        folderTitleInputEl.focus();
+        return;
+    }
+
+    const newFolderNode = {
+        id: generateId(),
+        type: 'folder',
+        title: title,
+        items: []
+    };
+
+    if (!currentNode.items) {
+        currentNode.items = [];
+    }
+    currentNode.items.push(newFolderNode);
+    
+    persistJsonData('Ordner hinzugefügt!', 'Hinzufügen fehlgeschlagen!');
+    renderView(currentNode);
+    closeModal(createFolderModalEl);
 }
 
 function savePromptChanges() {
@@ -1455,19 +1618,22 @@ function toggleOrganizeMode() {
     organizeIcon.classList.toggle('hidden', isEditing);
     doneIcon.classList.toggle('hidden', !isEditing);
     
-    addPromptBtn.style.display = isEditing ? 'none' : 'flex';
+    addBtn.style.display = isEditing ? 'none' : 'flex';
 
     if (isEditing) {
         sortableInstance = new Sortable(containerEl, {
             animation: 200,
             ghostClass: 'sortable-ghost',
             onEnd: (evt) => {
-                const { oldIndex, newIndex } = evt;
-                if (oldIndex === newIndex) return;
+                const { oldIndex, newIndex, to } = evt;
+                if (oldIndex === newIndex && evt.from === to) return;
 
-                const item = currentNode.items.splice(oldIndex, 1)[0];
-                currentNode.items.splice(newIndex, 0, item);
-
+                const itemNode = currentNode.items.splice(oldIndex, 1)[0];
+                
+                if (evt.from === to) {
+                    currentNode.items.splice(newIndex, 0, itemNode);
+                }
+                
                 persistJsonData('Reihenfolge gespeichert!', 'Fehler beim Speichern!');
             },
         });

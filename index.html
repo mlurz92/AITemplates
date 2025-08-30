@@ -37,12 +37,24 @@
             <polyline points="20 6 9 17 4 12"></polyline>
         </svg>
       </button>
-      <button id="add-prompt-button" class="button add-prompt" aria-label="Neue Prompt-Karte hinzufügen">
-        <svg class="icon icon-add" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-      </button>
+      <div class="add-container">
+        <button id="add-button" class="button add-prompt" aria-label="Neues Element hinzufügen">
+          <svg class="icon icon-add" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <div id="add-menu" class="add-menu hidden">
+            <button class="add-menu-item" data-action="add-prompt">
+                <svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Neuer Prompt
+            </button>
+            <button class="add-menu-item" data-action="add-folder">
+                <svg class="icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><line x1="9" y1="14" x2="15" y2="14"></line></svg>
+                Neuer Ordner
+            </button>
+        </div>
+      </div>
       <button id="reset-button" class="button reset-toggle" aria-label="Änderungen zurücksetzen" style="display: none;">
         <svg class="icon icon-reset" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="23 4 23 10 17 10"></polyline>
@@ -133,6 +145,30 @@
       </div>
     </div>
 
+    <div id="create-folder-modal" class="modal hidden">
+        <div class="modal-content small-modal">
+            <h2>Neuen Ordner erstellen</h2>
+            <input type="text" id="folder-title-input" class="prompt-title-input" placeholder="Name des neuen Ordners">
+            <div class="modal-buttons">
+                <button id="create-folder-save-button" class="button">Erstellen</button>
+                <button id="create-folder-cancel-button" class="button">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="move-item-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Element verschieben nach...</h2>
+            <div id="move-item-folder-tree" class="folder-tree">
+                <!-- Folder tree will be generated here by JS -->
+            </div>
+            <div class="modal-buttons">
+                <button id="move-item-confirm-button" class="button" disabled>Verschieben</button>
+                <button id="move-item-cancel-button" class="button">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
     <nav id="mobile-nav" class="mobile-nav hidden">
       <button id="mobile-home" class="button mobile-button" aria-label="Home">
         <svg class="icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -179,10 +215,11 @@
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
-            <svg id="svg-template-rename" class="icon icon-rename" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                <line x1="8" y1="12" x2="16" y2="12"></line>
+            <svg id="svg-template-move" class="icon icon-move" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
             </svg>
         </defs>
     </svg>
