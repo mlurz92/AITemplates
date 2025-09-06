@@ -249,7 +249,7 @@ body::before {
   justify-content: flex-start;
   position: relative;
   overflow: hidden;
-  min-height: 160px;
+  min-height: 140px;
   aspect-ratio: 1/1.2;
   cursor: pointer;
   will-change: transform, box-shadow, opacity;
