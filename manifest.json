@@ -2,7 +2,7 @@
     "name": "Prompt-Templates Browser",
     "short_name": "Prompts",
     "description": "Ein Browser zum Navigieren und Kopieren von Prompt-Templates.",
-    "start_url": ".",
+    "start_url": "index.html",
     "display": "standalone",
     "background_color": "#08080a",
     "theme_color": "#08080a",
