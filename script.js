@@ -1,5 +1,3 @@
-document.addEventListener('DOMContentLoaded', initApp);
-
 let jsonData = null;
 let currentNode = null;
 let pathStack = [];
@@ -1487,4 +1485,10 @@ function exitOrganizeMode() {
     if (containerEl.classList.contains('edit-mode')) {
         toggleOrganizeMode();
     }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
 }
