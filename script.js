@@ -974,36 +974,12 @@ function renderView(node) {
     
     if(childNodes.length > 0) {
         containerEl.scrollTop = currentScroll;
-        adjustCardHeights();
         requestAnimationFrame(() => {
             document.querySelectorAll('.card').forEach(c => c.classList.add('is-visible'));
         });
     } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
     }
-}
-
-function adjustCardHeights() {
-    const allCards = Array.from(containerEl.querySelectorAll('.card'));
-    if (allCards.length === 0) return;
-
-    let targetHeight = 190;
-
-    const folderCards = allCards.filter(card => card.classList.contains('folder-card'));
-    if (folderCards.length > 0) {
-        let maxFolderHeight = 0;
-        folderCards.forEach(card => {
-            card.style.height = '';
-            if (card.offsetHeight > maxFolderHeight) {
-                maxFolderHeight = card.offsetHeight;
-            }
-        });
-        targetHeight = Math.max(targetHeight, maxFolderHeight);
-    }
-
-    allCards.forEach(card => {
-        card.style.height = `${targetHeight}px`;
-    });
 }
 
 function navigateToNode(node) {
