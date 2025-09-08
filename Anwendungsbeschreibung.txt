@@ -3,7 +3,7 @@
 ## 1. Einleitung
 
 ### 1.1. Zweck und Kernidee der Anwendung
-Der Prompt-Template Browser ist eine hochmoderne, interaktive Webanwendung, die für die effiziente Verwaltung, Navigation und dynamische Anpassung einer hierarchisch organisierten Sammlung von Textbausteinen (Prompts) konzipiert wurde. Die Kernidee besteht darin, eine zentrale, intuitive und ästhetisch ansprechende Plattform zu schaffen, die es Nutzern ermöglicht, ihre Prompt-Vorlagen nicht nur zu durchsuchen und zu verwenden, sondern auch direkt in der Anwendung zu bearbeiten, neue Prompts hinzuzufügen und die personalisierte Sammlung lokal zu sichern und wiederzuverwenden.
+Der Prompt-Template Browser ist eine interaktive Webanwendung zur effizienten Verwaltung, Navigation und dynamischen Anpassung einer hierarchisch organisierten Sammlung von Textbausteinen (Prompts). Die Kernidee ist die Bereitstellung einer zentralen, intuitiven Plattform, die es Nutzern ermöglicht, ihre Prompt-Vorlagen nicht nur zu durchsuchen und zu verwenden, sondern diese auch direkt in der Anwendung zu bearbeiten, neue Prompts und Ordner hinzuzufügen und die personalisierte Sammlung lokal zu sichern und wiederzuverwenden.
 
 ### 1.2. Zielgruppe
 Die Anwendung richtet sich an eine breite Zielgruppe, die regelmäßig mit vordefinierten Textvorlagen arbeitet. Dazu gehören Content-Ersteller, Entwickler, Support-Mitarbeiter, Forscher und alle Anwender, die von einer strukturierten, schnell zugänglichen und erweiterbaren Wissens- oder Textdatenbank profitieren.
@@ -11,89 +11,88 @@ Die Anwendung richtet sich an eine breite Zielgruppe, die regelmäßig mit vorde
 ### 1.3. Hauptnutzen
 Der Hauptnutzen liegt in der signifikanten Steigerung der Effizienz und der verbesserten Organisation bei der Arbeit mit Textbausteinen. Durch die klare Ordnerstruktur, schnelle Navigationsmechanismen, direkte Kopierfunktionen sowie die flexible Bearbeitung und Erweiterung der Inhalte direkt im Browser wird der Workflow optimiert und beschleunigt.
 
-## 2. Globale UI-Konzepte und Design
+## 2. Design und User Experience
 
-Die Anwendung zeichnet sich durch ein modernes, klares und benutzerzentriertes Design aus, das auf "Glassmorphism"-Effekten basiert.
+Die Anwendung zeichnet sich durch ein modernes, klares und benutzerzentriertes Design aus, das auf "Liquid Glass"-Effekten basiert. Dies erzeugt durch halbtransparente, unscharfe Oberflächen und subtile Ränder ein Gefühl von Tiefe und Schichtung.
 
-* **Themes:** Es steht ein Dark- und ein Light-Theme zur Verfügung. Die vom Nutzer getroffene Auswahl wird im Local Storage des Browsers gespeichert und bei zukünftigen Besuchen automatisch angewendet.
-* **Responsivität:** Das Layout ist vollständig responsiv und passt sich nahtlos an alle Bildschirmgrößen an, von großen Desktop-Monitoren bis hin zu kleinen Smartphone-Displays. "Safe Areas" auf mobilen Geräten werden berücksichtigt, um eine optimale Darstellung ohne Überlappung durch Systemelemente zu gewährleisten.
-* **Animationen & Übergänge:** Flüssige und performante Animationen (View Transitions API, GSAP, Vivus.js) sorgen für eine dynamische und ansprechende Nutzererfahrung bei der Navigation und Interaktion mit Elementen.
+*   **Responsivität:** Das Layout ist vollständig responsiv und passt sich nahtlos an alle Bildschirmgrößen an, von großen Desktop-Monitoren bis hin zu kleinen Smartphone-Displays. "Safe Areas" auf mobilen Geräten werden berücksichtigt, um eine optimale Darstellung ohne Überlappung durch Systemelemente zu gewährleisten.
+*   **Animationen & Übergänge:** Flüssige und performante Animationen (View Transitions API) sorgen für eine dynamische und ansprechende Nutzererfahrung bei der Navigation zwischen den Ordnerebenen und der Interaktion mit Elementen.
 
 ## 3. Hauptkomponenten der Benutzeroberfläche
 
 ### 3.1. Obere Navigationsleiste (Top-Bar)
 Diese am oberen Bildschirmrand fixierte Leiste ist die zentrale Steuerungseinheit und enthält folgende Elemente von links nach rechts:
 
-* **Zurück-Button:** Ein Pfeil-Icon, das die Navigation eine Ordnerebene höher ermöglicht. Befindet sich der Nutzer im Hauptverzeichnis, ist dieser Button inaktiv. Wenn das Detail-Modal geöffnet ist, schließt dieser Button das Modal.
-* **Breadcrumb-Navigation:** Zeigt den aktuellen hierarchischen Pfad (z.B. Home > Ordner A > Unterordner B) an. Jeder Teil des Pfades ist ein klickbarer Link, der eine schnelle Rückkehr zu einer übergeordneten Ebene ermöglicht. Die aktuell angezeigte Ebene ist optisch hervorgehoben.
-* **Hinzufügen-Button (+):**
-    * **Funktion:** Öffnet das Detail-Modal in einem speziellen "Erstellen"-Modus, um eine neue Prompt-Karte im aktuell angezeigten Verzeichnis anzulegen.
-    * **Sichtbarkeit:** Der Button ist in allen Ordneransichten und im Hauptverzeichnis sichtbar.
-* **Änderungen zurücksetzen Button:**
-    * **Funktion:** Ermöglicht das Verwerfen aller im Local Storage gespeicherten Änderungen. Nach einer Bestätigungsabfrage wird der lokale Speicher geleert und die Anwendung mit den ursprünglichen Daten aus der `templates.json`-Datei neu geladen.
-    * **Sichtbarkeit:** Nur sichtbar, wenn Änderungen im Local Storage vorhanden sind.
-* **Download-Button:**
-    * **Funktion:** Startet den Download der aktuell im Browser gespeicherten Vorlagensammlung als `templates_modified.json`-Datei.
-    * **Sichtbarkeit:** Nur sichtbar, wenn Änderungen im Local Storage vorhanden sind.
-* **Fullscreen-Button:** Schaltet die Anwendung in den nativen Vollbildmodus des Browsers und wieder zurück.
-* **Theme-Toggle-Button (App-Logo):** Wechselt auf Klick zwischen dem Dark- und Light-Theme.
+*   **Zurück-Button:** Ein Pfeil-Icon, das die Navigation eine Ordnerebene höher ermöglicht. Befindet sich der Nutzer im Hauptverzeichnis, ist dieser Button inaktiv. Wenn ein Modal geöffnet ist, schließt dieser Button das Modal.
+*   **Breadcrumb-Navigation:** Zeigt den aktuellen hierarchischen Pfad (z.B. Home > Ordner A > Unterordner B) an. Jeder Teil des Pfades ist ein klickbarer Link, der eine schnelle Rückkehr zu einer übergeordneten Ebene ermöglicht.
+*   **Organisieren-Button:** Schaltet die Ansicht in einen "Organisieren"-Modus, in dem Karten per Drag & Drop neu angeordnet oder in andere Ordner verschoben werden können. In diesem Modus erscheinen zusätzliche Aktionsbuttons auf den Karten zum Löschen und Umbenennen.
+*   **Hinzufügen-Button (+):** Öffnet ein Menü mit zwei Optionen:
+    *   **Neuer Prompt:** Öffnet das Detail-Modal im "Erstellen"-Modus, um eine neue Prompt-Karte im aktuell angezeigten Verzeichnis anzulegen.
+    *   **Neuer Ordner:** Öffnet ein separates, kompaktes Modal zur Eingabe des Namens für einen neuen Ordner, der im aktuellen Verzeichnis erstellt wird.
+*   **Änderungen zurücksetzen Button:** Ermöglicht das Verwerfen aller im Local Storage gespeicherten Änderungen. Nach einer Bestätigungsabfrage wird der lokale Speicher geleert und die Anwendung mit den ursprünglichen Daten aus der `templates.json`-Datei neu geladen. Dieser Button ist nur sichtbar, wenn Änderungen im Local Storage vorhanden sind.
+*   **Download-Button:** Startet den Download der aktuell im Browser gespeicherten Vorlagensammlung als `templates_modified.json`-Datei. Dieser Button ist nur sichtbar, wenn Änderungen im Local Storage vorhanden sind.
+*   **Fullscreen-Button:** Schaltet die Anwendung in den nativen Vollbildmodus des Browsers und wieder zurück.
+*   **App-Logo-Button:** Dient als Theme-Toggle zum Wechseln zwischen einem zukünftigen Dark- und Light-Theme und navigiert gleichzeitig zur Startseite ("Home").
 
 ### 3.2. Karten-Container (`#cards-container`)
 Der Hauptinhaltsbereich, der die Ordner- und Prompt-Karten in einem responsiven Grid-Layout darstellt. Die Karten erscheinen beim Laden der Ansicht mit einer dezenten Animation.
 
-* **Ordner-Karten:** Repräsentieren Verzeichnisse. Sie zeigen den Ordner-Titel und ein animiertes SVG-Icon. Ein Klick auf die Karte navigiert den Nutzer in den entsprechenden Ordner.
-* **Prompt-Karten:** Repräsentieren einzelne Prompts. Sie zeigen den Titel des Prompts und zwei Aktionsbuttons:
-    * **Details anzeigen (Pfeil nach unten):** Öffnet das Detail-Modal, um den vollständigen Text zu lesen oder zu bearbeiten.
-    * **Kopieren:** Kopiert den vollständigen Text des Prompts direkt in die Zwischenablage und gibt eine visuelle Bestätigung.
-    * Ein Klick auf die Karte selbst (außerhalb der Buttons) öffnet ebenfalls das Detail-Modal.
+*   **Ordner-Karten:** Repräsentieren Verzeichnisse. Sie zeigen den Ordner-Titel und ein animiertes SVG-Icon. Ein Klick auf die Karte navigiert den Nutzer in den entsprechenden Ordner.
+*   **Prompt-Karten:** Repräsentieren einzelne Prompts. Sie zeigen den Titel des Prompts und zwei Aktionsbuttons:
+    *   **Details anzeigen (Pfeil nach unten):** Öffnet das Detail-Modal, um den vollständigen Text zu lesen oder zu bearbeiten.
+    *   **Kopieren:** Kopiert den vollständigen Text des Prompts direkt in die Zwischenablage und gibt eine visuelle Bestätigung.
+*   **Kontextmenü (Rechtsklick auf eine Karte):** Öffnet ein Menü mit schnellen Aktionen für das ausgewählte Element:
+    *   **Umbenennen:** Ermöglicht die direkte Bearbeitung des Titels der Karte.
+    *   **Verschieben:** Öffnet ein Modal mit einer Baumansicht aller Ordner, um das Element gezielt in ein anderes Verzeichnis zu verschieben.
+    *   **Löschen:** Entfernt die Karte oder den Ordner nach einer Bestätigungsabfrage.
 
 ### 3.3. Prompt-Detail-Modal (`#prompt-modal`)
-Ein überlagerndes Fenster, das den Kern der Interaktion mit einzelnen Prompts darstellt.
+Ein überlagerndes Fenster für die Interaktion mit einzelnen Prompts.
 
-* **Anzeigemodus (Standard):**
-    * **Inhalt:** Der vollständige Text des Prompts wird in einem schreibgeschützten Textfeld (`<textarea>`) angezeigt. Das Feld passt seine Höhe dynamisch an den Inhalt an, sodass der gesamte Text ohne internen Scrollbalken sichtbar ist.
-    * **Buttons:** "Bearbeiten", "Kopieren" und "Schließen".
-* **Bearbeitungsmodus:**
-    * **Aktivierung:** Durch Klick auf den "Bearbeiten"-Button.
-    * **Änderungen:** Das Textfeld wird editierbar, und der "Speichern"-Button ersetzt die anderen Aktionsbuttons.
-    * **Speichern:** Ein Klick auf den "Speichern"-Button persistiert die Änderungen im JSON-Datenmodell und im Local Storage.
-* **Erstellen-Modus:**
-    * **Aktivierung:** Durch Klick auf den "Hinzufügen"-Button in der Top-Bar.
-    * **Änderungen:** Das Modal öffnet sich leer. Ein zusätzliches Eingabefeld für den **Titel** der neuen Karte wird sichtbar. Das Textfeld für den Inhalt ist direkt editierbar.
-    * **Speichern:** Ein Klick auf "Speichern" validiert, ob ein Titel eingegeben wurde. Anschließend wird ein neues JSON-Objekt mit dem Typ "prompt" im aktuellen Verzeichnis der Datenstruktur erzeugt, und die Änderungen werden gespeichert. Die Ansicht im Hintergrund wird aktualisiert.
+*   **Anzeigemodus (Standard):**
+    *   **Inhalt:** Der vollständige Text des Prompts wird in einem schreibgeschützten Textfeld (`<textarea>`) angezeigt. Das Feld passt seine Höhe dynamisch an den Inhalt an.
+    *   **Buttons:** "Bearbeiten", "Kopieren" und "Schließen".
+*   **Bearbeitungsmodus:**
+    *   **Aktivierung:** Durch Klick auf den "Bearbeiten"-Button.
+    *   **Änderungen:** Das Textfeld wird editierbar, und ein "Speichern"-Button ersetzt die anderen Aktionsbuttons.
+    *   **Speichern:** Ein Klick auf den "Speichern"-Button persistiert die Änderungen im Datenmodell und im Local Storage.
+*   **Erstellen-Modus:**
+    *   **Aktivierung:** Durch Klick auf den "Hinzufügen"-Button in der Top-Bar und Auswahl von "Neuer Prompt".
+    *   **Änderungen:** Das Modal öffnet sich leer. Ein zusätzliches Eingabefeld für den **Titel** der neuen Karte wird sichtbar. Das Textfeld für den Inhalt ist direkt editierbar.
+    *   **Speichern:** Ein Klick auf "Speichern" validiert, ob ein Titel eingegeben wurde. Anschließend wird ein neues Objekt für den Prompt im aktuellen Verzeichnis erzeugt und die Änderungen werden gespeichert.
 
 ### 3.4. Mobile Navigation & Fixierter "Zurück"-Button
-* **Mobile Navigationsleiste:** Eine am unteren Bildschirmrand fixierte Leiste (nur auf mobilen Geräten sichtbar) mit "Home"- und "Zurück"-Buttons für eine einfache Einhand-Bedienung.
-* **Fixierter "Zurück"-Button:** Ein schwebender Button am linken Bildschirmrand (nur auf Desktop sichtbar, wenn nicht im Hauptverzeichnis), der eine schnelle Navigation zur obersten Ebene ("Home") ermöglicht.
+*   **Mobile Navigationsleiste:** Eine am unteren Bildschirmrand fixierte Leiste (nur auf mobilen Geräten sichtbar) mit "Home"- und "Zurück"-Buttons für eine einfache Einhand-Bedienung.
+*   **Fixierter "Zurück"-Button:** Ein schwebender Button am linken Bildschirmrand (nur auf Desktop sichtbar, wenn nicht im Hauptverzeichnis), der eine schnelle Navigation eine Ebene zurück ermöglicht.
 
 ### 3.5. Benachrichtigungen
-Nach Aktionen wie dem Kopieren eines Prompts oder dem Speichern von Änderungen erscheint kurzzeitig eine Benachrichtigung oben rechts, die dem Nutzer visuelles Feedback über den Erfolg der Aktion gibt.
+Nach Aktionen wie dem Kopieren eines Prompts oder dem Speichern von Änderungen erscheint kurzzeitig eine Benachrichtigung, die dem Nutzer visuelles Feedback über den Erfolg der Aktion gibt.
 
 ## 4. Kernfunktionalitäten und Datenmanagement
 
 ### 4.1. Daten-Lade-Logik und Persistenz
 Die Anwendung folgt einer klaren Priorisierung:
-1.  **Local Storage zuerst:** Beim Start wird geprüft, ob eine bearbeitete Version der Vorlagen im Local Storage des Browsers unter dem Schlüssel `customTemplatesJson` gespeichert ist. Wenn ja, wird dieser JSON-String geparst und verwendet. Dies stellt sicher, dass Nutzer ihre Sitzung mit ihren letzten Änderungen fortsetzen können.
+1.  **Local Storage zuerst:** Beim Start wird geprüft, ob eine bearbeitete Version der Vorlagen im Local Storage des Browsers unter dem Schlüssel `customTemplatesJson` gespeichert ist. Wenn ja, wird dieser JSON-String verwendet. Dies stellt sicher, dass Nutzer ihre Sitzung mit ihren letzten Änderungen fortsetzen können.
 2.  **Fallback auf `templates.json`:** Ist der Local Storage leer, wird die originale `templates.json`-Datei per `fetch` als Fallback geladen.
 
 ### 4.2. Navigation und Zustandsverwaltung
-Die Navigation durch die Ordnerhierarchie wird durch einen `pathStack` (ein Array von JSON-Objekten) verwaltet. Dies ermöglicht die Breadcrumb-Navigation und die "Zurück"-Funktionalität. Auf mobilen Geräten wird zusätzlich die Browser History API genutzt, um die physische Zurück-Taste des Geräts zu unterstützen und ein natives App-Gefühl zu erzeugen.
+Die Navigation durch die Ordnerhierarchie wird durch einen `pathStack` (ein Array von Objekten) verwaltet. Dies ermöglicht die Breadcrumb-Navigation und die "Zurück"-Funktionalität. Auf mobilen Geräten wird zusätzlich die Browser History API genutzt, um die physische Zurück-Taste des Geräts zu unterstützen.
 
-### 4.3. Erstellen, Bearbeiten und Speichern von Prompts
-Jede Änderung an den Daten – sei es das Bearbeiten eines bestehenden Prompts oder das Hinzufügen eines neuen – modifiziert das im Arbeitsspeicher gehaltene JavaScript-Objekt (das JSON-Datenmodell).
+### 4.3. Erstellen, Bearbeiten, Verschieben und Löschen
+Jede Änderung an den Daten modifiziert das im Arbeitsspeicher gehaltene JavaScript-Objekt (das JSON-Datenmodell).
 
-* **Bearbeiten:** Die `content`-Eigenschaft des entsprechenden Prompt-Objekts wird aktualisiert.
-* **Erstellen:** Ein komplett neues JSON-Objekt mit `type: "prompt"` wird mit allen notwendigen Eigenschaften (`id`, `title`, `content`) erzeugt und an das `items`-Array des aktuell angezeigten Ordner-Objekts angehängt. Eine neue, einzigartige ID wird dabei dynamisch generiert.
-* **Persistierung:** Nach jeder dieser Modifikationen wird das gesamte JavaScript-Objekt mittels `JSON.stringify()` in einen String umgewandelt und im Local Storage gespeichert. Dieser Ansatz stellt die Datenkonsistenz sicher.
+*   **Bearbeiten/Umbenennen:** Die `content`- oder `title`-Eigenschaft des entsprechenden Objekts wird aktualisiert.
+*   **Erstellen:** Ein komplett neues Objekt (Typ `prompt` oder `folder`) wird mit allen notwendigen Eigenschaften (`id`, `title`, etc.) erzeugt und an das `items`-Array des aktuellen Ordner-Objekts angehängt. Eine neue, einzigartige ID wird dabei dynamisch generiert.
+*   **Verschieben/Löschen:** Das entsprechende Objekt wird aus dem `items`-Array seines Eltern-Ordners entfernt und ggf. in das `items`-Array eines neuen Ziel-Ordners eingefügt.
+*   **Persistierung:** Nach jeder dieser Modifikationen wird das gesamte JavaScript-Objekt mittels `JSON.stringify()` in einen String umgewandelt und im Local Storage gespeichert.
 
-## 5. Datenquelle: `templates.json`
+## 5. Datenstruktur: `templates.json`
 Die Struktur und der Inhalt der Anwendung werden durch diese JSON-Datei definiert.
 
-* **Objektstruktur:** Das fundamentale Element für Ordner und Prompts ist ein JSON-Objekt.
-    * **Hierarchie:** Verschachtelte Objekte innerhalb eines `items`-Arrays erzeugen die Ordnerstruktur.
-    * **Eigenschaften:**
-        * `id`: Ein eindeutiger Identifikator (String), essentiell für alle Operationen.
-        * `type`: Definiert den Typ des Knotens. Muss entweder `"folder"` oder `"prompt"` sein.
-        * `title`: Der sichtbare Titel der Karte.
-        * `content`: (Nur für `type: "prompt"`) Der vollständige Text des Prompts.
-        * `items`: (Nur für `type: "folder"`) Ein Array, das weitere Ordner- oder Prompt-Objekte enthält.
+*   **Hierarchie:** Verschachtelte Objekte innerhalb eines `items`-Arrays erzeugen die Ordnerstruktur.
+*   **Eigenschaften:**
+    *   `id`: Ein eindeutiger Identifikator (String), essentiell für alle Operationen.
+    *   `type`: Definiert den Typ des Knotens. Muss entweder `"folder"` oder `"prompt"` sein.
+    *   `title`: Der sichtbare Titel der Karte.
+    *   `content`: (Nur für `type: "prompt"`) Der vollständige Text des Prompts.
+    *   `items`: (Nur für `type: "folder"`) Ein Array, das weitere Ordner- oder Prompt-Objekte enthält.
