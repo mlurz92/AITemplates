@@ -27,6 +27,10 @@
   --shadow-1: 0 12px 32px rgba(0,0,0,.4);
   --shadow-2: 0 8px 24px rgba(0,0,0,.3);
   --blur: 20px;
+  --glass-highlight: radial-gradient(150% 120% at 30% 10%, rgba(255,255,255,0.3), rgba(255,255,255,0) 80%);
+  --glass-shadow-overlay: radial-gradient(150% 120% at 70% 90%, rgba(0,0,0,0.4), rgba(0,0,0,0) 80%);
+  --glass-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /><feColorMatrix type='saturate' values='0' /><feComponentTransfer><feFuncA type='table' tableValues='0 0 .06 0' /></feComponentTransfer></filter><rect width='200' height='200' filter='url(%23f)' /></svg>");
+  --glass-border-gradient: linear-gradient(130deg, var(--acc-2) 0%, var(--acc-1) 100%);
   --font-ui: ui-sans-serif, system-ui, "Inter", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   --fs-1: clamp(28px, 4vw, 40px);
   --fs-2: clamp(18px, 2.2vw, 22px);
@@ -74,12 +78,14 @@ body::before {
   position: fixed;
   left: var(--safe-area-inset-left);
   right: var(--safe-area-inset-right);
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--blur)) saturate(150%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
-  border: 1px solid var(--glass-stroke);
+  background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
+  backdrop-filter: blur(var(--blur)) saturate(200%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(200%);
+  border: 1px solid transparent;
+  background-clip: padding-box;
   z-index: 999;
   transform: translateZ(0);
+  will-change: transform, opacity, backdrop-filter;
 }
 
 .top-bar {
@@ -201,10 +207,11 @@ body::before {
 .cards-container.swiping-right { transition-property: none; }
 
 .card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--blur)) saturate(150%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
-  border: 1px solid var(--glass-stroke);
+  background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
+  backdrop-filter: blur(var(--blur)) saturate(200%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(200%);
+  border: 1px solid transparent;
+  background-clip: padding-box;
   border-radius: var(--radius-xl);
   box-shadow: var(--vignette-shadow), var(--shadow-1);
   padding: clamp(0.8rem, 2vw, 1.2rem);
@@ -216,10 +223,10 @@ body::before {
   overflow: hidden;
   aspect-ratio: 1 / 1.1;
   cursor: pointer;
-  will-change: transform, box-shadow, opacity, border-color;
   width: 100%;
   opacity: 0;
   transform: translateY(20px) scale(0.98) translateZ(0);
+  will-change: transform, opacity, box-shadow, backdrop-filter;
 }
 .card.is-visible {
   opacity: 1;
@@ -234,7 +241,9 @@ body::before {
 }
 
 .cards-container.edit-mode .card { cursor: grab; animation: jiggle 0.4s infinite; }
-.cards-container.edit-mode .card:hover { transform: translateY(-5px) scale(1.03); animation-name: jiggle; }
+.cards-container.edit-mode .card:hover { transform: translateY(-5px) scale(1.03); animation-name: jiggle;
+  will-change: transform, opacity, box-shadow, backdrop-filter;
+}
 .cards-container.edit-mode .card.sortable-ghost { background: rgba(0,230,255,.12); border: 2px dashed var(--acc-2); opacity: 0.7; }
 .cards-container.edit-mode .card.sortable-drag { cursor: grabbing; opacity: 0.85; transform: scale(1.05); box-shadow: var(--shadow-1); z-index: 999; animation: none; }
 .card.drop-target-folder { transform: scale(1.05); border: 2px solid var(--acc-2); box-shadow: 0 0 15px 5px rgba(0,230,255,.24); }
@@ -377,6 +386,13 @@ body::before {
 }
 .modal.visible { opacity: 1; visibility: visible; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 .modal .modal-content {
+  background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
+  backdrop-filter: blur(var(--blur)) saturate(200%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(200%);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  box-shadow: var(--vignette-shadow), var(--shadow-2);
+  position: relative;
   max-width: 750px;
   width: 92%;
   max-height: 88vh;
@@ -441,14 +457,15 @@ svg.icon { display: block; stroke-width: 2.2; fill: none; stroke-linecap: round;
     pointer-events: none;
 }
 .notification {
-    background: var(--glass-bg);
+    background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
     color: var(--fg-1);
     padding: 10px 14px;
     border-radius: 12px;
     box-shadow: var(--shadow-1);
-    border: 1px solid var(--glass-stroke);
-    backdrop-filter: blur(var(--blur)) saturate(150%);
-    -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    backdrop-filter: blur(var(--blur)) saturate(200%);
+    -webkit-backdrop-filter: blur(var(--blur)) saturate(200%);
     font-size: 0.95rem;
     opacity: 0;
     transform: translateY(20px);
@@ -456,6 +473,7 @@ svg.icon { display: block; stroke-width: 2.2; fill: none; stroke-linecap: round;
     align-items: center;
     gap: 0.7rem;
     transition: transform var(--duration-2) var(--ease-smooth), opacity var(--duration-2) var(--ease-smooth);
+    will-change: transform, opacity, backdrop-filter;
 }
 .notification.show { opacity: 1; transform: translateY(0); }
 .notification.fade-out { transition: transform var(--duration-2) var(--ease-smooth), opacity var(--duration-2) var(--ease-smooth); opacity: 0; transform: translateY(20px); }
@@ -465,18 +483,20 @@ svg.icon { display: block; stroke-width: 2.2; fill: none; stroke-linecap: round;
 
 .context-menu {
     position: fixed;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-stroke);
+    background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
+    border: 1px solid transparent;
+  background-clip: padding-box;
     border-radius: 12px;
     padding: 0.5rem;
     box-shadow: var(--shadow-1);
-    backdrop-filter: blur(var(--blur)) saturate(150%);
-    -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
+    backdrop-filter: blur(var(--blur)) saturate(200%);
+    -webkit-backdrop-filter: blur(var(--blur)) saturate(200%);
     z-index: 2000;
     opacity: 0;
-    transform: scale(0.95) translateY(-10px);
+    transform: scale(0.95) translateY(-10px) translateZ(0);
     transition: opacity var(--duration-2) var(--ease-smooth), transform var(--duration-2) var(--ease-smooth);
     pointer-events: none;
+  will-change: transform, opacity, backdrop-filter;
 }
 .context-menu.visible { opacity: 1; transform: scale(1) translateY(0); pointer-events: all; }
 .context-menu-item { display: flex; align-items: center; padding: 0.6rem 1.2rem; cursor: pointer; transition: background-color var(--duration-1) var(--ease-smooth), color var(--duration-1) var(--ease-smooth); color: var(--fg-1); white-space: nowrap; border-radius: 8px; }
@@ -556,3 +576,30 @@ html[data-page-transition-direction="forward"]::view-transition-old(root) { anim
 html[data-page-transition-direction="forward"]::view-transition-new(root) { animation-name: slide-from-right-vt; }
 html[data-page-transition-direction="backward"]::view-transition-old(root) { animation-name: slide-to-right-vt; }
 html[data-page-transition-direction="backward"]::view-transition-new(root) { animation-name: slide-from-left-vt; }
+
+.top-bar::before, .mobile-nav::before, .card::before, .modal .modal-content::before, .context-menu::before, .notification::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: var(--glass-border-gradient);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: .8;
+  transition: opacity var(--duration-2) var(--ease-smooth);
+}
+.top-bar:hover::before, .mobile-nav:hover::before, .card:hover::before, .modal .modal-content:hover::before, .context-menu:hover::before, .notification:hover::before {
+  opacity: 1;
+}
+.top-bar::after, .mobile-nav::after, .card::after, .modal .modal-content::after, .context-menu::after, .notification::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-noise);
+  opacity: .25;
+  pointer-events: none;
+}
