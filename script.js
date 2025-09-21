@@ -8,7 +8,7 @@ const themeLocalStorageKey = 'promptAppTheme';
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCancelBtn;
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, themeToggleBtn;
 let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
 let themeMetaTag;
@@ -55,6 +55,7 @@ function initApp() {
     addMenu = document.getElementById('add-menu');
     organizeBtn = document.getElementById('organize-button');
     appLogoBtn = document.getElementById('app-logo-button');
+    themeToggleBtn = document.getElementById('theme-toggle-button');
     themeMetaTag = document.querySelector('meta[name="theme-color"]');
 
     if (fullscreenBtn) {
@@ -95,11 +96,18 @@ function initApp() {
 }
 
 function applyTheme(theme) {
-    document.body.classList.toggle('light-theme', theme === 'light');
+    const isLightTheme = theme === 'light';
+    document.body.classList.toggle('light-theme', isLightTheme);
+    
     const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--theme-color-meta').trim();
     if (themeMetaTag) {
         themeMetaTag.setAttribute('content', themeColor);
     }
+    
+    if (themeToggleBtn) {
+        themeToggleBtn.setAttribute('aria-label', isLightTheme ? 'Zum Dark-Theme wechseln' : 'Zum Light-Theme wechseln');
+    }
+
     localStorage.setItem(themeLocalStorageKey, theme);
 }
 
@@ -220,10 +228,9 @@ function setupEventListeners() {
 
     fixedBackBtn.addEventListener('click', navigateToHome);
     
-    appLogoBtn.addEventListener('click', () => {
-        toggleTheme();
-        navigateToHome();
-    });
+    appLogoBtn.addEventListener('click', navigateToHome);
+
+    themeToggleBtn.addEventListener('click', toggleTheme);
 
     organizeBtn.addEventListener('click', toggleOrganizeMode);
     
