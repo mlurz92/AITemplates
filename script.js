@@ -226,7 +226,7 @@ function setupEventListeners() {
         }
     });
 
-    fixedBackBtn.addEventListener('click', navigateToHome);
+    fixedBackBtn.addEventListener('click', navigateOneLevelUp);
     
     appLogoBtn.addEventListener('click', navigateToHome);
 
@@ -522,16 +522,16 @@ function navigateOneLevelUp() {
         return;
     }
     exitOrganizeMode();
-    performViewTransition(() => {
-        const parentNode = pathStack.pop();
-        currentNode = parentNode;
-        renderView(currentNode);
 
-        if (isMobile()) {
-             let historyPathIds = pathStack.map(n => n.id);
-             window.history.pushState({ path: historyPathIds, modalOpen: false }, '', window.location.href);
-        }
-    }, 'backward');
+    if (isMobile() && window.history.state?.path.length > 0) {
+        window.history.back();
+    } else {
+        performViewTransition(() => {
+            const parentNode = pathStack.pop();
+            currentNode = parentNode;
+            renderView(currentNode);
+        }, 'backward');
+    }
 }
 
 function findParentOfNode(targetId, startNode = jsonData) {
@@ -698,32 +698,17 @@ function handleTouchEnd() {
 
     if (Math.abs(diffX) > Math.abs(diffY) && diffX > swipeThreshold) {
         if (pathStack.length > 0) {
-             navigateHistory('backward');
+             navigateOneLevelUp();
         }
     }
     touchStartX = 0; touchStartY = 0; touchEndX = 0; touchEndY = 0;
-}
-
-function navigateHistory(direction) {
-    if (isMobile() && pathStack.length > 0) {
-        window.history.back();
-    } else if (!isMobile() && pathStack.length > 0) {
-        exitOrganizeMode();
-        performViewTransition(() => {
-            if (pathStack.length > 0) {
-                const parentNode = pathStack.pop();
-                currentNode = parentNode;
-                renderView(currentNode);
-            }
-        }, direction);
-    }
 }
 
 function handlePopState(event) {
     exitOrganizeMode();
     const state = event.state || { path: [], modalOpen: false };
     const currentlyModalOpen = modalEl.classList.contains('visible');
-    const direction = state.path.length < pathStack.length ? 'backward' : 'forward';
+    const direction = state.path.length < pathStack.map(n => n.id).length ? 'backward' : 'forward';
 
     if (currentlyModalOpen && !state.modalOpen) {
         closeModal({ fromPopstate: true });
@@ -1088,13 +1073,12 @@ function updateUIState() {
     const isModalVisible = modalEl.classList.contains('visible');
     const isOrganizing = containerEl.classList.contains('edit-mode');
 
-    downloadBtn.style.display = hasChanges ? 'inline-flex' : 'none';
-    resetBtn.style.display = hasChanges ? 'inline-flex' : 'none';
-    
-    addBtn.style.display = (currentNode?.type === 'folder' && !isOrganizing) ? 'inline-flex' : 'none';
-    organizeBtn.style.display = (currentNode?.items?.length > 0) ? 'inline-flex' : 'none';
+    downloadBtn.classList.toggle('hidden', !hasChanges);
+    resetBtn.classList.toggle('hidden', !hasChanges);
+    addBtn.classList.toggle('hidden', !(currentNode?.type === 'folder' && !isOrganizing));
+    organizeBtn.classList.toggle('hidden', !(currentNode?.items?.length > 0));
 
-    fixedBackBtn.classList.toggle('hidden', isAtHome && !isModalVisible);
+    fixedBackBtn.classList.toggle('hidden', isAtHome || isMobile());
     if(mobileNavEl) mobileNavEl.classList.toggle('hidden', !isMobile());
     if(mobileBackBtn) mobileBackBtn.disabled = isAtHome && !isModalVisible;
     topbarBackBtn.style.visibility = (isAtHome && !isModalVisible) ? 'hidden' : 'visible';
@@ -1236,12 +1220,7 @@ function closeModal(elementOrOptions = {}) {
     }, currentTransitionDurationMediumMs);
 
     if (element === modalEl) {
-        if (fromBackdrop) {
-            if (isMobile() && window.history.state?.modalOpen && !calledFromPopstate) {
-                window.history.back();
-            }
-            updateUIState();
-        } else if (isMobile() && !calledFromPopstate && window.history.state?.modalOpen) {
+        if (isMobile() && !calledFromPopstate && window.history.state?.modalOpen) {
             window.history.back();
         } else {
             updateUIState();
