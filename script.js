@@ -3,6 +3,7 @@ let currentNode = null;
 let pathStack = [];
 const currentJsonFile = "templates.json";
 const localStorageKey = 'customTemplatesJson';
+const themeLocalStorageKey = 'promptAppTheme';
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCancelBtn;
@@ -10,6 +11,7 @@ let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn;
 let mobileNavEl, mobileHomeBtn, mobileBackBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
+let themeMetaTag;
 
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
@@ -53,6 +55,7 @@ function initApp() {
     addMenu = document.getElementById('add-menu');
     organizeBtn = document.getElementById('organize-button');
     appLogoBtn = document.getElementById('app-logo-button');
+    themeMetaTag = document.querySelector('meta[name="theme-color"]');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
@@ -63,6 +66,8 @@ function initApp() {
         doneIcon = organizeBtn.querySelector('.icon-done');
     }
     mobileNavEl = document.getElementById('mobile-nav');
+    mobileHomeBtn = document.getElementById('mobile-home');
+    mobileBackBtn = document.getElementById('mobile-back');
 
     modalEditBtn = document.getElementById('modal-edit-button');
     modalSaveBtn = document.getElementById('modal-save-button');
@@ -77,6 +82,7 @@ function initApp() {
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
 
+    loadTheme();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -86,6 +92,31 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
+}
+
+function applyTheme(theme) {
+    document.body.classList.toggle('light-theme', theme === 'light');
+    const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--theme-color-meta').trim();
+    if (themeMetaTag) {
+        themeMetaTag.setAttribute('content', themeColor);
+    }
+    localStorage.setItem(themeLocalStorageKey, theme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    applyTheme(newTheme);
+}
+
+function loadTheme() {
+    const savedTheme = localStorage.getItem(themeLocalStorageKey);
+    if (savedTheme) {
+        applyTheme(savedTheme);
+    } else {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(prefersDark ? 'dark' : 'light');
+    }
 }
 
 function createContextMenu() {
@@ -171,7 +202,6 @@ function navigateToHome() {
             currentNode = jsonData;
             pathStack = [];
             renderView(currentNode);
-            updateBreadcrumb();
         }, 'backward');
         if (isMobile()) {
              window.history.pushState({ path: [], modalOpen: false }, '', window.location.href);
@@ -189,7 +219,11 @@ function setupEventListeners() {
     });
 
     fixedBackBtn.addEventListener('click', navigateToHome);
-    appLogoBtn.addEventListener('click', navigateToHome);
+    
+    appLogoBtn.addEventListener('click', () => {
+        toggleTheme();
+        navigateToHome();
+    });
 
     organizeBtn.addEventListener('click', toggleOrganizeMode);
     
@@ -458,23 +492,15 @@ function combineIntoNewFolder(sourceId, targetId) {
 
 function setupMobileSpecificFeatures() {
     document.body.classList.add('mobile');
-    if (mobileNavEl) mobileNavEl.classList.remove('hidden');
-    mobileHomeBtn = document.getElementById('mobile-home');
-    mobileBackBtn = document.getElementById('mobile-back');
-
-    if (mobileHomeBtn) {
-        mobileHomeBtn.addEventListener('click', navigateToHome);
-    }
-
-    if (mobileBackBtn) {
-        mobileBackBtn.addEventListener('click', () => {
-            if (modalEl.classList.contains('visible')) {
-                closeModal({ fromBackdrop: true });
-            } else if (pathStack.length > 0) {
-                navigateOneLevelUp();
-            }
-        });
-    }
+    
+    if (mobileHomeBtn) mobileHomeBtn.addEventListener('click', navigateToHome);
+    if (mobileBackBtn) mobileBackBtn.addEventListener('click', () => {
+        if (modalEl.classList.contains('visible')) {
+            closeModal({ fromBackdrop: true });
+        } else if (pathStack.length > 0) {
+            navigateOneLevelUp();
+        }
+    });
 
     containerEl.addEventListener('touchstart', handleTouchStart, { passive: true });
     containerEl.addEventListener('touchmove', handleTouchMove, { passive: true });
@@ -493,11 +519,10 @@ function navigateOneLevelUp() {
         const parentNode = pathStack.pop();
         currentNode = parentNode;
         renderView(currentNode);
-        updateBreadcrumb();
 
         if (isMobile()) {
-            let historyPathIds = pathStack.map(n => n.id);
-            window.history.pushState({ path: historyPathIds, modalOpen: false }, '', window.location.href);
+             let historyPathIds = pathStack.map(n => n.id);
+             window.history.pushState({ path: historyPathIds, modalOpen: false }, '', window.location.href);
         }
     }, 'backward');
 }
@@ -535,7 +560,6 @@ function handleDeleteClick(id, cardElement) {
                     parentNode.items.splice(index, 1);
                     persistJsonData('Element gelöscht!', 'success');
                     renderView(currentNode);
-                    updateBreadcrumb();
                 }
             }
         }, 300);
@@ -595,9 +619,7 @@ function exitRenameMode(card) {
 }
 
 function handleCardContainerClick(e) {
-    if (modalEl.classList.contains('visible') || e.target.closest('.modal-content')) {
-        return;
-    }
+    if (modalEl.classList.contains('visible')) return;
 
     const card = e.target.closest('.card');
     if (!card) {
@@ -608,30 +630,24 @@ function handleCardContainerClick(e) {
     }
 
     const button = e.target.closest('button[data-action]');
-    
+    const id = card.getAttribute('data-id');
+
     if (containerEl.classList.contains('edit-mode')) {
         if (button) {
             const action = button.getAttribute('data-action');
-            const id = card.getAttribute('data-id');
-            
-            if (action === 'delete') {
-                handleDeleteClick(id, card);
-            } else if (action === 'edit') {
-                startRenamingCard(card);
-            }
+            if (action === 'delete') handleDeleteClick(id, card);
+            else if (action === 'edit') startRenamingCard(card);
         }
         return;
     }
 
-    const id = card.getAttribute('data-id');
     const node = findNodeById(jsonData, id);
     if (!node) return;
 
     if (button) {
-        e.stopPropagation();
         const action = button.getAttribute('data-action');
         if (action === 'expand') openPromptModal(node);
-        else if (action === 'copy') copyPromptTextForCard(node, e.target.closest('button'));
+        else if (action === 'copy') copyPromptTextForCard(node, button);
     } else {
         if (node.type === 'folder') {
             navigateToNode(node);
@@ -691,7 +707,6 @@ function navigateHistory(direction) {
                 const parentNode = pathStack.pop();
                 currentNode = parentNode;
                 renderView(currentNode);
-                updateBreadcrumb();
             }
         }, direction);
     }
@@ -737,7 +752,6 @@ function handleNavigationFromState(state, direction) {
         if (!currentNode && jsonData) currentNode = jsonData;
 
         renderView(currentNode);
-        updateBreadcrumb();
      };
     performViewTransition(updateDOM, direction);
 }
@@ -760,7 +774,7 @@ function checkFullscreenSupport() {
         document.body.setAttribute('data-fullscreen-supported', 'true');
     } else {
         document.body.removeAttribute('data-fullscreen-supported');
-        if(fullscreenBtn) fullscreenBtn.remove();
+        if(fullscreenBtn) fullscreenBtn.style.display = 'none';
     }
 }
 
@@ -858,7 +872,6 @@ function processJson(data) {
     pathStack = [];
     performViewTransition(() => {
         renderView(currentNode);
-        updateBreadcrumb();
     }, 'initial');
     if (isMobile()) {
         window.history.replaceState({ path: [], modalOpen: false }, '', window.location.href);
@@ -871,8 +884,6 @@ function loadJsonData(filename) {
         try {
             const parsedData = JSON.parse(storedJson);
             processJson(parsedData);
-            downloadBtn.style.display = 'inline-flex';
-            resetBtn.style.display = 'inline-flex';
             return;
         } catch (error) {
             console.error("Fehler beim Laden der JSON aus dem Local Storage, lade Originaldatei:", error);
@@ -880,8 +891,6 @@ function loadJsonData(filename) {
         }
     }
     
-    downloadBtn.style.display = 'none';
-    resetBtn.style.display = 'none';
     fetch(filename)
         .then(response => { 
             if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`); 
@@ -900,6 +909,10 @@ function renderView(node) {
     exitOrganizeMode();
     const currentScroll = containerEl.scrollTop;
     containerEl.innerHTML = '';
+    
+    updateBreadcrumb();
+    updateUIState();
+
     if (!node) {
          containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
          return;
@@ -957,12 +970,26 @@ function renderView(node) {
             }
         } else {
             card.classList.add('prompt-card');
-            const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
+            const btnContainer = document.createElement('div');
+            btnContainer.classList.add('card-buttons');
             if (svgTemplateExpand) {
-                const expandBtn = document.createElement('button'); expandBtn.classList.add('btn', 'btn-ghost'); expandBtn.setAttribute('aria-label', 'Details anzeigen'); expandBtn.setAttribute('data-action', 'expand'); expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); btnContainer.appendChild(expandBtn);
+                const expandBtn = document.createElement('button');
+                expandBtn.classList.add('btn', 'btn-ghost');
+                expandBtn.setAttribute('aria-label', 'Details anzeigen');
+                expandBtn.setAttribute('data-action', 'expand');
+                expandBtn.appendChild(svgTemplateExpand.cloneNode(true));
+                btnContainer.appendChild(expandBtn);
             }
             if (svgTemplateCopy) {
-                const copyBtn = document.createElement('button'); copyBtn.classList.add('btn', 'btn-ghost'); copyBtn.setAttribute('aria-label', 'Prompt kopieren'); copyBtn.setAttribute('data-action', 'copy'); copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); btnContainer.appendChild(copyBtn);
+                const copyBtn = document.createElement('button');
+                copyBtn.classList.add('btn', 'btn-ghost', 'copy-button');
+                copyBtn.setAttribute('aria-label', 'Prompt kopieren');
+                copyBtn.setAttribute('data-action', 'copy');
+                copyBtn.appendChild(svgTemplateCopy.cloneNode(true));
+                const checkmarkIcon = svgTemplateCheckmark.cloneNode(true);
+                checkmarkIcon.classList.add('icon', 'icon-checkmark');
+                copyBtn.appendChild(checkmarkIcon);
+                btnContainer.appendChild(copyBtn);
             }
             contentWrapper.appendChild(btnContainer);
         }
@@ -990,7 +1017,6 @@ function navigateToNode(node) {
         }
         currentNode = node;
         renderView(currentNode);
-        updateBreadcrumb();
     }, 'forward');
 
     if (isMobile() && !modalEl.classList.contains('visible')) {
@@ -1008,82 +1034,63 @@ function updateBreadcrumb() {
 
     const homeLink = document.createElement('span');
     homeLink.textContent = 'Home';
+    homeLink.addEventListener('click', navigateToHome);
 
-    const clearAllActiveBreadcrumbs = () => {
-        const allActive = breadcrumbEl.querySelectorAll('.current-level-active');
-        allActive.forEach(el => {
-            el.classList.remove('current-level-active');
-            if (el === homeLink && !homeLink.classList.contains('breadcrumb-link')) {
-                 homeLink.classList.add('breadcrumb-link');
-            }
-        });
-    };
-
-    clearAllActiveBreadcrumbs();
-
-    if (pathStack.length === 0 && currentNode === jsonData) {
-        homeLink.classList.add('current-level-active');
-        homeLink.classList.remove('breadcrumb-link');
-    } else {
-        homeLink.classList.add('breadcrumb-link');
-        homeLink.addEventListener('click', navigateToHome);
-    }
+    const isAtHome = pathStack.length === 0 && currentNode === jsonData;
+    homeLink.classList.toggle('breadcrumb-link', !isAtHome);
+    homeLink.classList.toggle('current-level-active', isAtHome);
     breadcrumbEl.appendChild(homeLink);
 
     pathStack.forEach((nodeInPath, index) => {
-        const nodeTitle = nodeInPath.title;
-        if (nodeTitle && nodeInPath.id !== 'root') {
+        if (nodeInPath.id !== 'root') {
             const separator = document.createElement('span');
             separator.textContent = ' > ';
             breadcrumbEl.appendChild(separator);
 
             const link = document.createElement('span');
-            link.textContent = nodeTitle;
-
-            if (nodeInPath === currentNode) {
-                clearAllActiveBreadcrumbs();
-                link.classList.add('current-level-active');
-            } else {
-                link.classList.add('breadcrumb-link');
-                link.addEventListener('click', () => {
-                    exitOrganizeMode();
-                    if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
-                    performViewTransition(() => {
-                        pathStack = pathStack.slice(0, index + 1);
-                        currentNode = nodeInPath;
-                        renderView(currentNode); updateBreadcrumb();
-                    }, 'backward');
-                    if (isMobile()) window.history.pushState({ path: pathStack.map(n => n.id), modalOpen: false }, '', window.location.href);
-                });
-            }
+            link.textContent = nodeInPath.title;
+            link.classList.add('breadcrumb-link');
+            link.addEventListener('click', () => {
+                exitOrganizeMode();
+                if (modalEl.classList.contains('visible')) closeModal({ fromBackdrop: false });
+                performViewTransition(() => {
+                    pathStack = pathStack.slice(0, index + 1);
+                    currentNode = nodeInPath;
+                    renderView(currentNode);
+                }, 'backward');
+                if (isMobile()) window.history.pushState({ path: pathStack.map(n => n.id), modalOpen: false }, '', window.location.href);
+            });
             breadcrumbEl.appendChild(link);
         }
     });
 
-    const isAtHome = pathStack.length === 0 && currentNode === jsonData;
-    const parentOfCurrentNode = pathStack.length > 0 ? pathStack[pathStack.length - 1] : null;
-
-    if (!isAtHome && currentNode !== parentOfCurrentNode && currentNode !== jsonData) {
-        clearAllActiveBreadcrumbs();
-        if (pathStack.length > 0 || (pathStack.length === 0 && currentNode !== jsonData )) {
-            const separator = document.createElement('span');
-            separator.textContent = ' > ';
-            breadcrumbEl.appendChild(separator);
-        }
-         const currentSpan = document.createElement('span');
-         currentSpan.textContent = currentNode.title;
-         currentSpan.classList.add('current-level-active');
-         breadcrumbEl.appendChild(currentSpan);
+    if (!isAtHome) {
+        const separator = document.createElement('span');
+        separator.textContent = ' > ';
+        breadcrumbEl.appendChild(separator);
+        const currentSpan = document.createElement('span');
+        currentSpan.textContent = currentNode.title;
+        currentSpan.classList.add('current-level-active');
+        breadcrumbEl.appendChild(currentSpan);
     }
-    
-    addBtn.style.display = (currentNode && currentNode.type === 'folder' && !containerEl.classList.contains('edit-mode')) ? 'inline-flex' : 'none';
-    organizeBtn.style.display = (currentNode && currentNode.items && currentNode.items.length > 0) ? 'inline-flex' : 'none';
+}
 
+function updateUIState() {
+    const hasChanges = !!localStorage.getItem(localStorageKey);
+    const isAtHome = pathStack.length === 0 && currentNode === jsonData;
     const isModalVisible = modalEl.classList.contains('visible');
-    const isTrulyAtHome = pathStack.length === 0 && currentNode === jsonData;
-    fixedBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
-    if(mobileBackBtn) mobileBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
-    topbarBackBtn.style.visibility = (isTrulyAtHome && !isModalVisible) ? 'hidden' : 'visible';
+    const isOrganizing = containerEl.classList.contains('edit-mode');
+
+    downloadBtn.style.display = hasChanges ? 'inline-flex' : 'none';
+    resetBtn.style.display = hasChanges ? 'inline-flex' : 'none';
+    
+    addBtn.style.display = (currentNode?.type === 'folder' && !isOrganizing) ? 'inline-flex' : 'none';
+    organizeBtn.style.display = (currentNode?.items?.length > 0) ? 'inline-flex' : 'none';
+
+    fixedBackBtn.classList.toggle('hidden', isAtHome && !isModalVisible);
+    if(mobileNavEl) mobileNavEl.classList.toggle('hidden', !isMobile());
+    if(mobileBackBtn) mobileBackBtn.disabled = isAtHome && !isModalVisible;
+    topbarBackBtn.style.visibility = (isAtHome && !isModalVisible) ? 'hidden' : 'visible';
 }
 
 function adjustTextareaHeight(element) {
@@ -1189,7 +1196,7 @@ function openModal(element) {
             element.classList.add('visible');
          });
     });
-    updateBreadcrumb();
+    updateUIState();
 }
 
 function closeModal(elementOrOptions = {}) {
@@ -1226,11 +1233,11 @@ function closeModal(elementOrOptions = {}) {
             if (isMobile() && window.history.state?.modalOpen && !calledFromPopstate) {
                 window.history.back();
             }
-            updateBreadcrumb();
+            updateUIState();
         } else if (isMobile() && !calledFromPopstate && window.history.state?.modalOpen) {
             window.history.back();
         } else {
-            updateBreadcrumb();
+            updateUIState();
         }
     }
 }
@@ -1326,10 +1333,7 @@ function persistJsonData(successMsg, type) {
         const jsonString = JSON.stringify(jsonData, null, 2);
         localStorage.setItem(localStorageKey, jsonString);
         showNotification(successMsg, type);
-        if (downloadBtn) {
-            downloadBtn.style.display = 'inline-flex';
-            resetBtn.style.display = 'inline-flex';
-        }
+        updateUIState();
     } catch (e) {
         console.error("Fehler beim Speichern im Local Storage:", e);
         showNotification('Speichern fehlgeschlagen!', 'error');
@@ -1369,17 +1373,27 @@ function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl
 function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.content || '', buttonElement); }
 
 function copyToClipboard(text, buttonElement = null) {
+    const showFeedback = () => {
+        if (buttonElement) {
+            buttonElement.classList.add('is-copied');
+            setTimeout(() => {
+                buttonElement.classList.remove('is-copied');
+            }, 1500);
+        }
+        showNotification('Prompt kopiert!', 'success');
+    };
+
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(text)
-            .then(() => showNotification('Prompt kopiert!', 'success', buttonElement))
-            .catch(err => { console.error('Clipboard error:', err); showNotification('Fehler beim Kopieren', 'error', buttonElement); });
+            .then(showFeedback)
+            .catch(err => { console.error('Clipboard error:', err); showNotification('Fehler beim Kopieren', 'error'); });
     } else {
         const textArea = document.createElement('textarea');
         textArea.value = text;
         textArea.style.position = 'fixed'; textArea.style.top = '-9999px'; textArea.style.left = '-9999px'; textArea.style.opacity = '0';
         document.body.appendChild(textArea); textArea.focus(); textArea.select();
-        try { document.execCommand('copy'); showNotification('Prompt kopiert!', 'success', buttonElement); }
-        catch (err) { console.error('Fallback copy error:', err); showNotification('Fehler beim Kopieren', 'error', buttonElement); }
+        try { document.execCommand('copy'); showFeedback(); }
+        catch (err) { console.error('Fallback copy error:', err); showNotification('Fehler beim Kopieren', 'error'); }
         document.body.removeChild(textArea);
     }
 }
@@ -1430,7 +1444,7 @@ function toggleOrganizeMode() {
     organizeIcon.classList.toggle('hidden', isEditing);
     doneIcon.classList.toggle('hidden', !isEditing);
     
-    addBtn.style.display = isEditing ? 'none' : 'inline-flex';
+    updateUIState();
 
     if (isEditing) {
         sortableInstance = new Sortable(containerEl, {
