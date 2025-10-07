@@ -1,26 +1,68 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="128" height="128" style="">
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style="">
+  <!-- Definitionen fÃ¼r komplexe Effekte -->
   <defs>
-    <style>
-      .icon-line {
-        fill: none;
-        stroke: #e8e8e8;
-        stroke-width: 5;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-      .icon-accent {
-        fill: none;
-        stroke: #ffca7a; /* Akzentfarbe */
-        stroke-width: 5;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-    </style>
+    <!-- Aurora-Gradient fÃ¼r den Hintergrund -->
+    <linearGradient id="auroraGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6a11cb;stop-opacity:0.2"></stop>
+      <stop offset="33%" style="stop-color:#2575fc;stop-opacity:0.15"></stop>
+      <stop offset="66%" style="stop-color:#00d2ff;stop-opacity:0.1"></stop>
+      <stop offset="100%" style="stop-color:#3a7bd5;stop-opacity:0.05"></stop>
+    </linearGradient>
+    
+    <!-- Glas-Gradient mit mehr Tiefe -->
+    <linearGradient id="glassGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.4"></stop>
+      <stop offset="50%" style="stop-color:#ffffff;stop-opacity:0.2"></stop>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.1"></stop>
+    </linearGradient>
+    
+    <!-- Lichtreflex-Effekt -->
+    <linearGradient id="highlightGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.7"></stop>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0"></stop>
+    </linearGradient>
+    
+    <!-- Verbesserter Weichzeichner fÃ¼r Tiefe -->
+    <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="24"></feGaussianBlur>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"></feComposite>
+    </filter>
+    
+    <!-- Subtile Schattenwirkung -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-opacity="0.2"></feDropShadow>
+    </filter>
   </defs>
-  <g>
-    <path class="icon-line FlliOsVc_0" d="M32,4 A16,16 0 0,1 48,20 C48,29 40,32 40,38 H24 C24,32 16,29 16,20 A16,16 0 0,1 32,4 Z"></path>
-    <path class="icon-line FlliOsVc_1" width="16" height="8" d="M 26,38 L 38,38 A 2,2,0,0,1,40,40 L 40,44 A 2,2,0,0,1,38,46 L 26,46 A 2,2,0,0,1,24,44 L 24,40 A 2,2,0,0,1,26,38"></path>
-    <path class="icon-accent FlliOsVc_2" d="M32,46L32,56"></path>
-    <path class="icon-accent FlliOsVc_3" d="M24,52L40,52"></path>
+  
+  <!-- Aurora-Hintergrund fÃ¼r mehr Tiefe -->
+  <path width="512" height="512" fill="url(#auroraGradient)" d="M 96,0 L 416,0 A 96,96,0,0,1,512,96 L 512,416 A 96,96,0,0,1,416,512 L 96,512 A 96,96,0,0,1,0,416 L 0,96 A 96,96,0,0,1,96,0" class="olvwKUSF_0"></path>
+  
+  <!-- Haupt-Hintergrund mit Glas-Effekt -->
+  <path width="448" height="448" fill="url(#glassGradient)" stroke="#ffffff" stroke-width="8" stroke-opacity="0.3" filter="url(#shadow)" d="M 128,32 L 384,32 A 96,96,0,0,1,480,128 L 480,384 A 96,96,0,0,1,384,480 L 128,480 A 96,96,0,0,1,32,384 L 32,128 A 96,96,0,0,1,128,32" class="olvwKUSF_1"></path>
+  
+  <!-- Lichtreflex auf der Oberkante -->
+  <path width="448" height="120" fill="url(#highlightGradient)" opacity="0.6" d="M 128,32 L 384,32 A 96,60,0,0,1,480,92 L 480,92 A 96,60,0,0,1,384,152 L 128,152 A 96,60,0,0,1,32,92 L 32,92 A 96,60,0,0,1,128,32" class="olvwKUSF_2"></path>
+  
+  <!-- Dokument-Symbol mit mehr Details -->
+  <g transform="translate(144, 128)">
+    <!-- Dokument-Hintergrund mit leichtem Schatten -->
+    <path width="224" height="256" fill="#ffffff" fill-opacity="0.95" filter="url(#blur)" d="M 12,0 L 212,0 A 12,12,0,0,1,224,12 L 224,244 A 12,12,0,0,1,212,256 L 12,256 A 12,12,0,0,1,0,244 L 0,12 A 12,12,0,0,1,12,0" class="olvwKUSF_3"></path>
+    
+    <!-- Dokument-Falten-Effekt mit mehr Details -->
+    <path d="M176 0v80h80" fill="none" stroke="#4a6bff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" class="olvwKUSF_4"></path>
+    
+    <!-- Textlinien mit variabler OpazitÃ¤t fÃ¼r Tiefe -->
+    <path stroke="#4a6bff" stroke-width="16" opacity="0.9" d="M32,64L160,64" class="olvwKUSF_5"></path>
+    <path stroke="#4a6bff" stroke-width="16" opacity="0.8" d="M32,112L160,112" class="olvwKUSF_6"></path>
+    <path stroke="#4a6bff" stroke-width="16" opacity="0.7" d="M32,160L128,160" class="olvwKUSF_7"></path>
+    <path stroke="#4a6bff" stroke-width="16" opacity="0.6" d="M32,208L96,208" class="olvwKUSF_8"></path>
+    
+    <!-- Dokument-Icon mit leichtem inneren Schatten -->
+    <path width="224" height="256" fill="none" stroke="#ffffff" stroke-width="8" stroke-opacity="0.4" d="M 12,0 L 212,0 A 12,12,0,0,1,224,12 L 224,244 A 12,12,0,0,1,212,256 L 12,256 A 12,12,0,0,1,0,244 L 0,12 A 12,12,0,0,1,12,0" class="olvwKUSF_9"></path>
   </g>
-<style data-made-with="vivus-instant">.FlliOsVc_0{stroke-dasharray:107 109;stroke-dashoffset:108;animation:FlliOsVc_draw 1333ms ease 0ms forwards;}.FlliOsVc_1{stroke-dasharray:45 47;stroke-dashoffset:46;animation:FlliOsVc_draw 1333ms ease 222ms forwards;}.FlliOsVc_2{stroke-dasharray:10 12;stroke-dashoffset:11;animation:FlliOsVc_draw 1333ms ease 444ms forwards;}.FlliOsVc_3{stroke-dasharray:16 18;stroke-dashoffset:17;animation:FlliOsVc_draw 1333ms ease 666ms forwards;}@keyframes FlliOsVc_draw{100%{stroke-dashoffset:0;}}@keyframes FlliOsVc_fade{0%{stroke-opacity:1;}93.54838709677419%{stroke-opacity:1;}100%{stroke-opacity:0;}}</style></svg>
+  
+  <!-- ZusÃ¤tzliche Lichtpunkte fÃ¼r mehr Glanz -->
+  <path fill="#ffffff" opacity="0.9" d="M147,150A3,3 0,1,1 153,150A3,3 0,1,1 147,150" class="olvwKUSF_10"></path>
+  <path fill="#ffffff" opacity="0.8" d="M168,130A2,2 0,1,1 172,130A2,2 0,1,1 168,130" class="olvwKUSF_11"></path>
+  <path fill="#ffffff" opacity="0.7" d="M127.5,170A2.5,2.5 0,1,1 132.5,170A2.5,2.5 0,1,1 127.5,170" class="olvwKUSF_12"></path>
+<style data-made-with="vivus-instant">.olvwKUSF_0{stroke-dasharray:1884 1886;stroke-dashoffset:1885;animation:olvwKUSF_draw 1000ms ease-in-out 0ms forwards;}.olvwKUSF_1{stroke-dasharray:1628 1630;stroke-dashoffset:1629;animation:olvwKUSF_draw 1000ms ease-in-out 41ms forwards;}.olvwKUSF_2{stroke-dasharray:1009 1011;stroke-dashoffset:1010;animation:olvwKUSF_draw 1000ms ease-in-out 83ms forwards;}.olvwKUSF_3{stroke-dasharray:940 942;stroke-dashoffset:941;animation:olvwKUSF_draw 1000ms ease-in-out 125ms forwards;}.olvwKUSF_4{stroke-dasharray:160 162;stroke-dashoffset:161;animation:olvwKUSF_draw 1000ms ease-in-out 166ms forwards;}.olvwKUSF_5{stroke-dasharray:128 130;stroke-dashoffset:129;animation:olvwKUSF_draw 1000ms ease-in-out 208ms forwards;}.olvwKUSF_6{stroke-dasharray:128 130;stroke-dashoffset:129;animation:olvwKUSF_draw 1000ms ease-in-out 250ms forwards;}.olvwKUSF_7{stroke-dasharray:96 98;stroke-dashoffset:97;animation:olvwKUSF_draw 1000ms ease-in-out 291ms forwards;}.olvwKUSF_8{stroke-dasharray:64 66;stroke-dashoffset:65;animation:olvwKUSF_draw 1000ms ease-in-out 333ms forwards;}.olvwKUSF_9{stroke-dasharray:940 942;stroke-dashoffset:941;animation:olvwKUSF_draw 1000ms ease-in-out 375ms forwards;}.olvwKUSF_10{stroke-dasharray:19 21;stroke-dashoffset:20;animation:olvwKUSF_draw 1000ms ease-in-out 416ms forwards;}.olvwKUSF_11{stroke-dasharray:13 15;stroke-dashoffset:14;animation:olvwKUSF_draw 1000ms ease-in-out 458ms forwards;}.olvwKUSF_12{stroke-dasharray:16 18;stroke-dashoffset:17;animation:olvwKUSF_draw 1000ms ease-in-out 500ms forwards;}@keyframes olvwKUSF_draw{100%{stroke-dashoffset:0;}}@keyframes olvwKUSF_fade{0%{stroke-opacity:1;}92.98245614035088%{stroke-opacity:1;}100%{stroke-opacity:0;}}</style></svg>
