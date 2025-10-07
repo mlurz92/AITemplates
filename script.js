@@ -946,6 +946,7 @@ function processJson(data) {
     if (isMobile()) {
         window.history.replaceState({ path: [], modalOpen: false }, '', window.location.href);
     }
+    renderFavoritesBar();
 }
 
 function loadJsonData(filename) {
@@ -999,15 +1000,17 @@ function renderView(node) {
     const currentScroll = containerEl.scrollTop;
     containerEl.innerHTML = '';
     if (!node) {
-         containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
-         return;
-     }
+        containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
+        return;
+    }
 
     const childNodes = node.items || [];
+    const maxItems = 36; 
+    const nodesToRender = childNodes.slice(0, maxItems);
     const vivusSetups = [];
     const renderedCards = [];
 
-    childNodes.forEach(childNode => {
+    nodesToRender.forEach(childNode => {
         const card = document.createElement('div');
         card.classList.add('card');
         
@@ -1072,7 +1075,7 @@ function renderView(node) {
 
     vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
     
-    if(renderedCards.length > 0) {
+    if (renderedCards.length > 0) {
         containerEl.scrollTop = currentScroll;
         requestAnimationFrame(() => {
             renderedCards.forEach(c => {
@@ -1084,6 +1087,7 @@ function renderView(node) {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
     }
 }
+
 
 function navigateToNode(node) {
     exitOrganizeMode();
@@ -1598,7 +1602,6 @@ function loadFavorites() {
             favoritePrompts = [];
         }
     }
-    renderFavoritesBar();
 }
 
 function saveFavorites() {
