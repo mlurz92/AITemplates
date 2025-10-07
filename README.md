@@ -1,199 +1,101 @@
-# Prompt-Template Browser: Inbetriebnahme auf einem Raspberry Pi
+# Anwendungsbeschreibung: Prompt-Templates Browser
 
-Dies ist eine detaillierte Schritt-für-Schritt-Anleitung zur Installation, Konfiguration und Bereitstellung der Prompt-Template Browser Anwendung auf einem Raspberry Pi 4. Die Anleitung ist speziell für Benutzer ohne Vorerfahrung konzipiert und erklärt jeden notwendigen Schritt, um die Anwendung sicher und dauerhaft über das Internet via HTTPS verfügbar zu machen.
+## 1. Vision & Architektur: Ein performantes Offline-First Erlebnis
 
-## Inhaltsverzeichnis
+Der **Prompt-Templates Browser** ist eine als **Progressive Web App (PWA)** konzipierte Single-Page-Anwendung, die eine nahtlose, hochperformante und offline-fähige Erfahrung zur Verwaltung von Textvorlagen bietet. Die Architektur ist darauf ausgelegt, maximale Interaktivität bei minimaler Latenz zu gewährleisten, indem sie auf reine, optimierte Vanilla-JavaScript-Logik ohne den Overhead von Frameworks setzt.
 
-1.  [Voraussetzungen](#1-voraussetzungen)
-2.  [Schritt-für-Schritt-Anleitung zur Installation](#2-schritt-für-schritt-anleitung-zur-installation)
-    *   [2.1: Mit dem Raspberry Pi verbinden](#21-mit-dem-raspberry-pi-verbinden)
-    *   [2.2: System aktualisieren](#22-system-aktualisieren)
-    *   [2.3: Benötigte Software installieren (Git & Nginx)](#23-benötigte-software-installieren-git--nginx)
-    *   [2.4: Webserver starten und konfigurieren](#24-webserver-starten-und-konfigurieren)
-    *   [2.5: Anwendung herunterladen](#25-anwendung-herunterladen)
-    *   [2.6: HTTPS mit Certbot einrichten (Let's Encrypt)](#26-https-mit-certbot-einrichten-lets-encrypt)
-3.  [Aufrufen der Anwendung](#3-aufrufen-der-anwendung)
-4.  [Anwendung aktualisieren](#4-anwendung-aktualisieren)
-5.  [Vollständige Deinstallation und Systemrücksetzung](#5-vollständige-deinstallation-und-systemrücksetzung)
-    *   [5.1: Software-Komponenten entfernen](#51-software-komponenten-entfernen)
-    *   [5.2: Anwendungsdateien löschen](#52-anwendungsdateien-löschen)
-    *   [5.3: System auf den Ursprungszustand zurücksetzen (Empfohlen)](#53-system-auf-den-ursprungszustand-zurücksetzen-empfohlen)
-6.  [Wichtiger Hinweis zu den Zugangsdaten](#6-wichtiger-hinweis-zu-den-zugangsdaten)
+### 1.1. Dateistruktur & Technologien
 
----
+Die Anwendung besteht aus einem präzisen Satz von Kern-Assets, die jeweils eine klar definierte Rolle spielen:
 
-## 1. Voraussetzungen
+-   **`index.html`**: Das einzige HTML-Dokument. Es dient als semantisches Grundgerüst und App-Shell, enthält alle Container für dynamische Inhalte und vordefinierte SVG-Templates zur performanten Klonung. Das `lang="de"` Attribut ist entscheidend für die korrekte Silbentrennung.
+-   **`style.css`**: Eine einzelne, umfassende CSS-Datei, die das gesamte visuelle Design, das responsive Layout, alle Animationen und das "Glassmorphism"-Thema definiert.
+-   **`script.js`**: Das Gehirn der Anwendung. Dieses Skript verwaltet den Zustand, rendert dynamisch alle Ansichten, verarbeitet sämtliche Benutzerinteraktionen und implementiert die Persistenzlogik.
+-   **`templates.json`**: Die initiale Datenquelle, die die hierarchische Struktur der Prompts und Ordner als JSON-Objekt definiert.
+-   **`manifest.json`**: Definiert das PWA-Verhalten (App-Name, Icons, Theme-Farbe, Start-URL) und ermöglicht die "Zum Startbildschirm hinzufügen"-Funktionalität für ein natives App-Gefühl.
+-   **`favicon_animated.svg`**: Ein animiertes SVG-Favicon, das bereits im Browser-Tab einen dynamischen und hochwertigen ersten Eindruck vermittelt.
+-   **Externe Bibliotheken:**
+    -   `Vivus.js`: Wird für die elegante "Zeichnen"-Animation der Ordner-Icons bei Hover/Touch verwendet.
+    -   `Sortable.js`: Stellt die robuste und intuitive Drag-and-Drop-Funktionalität für das Umordnen und Verwalten von Karten bereit.
 
-Bevor Sie mit der Installation beginnen, stellen Sie bitte sicher, dass die folgenden Punkte erfüllt sind:
+### 1.2. Zustandsverwaltung (State Management)
 
-*   **Hardware:** Ein Raspberry Pi 4 ist betriebsbereit und mit Strom versorgt.
-*   **Betriebssystem:** Eine frische Installation von **Raspberry Pi OS Lite (64-bit)** befindet sich auf der SD-Karte. Der Standardbenutzer ist `pi`.
-*   **Netzwerk:** Der Raspberry Pi ist per LAN-Kabel oder WLAN mit Ihrem Router und dem Internet verbunden.
-*   **SSH-Zugang:** Sie können sich von einem anderen Computer aus per SSH mit Ihrem Raspberry Pi verbinden. Sie benötigen dafür die IP-Adresse des Raspberry Pi in Ihrem lokalen Netzwerk.
-*   **MyFRITZ!-Konto & DynDNS:**
-    *   Sie haben ein MyFRITZ!-Konto eingerichtet.
-    *   Sie haben eine MyFRITZ!-Adresse für Ihren Raspberry Pi erstellt. Für diese Anleitung gehen wir von der Adresse `raspberrypi.hyg6zkbn2mykr1go.myfritz.net` aus.
-*   **Port-Weiterleitung (Port Forwarding):** Dies ist der wichtigste Schritt! In den Einstellungen Ihres Routers (z.B. FRITZ!Box) müssen Sie die folgenden Ports an die **lokale IP-Adresse Ihres Raspberry Pi** weiterleiten:
-    *   **Port `80`** (für HTTP)
-    *   **Port `443`** (für HTTPS)
+Der Anwendungszustand wird clientseitig über den `localStorage` des Browsers verwaltet, was eine sofortige Persistenz ohne Server-Kommunikation ermöglicht.
 
-Ohne diese Port-Weiterleitungen ist Ihr Raspberry Pi aus dem Internet nicht erreichbar und die Einrichtung von HTTPS wird fehlschlagen.
+-   **`customTemplatesJson`**: Speichert die gesamte, vom Benutzer modifizierte Baumstruktur der Prompts und Ordner als JSON-String. Dies ist der "Single Source of Truth" nach der initialen Ladung.
+-   **`favoritePrompts`**: Speichert eine separate, flache Liste von Prompt-IDs, die als Favoriten markiert wurden. Dies entkoppelt die Favoriten-Logik von der Hauptdatenstruktur und ermöglicht einen schnellen Zugriff.
 
-## 2. Schritt-für-Schritt-Anleitung zur Installation
+### 1.3. Rendering & Performance
 
-Führen Sie die folgenden Befehle nacheinander im Terminal Ihres Raspberry Pi aus.
+-   **Dynamisches Rendering:** Alle Karten und Modal-Inhalte werden zur Laufzeit per JavaScript erstellt und in das DOM eingefügt. Dies hält die initiale `index.html` schlank und das Laden extrem schnell.
+-   **GPU-Beschleunigung:** Jede Animation und jeder Übergang in der Anwendung ist akribisch darauf optimiert, von der GPU berechnet zu werden. Dies wird durch die ausschließliche Animation der CSS-Eigenschaften `transform`, `opacity` und `filter` erreicht.
+-   **Effiziente Event-Handhabung:** Komplexe Interaktionen wie das Parallax-Scrolling werden durch `requestAnimationFrame` gedrosselt, um sicherzustellen, dass DOM-Manipulationen nur einmal pro Frame stattfinden und das UI niemals blockiert wird.
 
-### 2.1: Mit dem Raspberry Pi verbinden
+## 2. Visuelles Design & Ästhetik: "Layered Glassmorphism"
 
-Öffnen Sie ein Terminal (auf Windows z.B. PowerShell oder CMD, auf macOS/Linux das Terminal) und verbinden Sie sich per SSH mit Ihrem Raspberry Pi. Ersetzen Sie `<IP_ADRESSE_DES_PI>` durch die tatsächliche lokale IP-Adresse Ihres Geräts.
+Das Design basiert auf einer mehrschichtigen "Glassmorphism"-Ästhetik, die eine visuelle Hierarchie und Tiefe erzeugt.
 
-```bash
-ssh pi@<IP_ADRESSE_DES_PI>
-```
+1.  **Ebene 1: Dynamischer Aurora-Hintergrund (`.aurora-container`)**
+    -   Drei große, farbige Formen bewegen und skalieren sich langsam und organisch über lange, asynchrone CSS-Animationen.
+    -   `mix-blend-mode: plus-lighter` sorgt für leuchtende, additive Farbüberschneidungen.
+    -   `filter: blur(100px)` erzeugt die weichen, diffusen Kanten.
+    -   **Parallax-Effekt:** Dieser gesamte Container ist `position: fixed` und wird per JavaScript (`transform: translateY()`) mit reduzierter Geschwindigkeit bewegt, wenn der Benutzer den Hauptinhalt scrollt, was eine beeindruckende Tiefenillusion erzeugt.
 
-Sie werden nach dem Passwort für den Benutzer `pi` gefragt.
+2.  **Ebene 2: Globale Rauschtextur (`body::before`)**
+    -   Eine subtile, animierte SVG-Rauschtextur liegt über dem Aurora-Hintergrund und verleiht allen Oberflächen eine taktile, filmische Qualität.
 
-### 2.2: System aktualisieren
+3.  **Ebene 3: UI-Ebene (Karten, Bars, Modals)**
+    -   Alle UI-Elemente schweben über dem Hintergrund. Ihr `backdrop-filter: blur(20px)` lässt den Aurora-Hintergrund durchscheinen und erzeugt den charakteristischen "Milchglas"-Effekt.
+    -   Ein feiner, gradientenbasierter Rand (`--glass-border-gradient`) und eine subtile Highlight-Schattierung (`--glass-highlight`) heben die Elemente vom Hintergrund ab und definieren ihre Form.
 
-Es ist eine bewährte Praxis, das System vor jeder neuen Installation auf den neuesten Stand zu bringen.
+### 2.1. Mikro-Interaktionen & Animationen
 
-*   Der erste Befehl lädt die neuesten Paketlisten herunter.
-*   Der zweite Befehl installiert alle verfügbaren Updates.
+-   **Karten-Hover:** Eine sanfte `transform`-Animation hebt die Karte an (`translateY`) und vergrößert sie leicht (`scale`), was eine direkte physische Reaktion auf die Interaktion des Benutzers suggeriert.
+-   **Ordner-Icon-Animation:** Bei Hover/Touch wird das SVG-Icon durch `Vivus.js` elegant "gezeichnet".
+-   **"Jiggle"-Modus:** Im "Organisieren"-Modus zittern alle Karten durch eine subtile CSS-`transform: rotate()`-Animation, was ihren veränderbaren Zustand visuell kommuniziert.
+-   **Kopier-Feedback:** Beim Kopieren eines Prompts pulsiert das Kopier-Icon kurz auf (`transform: scale(1.2)`) und leuchtet in der Akzentfarbe, was eine sofortige, befriedigende Bestätigung der Aktion darstellt.
+-   **Modal-Transition:** Das Öffnen und Schließen von Modals wird durch eine kombinierte `opacity`- und `scale`-Animation begleitet, die ein sanftes "Hereinzoomen" und "Herauszoomen" bewirkt.
 
-```bash
-sudo apt update && sudo apt upgrade -y
-```
+## 3. Layout & Responsivität: Absolute Stabilität
 
-### 2.3: Benötigte Software installieren (Git & Nginx)
+Das Layout ist so konzipiert, dass es auf jeder Bildschirmgröße – vom schmalsten Smartphone bis zum Breitbildmonitor – eine perfekte, harmonische und niemals fehlerhafte Darstellung bietet.
 
-Wir benötigen zwei Hauptkomponenten:
-*   `git`: Um den Quellcode der Anwendung von GitHub herunterzuladen.
-*   `nginx`: Ein leistungsstarker und ressourcenschonender Webserver, der die Anwendungsdateien im Internet bereitstellt.
+-   **Intelligentes Grid:** Das `auto-fill`-Grid mit `minmax(120px, 1fr)` ist der Kern des Systems. Es erzeugt automatisch die optimale Anzahl von Spalten, stellt aber sicher, dass keine Karte jemals schmaler als `120px` wird.
+-   **Größenkontrolle:** Eine `max-width` von `180px` auf den Karten und eine korrespondierende `max-width` auf dem Container verhindern, dass Karten bei wenigen Elementen unnatürlich groß werden. Das Layout behält stets seine Proportionen.
+-   **Typografische Integrität:**
+    -   **Dynamische Skalierung:** JavaScript (`adjustCardTitleFontSize`) stellt sicher, dass Kartentitel niemals überlaufen, indem die Schriftgröße intelligent reduziert wird.
+    -   **Korrekte Silbentrennung:** Die CSS-Eigenschaft `hyphens: auto` sorgt für professionelle, sprachlich korrekte Wortumbrüche, was die Lesbarkeit und Ästhetik maximiert.
+-   **Interne Karten-Layouts:**
+    -   **Ordner:** Die Verwendung von `justify-content: space-between` garantiert, dass der Titel (oben) und das Icon (unten) immer den maximal möglichen Abstand haben, wodurch eine Überlappung selbst bei mehrzeiligen Titeln ausgeschlossen ist.
+    -   **Prompts:** `justify-content: space-between` stellt sicher, dass der Titel, der Inhaltsbereich und die Aktions-Buttons den vertikalen Raum der Karte immer optimal ausnutzen.
 
-```bash
-sudo apt install git nginx -y
-```
+## 4. Komponenten & Funktionalität im Detail
 
-### 2.4: Webserver starten und konfigurieren
+### 4.1. Navigations-Elemente
 
-Nach der Installation stellen wir sicher, dass Nginx läuft und bei jedem Systemstart automatisch gestartet wird.
+-   **Top-Bar:** Ein `position: fixed` "Glas"-Element, das permanenten Zugriff auf Navigation und Kernaktionen bietet.
+-   **Breadcrumbs:** Zeigen den hierarchischen Pfad an und ermöglichen eine schnelle Rückkehr zu übergeordneten Ebenen.
+-   **Fixed Back Button:** Ein schwebender Button, der auf allen Unterseiten erscheint und eine schnelle Rückkehr zur Startseite mit einem einzigen Klick ermöglicht.
 
-```bash
-sudo systemctl start nginx
-sudo systemctl enable nginx
-```
+### 4.2. Interaktive Elemente
 
-### 2.5: Anwendung herunterladen
+-   **Karten:** Die primären Interaktionselemente, die entweder zu Unterordnern führen oder das Prompt-Modal öffnen.
+-   **Prompt-Modal:** Der zentrale Ort für die Interaktion mit einem Prompt, der Lese-, Kopier- und Bearbeitungsfunktionen in einer einzigen, fokussierten Ansicht bündelt.
+-   **Favoritenleiste:** Ein `position: fixed` "Glas"-Element am unteren Rand, das als Schnellzugriffs-Dock für die wichtigsten Prompts dient. Sie ist horizontal scrollbar und nur bei Bedarf sichtbar.
+-   **Kontextmenü:**
+    -   **Robustheit:** Die Event-Handhabung ist so konzipiert, dass ein unbeabsichtigtes sofortiges Schließen verhindert wird.
+    -   **Intelligenz:** Das Menü erkennt seine Position relativ zum Viewport und klappt sich automatisch in die entgegengesetzte Richtung auf, um niemals außerhalb des Bildschirms zu erscheinen. Die `transform-origin` der Animation wird dynamisch angepasst.
+    -   **Kontextsensitivität:** Der Inhalt des Menüs ändert sich je nach angeklicktem Element (Ordner, Prompt, Favorit), um immer nur relevante Aktionen anzubieten.
 
-Wir wechseln nun in das Standardverzeichnis für Web-Inhalte, entfernen die Platzhalterseite von Nginx und laden die Anwendung direkt aus dem GitHub-Repository.
+## 5. Barrierefreiheit (Accessibility)
 
-1.  **Verzeichnis leeren:** Wir löschen die Standard-HTML-Datei von Nginx.
+Die Anwendung ist mit grundlegenden Barrierefreiheitsmerkmalen ausgestattet, um eine breitere Nutzbarkeit zu gewährleisten.
 
-    ```bash
-    sudo rm /var/www/html/index.nginx-debian.html
-    ```
+-   **ARIA-Labels:** Alle ikon-basierten Buttons ohne sichtbaren Text sind mit `aria-label`-Attributen versehen, um ihre Funktion für Screenreader verständlich zu machen.
+-   **Fokus-Management:** Die Anwendung nutzt `:focus-visible`, um nur bei Tastaturnavigation einen klaren Fokus-Indikator anzuzeigen, was die Ästhetik bei Mausinteraktion nicht stört.
+-   **Semantik:** Wo möglich, werden semantische HTML-Elemente (`<main>`, `<header>`, `<nav>`) verwendet, um die Struktur der Seite für assistierende Technologien verständlich zu machen.
 
-2.  **Anwendung klonen:** Wir laden den Code in das richtige Verzeichnis.
+## 6. Datenmanagement & Persistenz
 
-    ```bash
-    sudo git clone https://github.com/mlurz92/anwendungsname.git /var/www/html/
-    ```
-
-    **Wichtiger Hinweis:** Der Befehl lädt den gesamten Inhalt des Repositorys in das Verzeichnis `/var/www/html/`. Die `index.html` der Anwendung liegt damit direkt im Hauptverzeichnis des Webservers.
-
-### 2.6: HTTPS mit Certbot einrichten (Let's Encrypt)
-
-Um eine sichere HTTPS-Verbindung zu gewährleisten, verwenden wir Certbot, um ein kostenloses SSL-Zertifikat von Let's Encrypt zu erhalten und automatisch zu konfigurieren.
-
-1.  **Certbot installieren:** Wir installieren Certbot und das spezielle Plugin für Nginx.
-
-    ```bash
-    sudo apt install certbot python3-certbot-nginx -y
-    ```
-
-2.  **Zertifikat anfordern und Nginx konfigurieren:** Führen Sie den folgenden Befehl aus. Certbot wird Nginx automatisch erkennen, das Zertifikat für Ihre Domain anfordern und die Nginx-Konfiguration für HTTPS anpassen.
-
-    *   `--nginx`: Verwendet das Nginx-Plugin.
-    *   `-d`: Gibt die Domain an, für die das Zertifikat gelten soll.
-    *   `--non-interactive --agree-tos`: Stimmt den Nutzungsbedingungen automatisch zu.
-    *   `-m`: Die E-Mail-Adresse für wichtige Benachrichtigungen (z.B. zum Ablauf des Zertifikats).
-
-    ```bash
-    sudo certbot --nginx -d raspberrypi.hyg6zkbn2mykr1go.myfritz.net --non-interactive --agree-tos -m mlurz92@googlemail.com
-    ```
-
-Certbot richtet auch eine automatische Erneuerung des Zertifikats ein, sodass Sie sich darum in Zukunft nicht mehr kümmern müssen.
-
-**Die Installation ist nun abgeschlossen!**
-
-## 3. Aufrufen der Anwendung
-
-Öffnen Sie einen beliebigen Webbrowser auf einem Gerät (Computer, Smartphone) und geben Sie die folgende Adresse in die Adresszeile ein:
-
-**https://raspberrypi.hyg6zkbn2mykr1go.myfritz.net/**
-
-Die Anwendung sollte nun sicher über HTTPS geladen werden.
-
-## 4. Anwendung aktualisieren
-
-Wenn es eine neue Version der Anwendung im GitHub-Repository gibt, können Sie diese mit den folgenden Befehlen auf Ihrem Raspberry Pi einspielen.
-
-**WARNUNG:** Der Befehl `git reset --hard` überschreibt alle lokalen Änderungen an den Dateien. Wenn Sie in der Anwendung selbst Prompts bearbeitet oder hinzugefügt haben, werden diese Änderungen durch das Update **nicht** beeinflusst, da sie im Local Storage Ihres Browsers gespeichert sind. Dieser Befehl aktualisiert nur die Basis-Anwendungsdateien (`index.html`, `script.js`, `style.css` etc.).
-
-1.  **In das Anwendungsverzeichnis wechseln:**
-
-    ```bash
-    cd /var/www/html/
-    ```
-
-2.  **Neueste Änderungen vom Server abrufen:**
-
-    ```bash
-    sudo git fetch origin
-    ```
-
-3.  **Lokalen Stand auf den neuesten Stand des Servers zurücksetzen:**
-
-    ```bash
-    sudo git reset --hard origin/main
-    ```
-    *(Hinweis: Falls der Haupt-Branch anders als `main` heißt, z.B. `master`, passen Sie den Befehl entsprechend an.)*
-
-Nachdem Sie diese Befehle ausgeführt haben, laden Sie die Seite in Ihrem Browser neu (ggf. mit `Strg + F5` oder `Cmd + Shift + R`, um den Cache zu leeren), um die aktualisierte Version zu sehen.
-
-## 5. Vollständige Deinstallation und Systemrücksetzung
-
-Wenn Sie die Anwendung und alle zugehörigen Komponenten vollständig entfernen möchten, folgen Sie diesen Schritten.
-
-### 5.1: Software-Komponenten entfernen
-
-Dieser Befehl deinstalliert Nginx, Certbot und alle zugehörigen Konfigurationsdateien und Abhängigkeiten.
-
-```bash
-sudo systemctl stop nginx
-sudo apt purge --auto-remove nginx certbot python3-certbot-nginx git -y
-```
-
-### 5.2: Anwendungsdateien löschen
-
-Dieser Befehl löscht das Verzeichnis mit den Anwendungsdateien sowie die von Certbot erstellten Zertifikats- und Konfigurationsdateien.
-
-```bash
-sudo rm -rf /var/www/html
-sudo rm -rf /etc/letsencrypt/
-```
-
-### 5.3: System auf den Ursprungszustand zurücksetzen (Empfohlen)
-
-Die oben genannten Schritte entfernen die spezifische Software, die für diese Anwendung installiert wurde. Es können jedoch weitere Systemkonfigurationen oder Abhängigkeiten zurückbleiben.
-
-Der **sicherste und sauberste Weg**, ein Raspberry Pi OS Lite System in seinen absoluten Ursprungszustand zurückzusetzen, ist das **Neuaufspielen des Betriebssystem-Images** auf die SD-Karte mit dem "Raspberry Pi Imager". Dies garantiert ein frisches System ohne jegliche Rückstände.
-
-## 6. Wichtiger Hinweis zu den Zugangsdaten
-
-In den Anforderungen für diese Anleitung wurden die folgenden Zugangsdaten spezifiziert:
-
-*   **Benutzername:** `mlurz92`
-*   **Passwort/Secret:** `Kandinsky1!`
-
-Die Prompt-Template Browser Anwendung ist eine rein **clientseitige Anwendung**. Das bedeutet, die gesamte Logik wird im Webbrowser des Benutzers ausgeführt. Die Anwendung selbst hat **keine Benutzerverwaltung, keine Login-Funktion und keine serverseitige Komponente**, die diese Zugangsdaten verwenden würde. Sie werden daher für den Betrieb der Anwendung **nicht benötigt**. Sie sind hier lediglich der Vollständigkeit halber gemäß den Anweisungen dokumentiert.
+-   **Download/Reset:** Der Benutzer hat die volle Kontrolle über seine personalisierten Daten. Er kann jederzeit eine `templates_modified.json`-Datei mit all seinen Änderungen herunterladen oder alle lokalen Modifikationen mit einem Klick zurücksetzen und zum Originalzustand zurückkehren.
+-   **Graceful Degradation:** Sollte die initiale `templates.json`-Datei aus irgendeinem Grund nicht geladen werden können, zeigt die Anwendung eine klare Fehlermeldung an, anstatt abzustürzen.
