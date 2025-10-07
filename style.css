@@ -483,7 +483,7 @@ body.favorites-bar-visible #notification-area {
     position: fixed;
     background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
     border: 1px solid transparent;
-  background-clip: padding-box;
+    background-clip: padding-box;
     border-radius: 12px;
     padding: 0.5rem;
     box-shadow: var(--shadow-1);
@@ -491,12 +491,12 @@ body.favorites-bar-visible #notification-area {
     -webkit-backdrop-filter: blur(var(--blur)) saturate(200%);
     z-index: 2000;
     opacity: 0;
-    transform: scale(0.95) translateY(-10px) translateZ(0);
+    transform: scale(0.95);
     transition: opacity var(--duration-2) var(--ease-smooth), transform var(--duration-2) var(--ease-smooth);
     pointer-events: none;
-  will-change: transform, opacity, backdrop-filter;
+    will-change: transform, opacity, backdrop-filter;
 }
-.context-menu.visible { opacity: 1; transform: scale(1) translateY(0); pointer-events: all; }
+.context-menu.visible { opacity: 1; transform: scale(1); pointer-events: all; }
 .context-menu-item { display: flex; align-items: center; padding: 0.6rem 1.2rem; cursor: pointer; transition: background-color var(--duration-1) var(--ease-smooth), color var(--duration-1) var(--ease-smooth); color: var(--fg-1); white-space: nowrap; border-radius: 8px; }
 .context-menu-item.hidden { display: none; }
 .context-menu-item:hover { background-color: rgba(255,255,255,0.1); color: var(--acc-2); }
@@ -539,7 +539,7 @@ body.favorites-bar-visible #notification-area {
     display: flex;
     gap: 0.75rem;
     overflow-x: auto;
-    padding: 0.5rem clamp(0.75rem, var(--safe-area-inset-left), 1.5rem);
+    padding: 0.75rem clamp(0.75rem, var(--safe-area-inset-left), 1.5rem);
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
