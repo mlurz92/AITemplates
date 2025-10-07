@@ -3,13 +3,14 @@ let currentNode = null;
 let pathStack = [];
 const currentJsonFile = "templates.json";
 const localStorageKey = 'customTemplatesJson';
+const favoritesKey = 'favoritePrompts';
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCancelBtn;
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn;
-let mobileNavEl, mobileHomeBtn, mobileBackBtn;
-let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton;
+let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
+let favoritesBarEl, favoritesContainerEl;
 
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
@@ -24,6 +25,7 @@ const swipeThreshold = 50;
 const swipeFeedbackThreshold = 5;
 
 const currentTransitionDurationMediumMs = 300;
+let favoritePrompts = [];
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -54,6 +56,9 @@ function initApp() {
     organizeBtn = document.getElementById('organize-button');
     appLogoBtn = document.getElementById('app-logo-button');
 
+    favoritesBarEl = document.getElementById('favorites-bar');
+    favoritesContainerEl = document.getElementById('favorites-container');
+
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
         fullscreenExitIcon = fullscreenBtn.querySelector('.icon-fullscreen-exit');
@@ -62,12 +67,16 @@ function initApp() {
         organizeIcon = organizeBtn.querySelector('.icon-organize');
         doneIcon = organizeBtn.querySelector('.icon-done');
     }
-    mobileNavEl = document.getElementById('mobile-nav');
 
     modalEditBtn = document.getElementById('modal-edit-button');
     modalSaveBtn = document.getElementById('modal-save-button');
     modalCloseBtn = document.getElementById('modal-close-button');
     copyModalButton = document.getElementById('copy-prompt-modal-button');
+    modalFavoriteBtn = document.getElementById('modal-favorite-button');
+    if (modalFavoriteBtn) {
+        starOutlineIcon = modalFavoriteBtn.querySelector('.icon-star-outline');
+        starFilledIcon = modalFavoriteBtn.querySelector('.icon-star-filled');
+    }
 
     svgTemplateFolder = document.getElementById('svg-template-folder');
     svgTemplateExpand = document.getElementById('svg-template-expand');
@@ -80,6 +89,7 @@ function initApp() {
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
+    loadFavorites();
 
     if (isMobile()) {
         setupMobileSpecificFeatures();
@@ -92,6 +102,13 @@ function createContextMenu() {
     contextMenu = document.createElement('div');
     contextMenu.classList.add('context-menu');
     contextMenu.innerHTML = `
+        <div class="context-menu-item" data-action="toggle-favorite">
+            <svg class="icon icon-star" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>Favorit</span>
+        </div>
+        <div class="context-menu-divider"></div>
         <div class="context-menu-item" data-action="rename">
             <svg class="icon icon-edit" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -122,23 +139,51 @@ function createContextMenu() {
         if (!menuItem) return;
         
         const action = menuItem.getAttribute('data-action');
-        const cardId = contextMenu.getAttribute('data-card-id');
-        const card = document.querySelector(`.card[data-id="${cardId}"]`);
+        const elementId = contextMenu.getAttribute('data-id');
+        const card = document.querySelector(`.card[data-id="${elementId}"]`);
         
-        if (action === 'rename') {
-            startRenamingCard(card);
-        } else if (action === 'delete') {
-            handleDeleteClick(cardId, card);
-        } else if (action === 'move') {
-            openMoveItemModal(cardId);
-        }
+        if (action === 'rename') startRenamingCard(card);
+        else if (action === 'delete') handleDeleteClick(elementId, card);
+        else if (action === 'move') openMoveItemModal(elementId);
+        else if (action === 'toggle-favorite') toggleFavoriteStatus(elementId);
         
         hideContextMenu();
     });
 }
 
-function showContextMenu(x, y, cardId) {
-    contextMenu.setAttribute('data-card-id', cardId);
+function showContextMenu(x, y, targetElement) {
+    const id = targetElement.dataset.id;
+    const type = targetElement.dataset.type || (targetElement.classList.contains('favorite-item') ? 'favorite' : null);
+    if (!id || !type) return;
+
+    const isFavorite = favoritePrompts.includes(id);
+
+    const renameItem = contextMenu.querySelector('[data-action="rename"]');
+    const moveItem = contextMenu.querySelector('[data-action="move"]');
+    const deleteItem = contextMenu.querySelector('[data-action="delete"]');
+    const favoriteItem = contextMenu.querySelector('[data-action="toggle-favorite"]');
+    const favoriteText = favoriteItem.querySelector('span');
+    const dividers = contextMenu.querySelectorAll('.context-menu-divider');
+
+    renameItem.classList.toggle('hidden', type === 'favorite');
+    moveItem.classList.toggle('hidden', type === 'favorite');
+    deleteItem.classList.toggle('hidden', type === 'favorite');
+    dividers[1].classList.toggle('hidden', type === 'favorite');
+
+    if (type === 'prompt' || type === 'favorite') {
+        favoriteItem.classList.remove('hidden');
+        favoriteText.textContent = isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen';
+    } else {
+        favoriteItem.classList.add('hidden');
+    }
+
+    if (type === 'folder') {
+        dividers[0].classList.add('hidden');
+    } else {
+        dividers[0].classList.remove('hidden');
+    }
+
+    contextMenu.setAttribute('data-id', id);
     contextMenu.style.left = `${x}px`;
     contextMenu.style.top = `${y}px`;
     contextMenu.classList.add('visible');
@@ -232,6 +277,12 @@ function setupEventListeners() {
     if (copyModalButton) {
       copyModalButton.addEventListener('click', () => copyPromptText(copyModalButton));
     }
+    if (modalFavoriteBtn) {
+        modalFavoriteBtn.addEventListener('click', () => {
+            const promptId = modalEl.getAttribute('data-id');
+            if(promptId) toggleFavoriteStatus(promptId);
+        });
+    }
 
     modalEditBtn.addEventListener('click', () => toggleEditMode(true));
     modalSaveBtn.addEventListener('click', savePromptChanges);
@@ -257,6 +308,8 @@ function setupEventListeners() {
 
     containerEl.addEventListener('click', handleCardContainerClick);
     containerEl.addEventListener('contextmenu', handleContextMenu);
+    favoritesBarEl.addEventListener('contextmenu', handleContextMenu);
+
     containerEl.addEventListener('dragstart', handleDragStart);
     containerEl.addEventListener('dragover', handleDragOver);
     containerEl.addEventListener('dragenter', handleDragEnter);
@@ -289,13 +342,11 @@ function handleContextMenu(e) {
         return;
     }
     
-    const card = e.target.closest('.card');
-    if (!card) return;
+    const targetElement = e.target.closest('.card, .favorite-item');
+    if (!targetElement) return;
     
     e.preventDefault();
-    
-    const id = card.getAttribute('data-id');
-    showContextMenu(e.pageX, e.pageY, id);
+    showContextMenu(e.pageX, e.pageY, targetElement);
 }
 
 function handleDragStart(e) {
@@ -458,24 +509,6 @@ function combineIntoNewFolder(sourceId, targetId) {
 
 function setupMobileSpecificFeatures() {
     document.body.classList.add('mobile');
-    if (mobileNavEl) mobileNavEl.classList.remove('hidden');
-    mobileHomeBtn = document.getElementById('mobile-home');
-    mobileBackBtn = document.getElementById('mobile-back');
-
-    if (mobileHomeBtn) {
-        mobileHomeBtn.addEventListener('click', navigateToHome);
-    }
-
-    if (mobileBackBtn) {
-        mobileBackBtn.addEventListener('click', () => {
-            if (modalEl.classList.contains('visible')) {
-                closeModal({ fromBackdrop: true });
-            } else if (pathStack.length > 0) {
-                navigateOneLevelUp();
-            }
-        });
-    }
-
     containerEl.addEventListener('touchstart', handleTouchStart, { passive: true });
     containerEl.addEventListener('touchmove', handleTouchMove, { passive: true });
     containerEl.addEventListener('touchend', handleTouchEnd, { passive: true });
@@ -533,6 +566,11 @@ function handleDeleteClick(id, cardElement) {
                 const index = parentNode.items.findIndex(item => item.id === id);
                 if (index > -1) {
                     parentNode.items.splice(index, 1);
+                    if (favoritePrompts.includes(id)) {
+                        favoritePrompts = favoritePrompts.filter(favId => favId !== id);
+                        saveFavorites();
+                        renderFavoritesBar();
+                    }
                     persistJsonData('Element gelöscht!', 'success');
                     renderView(currentNode);
                     updateBreadcrumb();
@@ -570,6 +608,9 @@ function startRenamingCard(card) {
                 node.title = newTitle;
                 titleElement.textContent = newTitle;
                 persistJsonData('Umbenennung gespeichert!', 'success');
+                if (favoritePrompts.includes(id)) {
+                    renderFavoritesBar();
+                }
             }
         }
         
@@ -1082,7 +1123,6 @@ function updateBreadcrumb() {
     const isModalVisible = modalEl.classList.contains('visible');
     const isTrulyAtHome = pathStack.length === 0 && currentNode === jsonData;
     fixedBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
-    if(mobileBackBtn) mobileBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
     topbarBackBtn.style.visibility = (isTrulyAtHome && !isModalVisible) ? 'hidden' : 'visible';
 }
 
@@ -1107,6 +1147,7 @@ function openPromptModal(node, calledFromPopstate = false) {
     if (node) {
         modalEl.setAttribute('data-id', node.id);
         promptFullTextEl.value = node.content || '';
+        updateFavoriteButton(node.id);
         requestAnimationFrame(() => adjustTextareaHeight(promptFullTextEl));
     }
     openModal(modalEl);
@@ -1242,6 +1283,7 @@ function toggleEditMode(isEditing) {
     modalSaveBtn.classList.toggle('hidden', !isEditing);
     copyModalButton.classList.toggle('hidden', isEditing);
     modalCloseBtn.classList.toggle('hidden', isEditing);
+    modalFavoriteBtn.classList.toggle('hidden', isEditing);
 
     const isNewMode = modalEl.dataset.mode === 'new';
     promptTitleInputEl.style.display = isEditing && isNewMode ? 'block' : 'none';
@@ -1358,6 +1400,7 @@ function resetLocalStorage() {
     const confirmation = confirm("Möchten Sie wirklich alle lokalen Änderungen verwerfen und die originalen Vorlagen laden? Alle nicht heruntergeladenen Anpassungen gehen dabei verloren.");
     if (confirmation) {
         localStorage.removeItem(localStorageKey);
+        localStorage.removeItem(favoritesKey);
         showNotification('Änderungen zurückgesetzt. Lade neu...', 'info');
         setTimeout(() => {
             location.reload();
@@ -1461,6 +1504,86 @@ function exitOrganizeMode() {
     if (containerEl.classList.contains('edit-mode')) {
         toggleOrganizeMode();
     }
+}
+
+function loadFavorites() {
+    const storedFavorites = localStorage.getItem(favoritesKey);
+    if (storedFavorites) {
+        try {
+            favoritePrompts = JSON.parse(storedFavorites);
+        } catch (e) {
+            console.error("Fehler beim Laden der Favoriten:", e);
+            favoritePrompts = [];
+        }
+    }
+    renderFavoritesBar();
+}
+
+function saveFavorites() {
+    localStorage.setItem(favoritesKey, JSON.stringify(favoritePrompts));
+}
+
+function toggleFavoriteStatus(promptId) {
+    if (!promptId) return;
+
+    const index = favoritePrompts.indexOf(promptId);
+    if (index > -1) {
+        favoritePrompts.splice(index, 1);
+        showNotification('Von Favoriten entfernt', 'info');
+    } else {
+        favoritePrompts.push(promptId);
+        showNotification('Zu Favoriten hinzugefügt', 'success');
+    }
+
+    saveFavorites();
+    updateFavoriteButton(promptId);
+    renderFavoritesBar();
+}
+
+function updateFavoriteButton(promptId) {
+    const isFavorite = favoritePrompts.includes(promptId);
+    starOutlineIcon.classList.toggle('hidden', isFavorite);
+    starFilledIcon.classList.toggle('hidden', !isFavorite);
+    modalFavoriteBtn.setAttribute('aria-label', isFavorite ? 'Von Favoriten entfernen' : 'Zu Favoriten hinzufügen');
+}
+
+function adjustFavoriteFontSize(button) {
+    const maxFontSize = 11;
+    const minFontSize = 8;
+    let currentSize = maxFontSize;
+    button.style.fontSize = `${currentSize}px`;
+
+    while (button.scrollHeight > button.clientHeight && currentSize > minFontSize) {
+        currentSize -= 0.5;
+        button.style.fontSize = `${currentSize}px`;
+    }
+}
+
+function renderFavoritesBar() {
+    favoritesContainerEl.innerHTML = '';
+    if (favoritePrompts.length === 0) {
+        favoritesBarEl.classList.add('hidden');
+        document.body.classList.remove('favorites-bar-visible');
+        return;
+    }
+
+    favoritesBarEl.classList.remove('hidden');
+    document.body.classList.add('favorites-bar-visible');
+
+    favoritePrompts.forEach(promptId => {
+        const node = findNodeById(jsonData, promptId);
+        if (node && node.type === 'prompt') {
+            const button = document.createElement('button');
+            button.classList.add('btn', 'favorite-item');
+            button.textContent = node.title;
+            button.dataset.id = promptId;
+            button.addEventListener('click', () => {
+                copyToClipboard(node.content, button);
+            });
+            favoritesContainerEl.appendChild(button);
+            adjustFavoriteFontSize(button);
+        }
+    });
 }
 
 if (document.readyState === 'loading') {
