@@ -27,6 +27,18 @@ const swipeFeedbackThreshold = 5;
 const currentTransitionDurationMediumMs = 300;
 let favoritePrompts = [];
 
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
     breadcrumbEl = document.getElementById('breadcrumb');
@@ -176,8 +188,8 @@ function showContextMenu(x, y, targetElement) {
     } else {
         favoriteItem.classList.add('hidden');
     }
-
-    if (type === 'folder') {
+    
+    if (type === 'folder' || type === 'favorite') {
         dividers[0].classList.add('hidden');
     } else {
         dividers[0].classList.remove('hidden');
@@ -339,6 +351,8 @@ function setupEventListeners() {
     promptFullTextEl.addEventListener('input', () => adjustTextareaHeight(promptFullTextEl));
     
     document.addEventListener('keydown', handleKeyDown);
+
+    window.addEventListener('resize', debounce(adjustCardFontSizes, 150));
 }
 
 function handleKeyDown(e) {
@@ -814,6 +828,7 @@ function performViewTransition(updateDomFunction, direction) {
     const transition = document.startViewTransition(updateDomFunction);
     transition.finished.finally(() => {
         delete document.documentElement.dataset.pageTransitionDirection;
+        adjustCardFontSizes();
     });
 }
 
@@ -959,6 +974,26 @@ function loadJsonData(filename) {
         });
 }
 
+function adjustFontSizeForCard(card) {
+    const title = card.querySelector('h3');
+    if (!title) return;
+
+    const maxFontSize = 16;
+    const minFontSize = 9;
+    let currentSize = maxFontSize;
+    title.style.fontSize = `${currentSize}px`;
+
+    while ((title.scrollHeight > title.clientHeight || title.scrollWidth > title.clientWidth) && currentSize > minFontSize) {
+        currentSize -= 1;
+        title.style.fontSize = `${currentSize}px`;
+    }
+}
+
+function adjustCardFontSizes() {
+    const cards = document.querySelectorAll('.cards-container .card');
+    cards.forEach(adjustFontSizeForCard);
+}
+
 function renderView(node) {
     exitOrganizeMode();
     const currentScroll = containerEl.scrollTop;
@@ -1039,6 +1074,7 @@ function renderView(node) {
         containerEl.scrollTop = currentScroll;
         requestAnimationFrame(() => {
             document.querySelectorAll('.card').forEach(c => c.classList.add('is-visible'));
+            adjustCardFontSizes();
         });
     } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
@@ -1434,17 +1470,37 @@ function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl
 function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.content || '', buttonElement); }
 
 function copyToClipboard(text, buttonElement = null) {
+    const showSuccess = () => {
+        showNotification('Prompt kopiert!', 'success');
+        if (buttonElement) {
+            const icon = buttonElement.querySelector('.icon-copy');
+            if (icon) {
+                icon.classList.add('copy-success');
+                setTimeout(() => icon.classList.remove('copy-success'), 600);
+            }
+        }
+    };
+
+    const showError = (err) => {
+        console.error('Clipboard error:', err);
+        showNotification('Fehler beim Kopieren', 'error');
+    };
+
     if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text)
-            .then(() => showNotification('Prompt kopiert!', 'success', buttonElement))
-            .catch(err => { console.error('Clipboard error:', err); showNotification('Fehler beim Kopieren', 'error', buttonElement); });
+        navigator.clipboard.writeText(text).then(showSuccess).catch(showError);
     } else {
         const textArea = document.createElement('textarea');
         textArea.value = text;
         textArea.style.position = 'fixed'; textArea.style.top = '-9999px'; textArea.style.left = '-9999px'; textArea.style.opacity = '0';
-        document.body.appendChild(textArea); textArea.focus(); textArea.select();
-        try { document.execCommand('copy'); showNotification('Prompt kopiert!', 'success', buttonElement); }
-        catch (err) { console.error('Fallback copy error:', err); showNotification('Fehler beim Kopieren', 'error', buttonElement); }
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showSuccess();
+        } catch (err) {
+            showError(err);
+        }
         document.body.removeChild(textArea);
     }
 }
