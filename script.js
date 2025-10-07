@@ -184,22 +184,42 @@ function showContextMenu(x, y, targetElement) {
     }
 
     contextMenu.setAttribute('data-id', id);
-    contextMenu.style.left = `${x}px`;
-    contextMenu.style.top = `${y}px`;
     contextMenu.classList.add('visible');
-    
-    const hideMenu = (e) => {
-        if (!contextMenu.contains(e.target)) {
-            hideContextMenu();
-            document.removeEventListener('click', hideMenu);
-            document.removeEventListener('contextmenu', hideMenu);
-        }
-    };
+
+    const menuWidth = contextMenu.offsetWidth;
+    const menuHeight = contextMenu.offsetHeight;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    let finalX = x;
+    let finalY = y;
+    let originX = '0%';
+    let originY = '0%';
+
+    if (x + menuWidth > windowWidth) {
+        finalX = x - menuWidth;
+        originX = '100%';
+    }
+    if (y + menuHeight > windowHeight) {
+        finalY = y - menuHeight;
+        originY = '100%';
+    }
+
+    contextMenu.style.left = `${finalX}px`;
+    contextMenu.style.top = `${finalY}px`;
+    contextMenu.style.transformOrigin = `${originX} ${originY}`;
     
     setTimeout(() => {
-        document.addEventListener('click', hideMenu);
-        document.addEventListener('contextmenu', hideMenu);
-    }, 10);
+        const hideMenu = (e) => {
+            if (!contextMenu.contains(e.target)) {
+                hideContextMenu();
+                document.removeEventListener('click', hideMenu, true);
+                document.removeEventListener('contextmenu', hideMenu, true);
+            }
+        };
+        document.addEventListener('click', hideMenu, true);
+        document.addEventListener('contextmenu', hideMenu, true);
+    }, 0);
 }
 
 function hideContextMenu() {
@@ -556,9 +576,11 @@ function handleDeleteClick(id, cardElement) {
 
     const confirmation = confirm(`Möchten Sie "${nodeToDelete.title}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`);
     if (confirmation) {
-        cardElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-        cardElement.style.opacity = '0';
-        cardElement.style.transform = 'scale(0.8)';
+        if (cardElement) {
+            cardElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            cardElement.style.opacity = '0';
+            cardElement.style.transform = 'scale(0.8)';
+        }
         
         setTimeout(() => {
             const parentNode = findParentOfNode(id);
@@ -1541,6 +1563,7 @@ function toggleFavoriteStatus(promptId) {
 }
 
 function updateFavoriteButton(promptId) {
+    if (!modalEl.classList.contains('visible') || modalEl.dataset.id !== promptId) return;
     const isFavorite = favoritePrompts.includes(promptId);
     starOutlineIcon.classList.toggle('hidden', isFavorite);
     starFilledIcon.classList.toggle('hidden', !isFavorite);
