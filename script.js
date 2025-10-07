@@ -10,9 +10,9 @@ let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCa
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
-let favoritesBarEl, favoritesContainerEl, auroraContainerEl;
+let favoritesBarEl, favoritesContainerEl, auroraContainerEl, favoriteTooltipEl;
 
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
+let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove, svgTemplateFavoriteCopy, svgTemplateFavoriteCheckmark;
 
 let sortableInstance = null;
 let contextMenu = null;
@@ -28,6 +28,7 @@ const currentTransitionDurationMediumMs = 300;
 let favoritePrompts = [];
 let lastScrollY = 0;
 let ticking = false;
+let tooltipTimeout = null;
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -88,7 +89,10 @@ function initApp() {
     svgTemplateDelete = document.getElementById('svg-template-delete');
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
+    svgTemplateFavoriteCopy = document.getElementById('svg-template-favorite-copy');
+    svgTemplateFavoriteCheckmark = document.getElementById('svg-template-favorite-checkmark');
 
+    createGlobalTooltip();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -99,6 +103,65 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
+}
+
+function createGlobalTooltip() {
+    favoriteTooltipEl = document.createElement('div');
+    favoriteTooltipEl.id = 'favorite-tooltip';
+    document.body.appendChild(favoriteTooltipEl);
+}
+
+function showFavoriteTooltip(targetElement, node) {
+    clearTimeout(tooltipTimeout);
+    tooltipTimeout = setTimeout(() => {
+        if (!favoriteTooltipEl) return;
+
+        favoriteTooltipEl.innerHTML = '';
+        const tooltipTitle = document.createElement('strong');
+        tooltipTitle.className = 'favorite-tooltip-title';
+        tooltipTitle.textContent = node.title;
+        const tooltipContent = document.createTextNode((node.content || '').substring(0, 200) + ((node.content || '').length > 200 ? '...' : ''));
+
+        favoriteTooltipEl.appendChild(tooltipTitle);
+        favoriteTooltipEl.appendChild(tooltipContent);
+
+        const targetRect = targetElement.getBoundingClientRect();
+        const viewportMargin = 10;
+
+        favoriteTooltipEl.style.visibility = 'hidden';
+        favoriteTooltipEl.classList.add('visible');
+        const tooltipWidth = favoriteTooltipEl.offsetWidth;
+        const tooltipHeight = favoriteTooltipEl.offsetHeight;
+        favoriteTooltipEl.classList.remove('visible');
+        favoriteTooltipEl.style.visibility = '';
+
+        let top = targetRect.top - tooltipHeight - viewportMargin;
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
+
+        if (left < viewportMargin) {
+            left = viewportMargin;
+        }
+        if (left + tooltipWidth > window.innerWidth - viewportMargin) {
+            left = window.innerWidth - tooltipWidth - viewportMargin;
+        }
+        if (top < viewportMargin) {
+            top = targetRect.bottom + viewportMargin;
+        }
+
+        favoriteTooltipEl.style.top = `${top}px`;
+        favoriteTooltipEl.style.left = `${left}px`;
+        
+        requestAnimationFrame(() => {
+            favoriteTooltipEl.classList.add('visible');
+        });
+    }, 50);
+}
+
+function hideFavoriteTooltip() {
+    clearTimeout(tooltipTimeout);
+    if (favoriteTooltipEl) {
+        favoriteTooltipEl.classList.remove('visible');
+    }
 }
 
 function createContextMenu() {
@@ -1481,10 +1544,10 @@ function copyToClipboard(text, buttonElement = null) {
     const showSuccess = () => {
         showNotification('Prompt kopiert!', 'success');
         if (buttonElement) {
-            const icon = buttonElement.querySelector('.icon-copy');
-            if (icon) {
-                icon.classList.add('copy-success');
-                setTimeout(() => icon.classList.remove('copy-success'), 600);
+            const targetElement = buttonElement.closest('.favorite-item') || buttonElement.querySelector('.icon-copy');
+            if (targetElement) {
+                targetElement.classList.add('copy-success');
+                setTimeout(() => targetElement.classList.remove('copy-success'), 1200);
             }
         }
     };
@@ -1633,18 +1696,6 @@ function updateFavoriteButton(promptId) {
     modalFavoriteBtn.setAttribute('aria-label', isFavorite ? 'Von Favoriten entfernen' : 'Zu Favoriten hinzufügen');
 }
 
-function adjustFavoriteFontSize(button) {
-    const maxFontSize = 11;
-    const minFontSize = 8;
-    let currentSize = maxFontSize;
-    button.style.fontSize = `${currentSize}px`;
-
-    while (button.scrollHeight > button.clientHeight && currentSize > minFontSize) {
-        currentSize -= 0.5;
-        button.style.fontSize = `${currentSize}px`;
-    }
-}
-
 function renderFavoritesBar() {
     favoritesContainerEl.innerHTML = '';
     if (favoritePrompts.length === 0) {
@@ -1659,15 +1710,42 @@ function renderFavoritesBar() {
     favoritePrompts.forEach(promptId => {
         const node = findNodeById(jsonData, promptId);
         if (node && node.type === 'prompt') {
-            const button = document.createElement('button');
-            button.classList.add('btn', 'favorite-item');
-            button.textContent = node.title;
-            button.dataset.id = promptId;
-            button.addEventListener('click', () => {
-                copyToClipboard(node.content, button);
+            const favoriteItem = document.createElement('div');
+            favoriteItem.className = 'favorite-item';
+            favoriteItem.dataset.id = promptId;
+            favoriteItem.dataset.type = 'favorite';
+
+            const iconWrapper = document.createElement('div');
+            iconWrapper.className = 'favorite-item-icon-wrapper';
+            
+            const copyIcon = svgTemplateFavoriteCopy.cloneNode(true);
+            copyIcon.classList.add('icon-copy');
+            const checkmarkIcon = svgTemplateFavoriteCheckmark.cloneNode(true);
+            checkmarkIcon.classList.add('icon-checkmark');
+            
+            iconWrapper.appendChild(copyIcon);
+            iconWrapper.appendChild(checkmarkIcon);
+
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'favorite-item-title';
+            titleSpan.textContent = node.title;
+            
+            favoriteItem.appendChild(iconWrapper);
+            favoriteItem.appendChild(titleSpan);
+
+            favoriteItem.addEventListener('click', () => {
+                copyToClipboard(node.content, favoriteItem);
             });
-            favoritesContainerEl.appendChild(button);
-            adjustFavoriteFontSize(button);
+
+            favoriteItem.addEventListener('mouseenter', (e) => {
+                showFavoriteTooltip(e.currentTarget, node);
+            });
+            
+            favoriteItem.addEventListener('mouseleave', () => {
+                hideFavoriteTooltip();
+            });
+
+            favoritesContainerEl.appendChild(favoriteItem);
         }
     });
 }

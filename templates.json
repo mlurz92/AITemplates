@@ -259,6 +259,12 @@
               "type": "prompt",
               "title": "Anwendungsbeschreibung erstellen",
               "content": "Analysiere den aktuellen Stand der Anwendung vollständig und verstehe deren Funktion, zusammenhänge sowie das Aussehen des UI bei allen Viewport-Größen. Erstelle eine vollständige Anwendungsbeschreibung, welche Alle Aspekte der Anwendung berücksichtigt bis ins lächerlich kleinste Detail inklusive Aller Funktionen, das UI/UX bei allen Größen sowie die möglichen Interaktionen und Reaktionen, Animationen und Effekte. Verfasse die Anwendungsbeschreibung vollständig in einem Markdown-Codeblock, wobei du kompakt aber sehr Präzise schreibst und deine Anwendungsbeschreibung sinnvoll und übersichtlich strukturierst und gliederst. Denke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Beeindrucke mich mit einer perfekten Antwort."
+            },
+            {
+              "id": "76155d39-1e71-4965-9b26-babd9c73da3e",
+              "type": "prompt",
+              "title": "Anwendungsbeschreibung und Erklärungen",
+              "content": "Analysiere den aktuellen Stand der Anwendung vollständig und verstehe deren Funktion, zusammenhänge sowie das Aussehen des UI bei allen Viewport-Größen. Erstelle eine vollständige Anwendungsbeschreibung, welche Alle Aspekte der Anwendung berücksichtigt bis ins lächerlich kleinste Detail inklusive Aller Funktionen, das UI/UX bei allen Größen sowie die möglichen Interaktionen und Reaktionen, Animationen und Effekte. Die Anwendungsbeschreibung soll es einem Entwickler erleichtern die Bestandteile des Codes bestimmten Funktionen und einem bestimmten Zweck zuzuordnen. Verfasse die Anwendungsbeschreibung vollständig in einem Markdown-Codeblock, wobei du kompakt aber sehr Präzise schreibst und deine Anwendungsbeschreibung sinnvoll und übersichtlich strukturierst und gliederst. Denke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Beeindrucke mich mit einer perfekten Antwort."
             }
           ]
         },

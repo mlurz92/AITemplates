@@ -1,102 +1,115 @@
-# Anwendungsbeschreibung: Prompt-Templates Browser
+# Anwendungsbeschreibung & Entwickler-Handbuch: Prompt-Templates Browser
 
-## 1. Vision & Architektur: Ein performantes Offline-First Erlebnis
+## 1. Vision & Architektur-Philosophie
 
-Der **Prompt-Templates Browser** ist eine als **Progressive Web App (PWA)** konzipierte Single-Page-Anwendung, die eine nahtlose, hochperformante und offline-fähige Erfahrung zur Verwaltung von Textvorlagen bietet. Die Architektur ist darauf ausgelegt, maximale Interaktivität bei minimaler Latenz zu gewährleisten, indem sie auf reine, optimierte Vanilla-JavaScript-Logik ohne den Overhead von Frameworks setzt.
+Der **Prompt-Templates Browser** ist eine als **Progressive Web App (PWA)** konzipierte Single-Page-Anwendung. Die Kernvision ist die Bereitstellung eines **maximal performanten, latenzfreien und offline-fähigen Erlebnisses**.
 
-### 1.1. Dateistruktur & Technologien
+Dieses Ziel wird durch eine bewusste architektonische Entscheidung erreicht: den **Verzicht auf JavaScript-Frameworks**. Die gesamte Anwendungslogik basiert auf reinem, hochoptimiertem **Vanilla JavaScript**. Dieser Ansatz minimiert den Overhead, ermöglicht die volle Kontrolle über das Rendering und die Performance und stellt sicher, dass die Interaktionen des Benutzers unmittelbar und flüssig sind.
 
-Die Anwendung besteht aus einem präzisen Satz von Kern-Assets, die jeweils eine klar definierte Rolle spielen:
+## 2. Getting Started (Lokale Entwicklung)
 
-* **`index.html`**: Das einzige HTML-Dokument. Es dient als semantisches Grundgerüst und App-Shell, enthält alle Container für dynamische Inhalte und vordefinierte SVG-Templates zur performanten Klonung.
-* **`style.css`**: Eine einzelne, umfassende CSS-Datei, die das gesamte visuelle Design, das responsive Layout, alle Animationen und das "Glassmorphism"-Thema definiert.
-* **`script.js`**: Das Gehirn der Anwendung. Dieses Skript verwaltet den Zustand, rendert dynamisch alle Ansichten, verarbeitet sämtliche Benutzerinteraktionen und implementiert die Persistenzlogik.
-* **`templates.json`**: Die initiale Datenquelle, die die hierarchische Struktur der Prompts und Ordner als JSON-Objekt definiert.
-* **`manifest.json`**: Definiert das PWA-Verhalten (App-Name, Icons, Theme-Farbe, Start-URL) und ermöglicht die "Zum Startbildschirm hinzufügen"-Funktionalität für ein natives App-Gefühl.
-* **`favicon_animated.svg`**: Ein animiertes SVG-Favicon, das bereits im Browser-Tab einen dynamischen und hochwertigen ersten Eindruck vermittelt.
-* **Externe Bibliotheken:**
-    * `Vivus.js`: Wird für die elegante "Zeichnen"-Animation der Ordner-Icons bei Hover/Touch verwendet.
-    * `Sortable.js`: Stellt die robuste und intuitive Drag-and-Drop-Funktionalität für das Umordnen und Verwalten von Karten bereit.
+Die Anwendung ist vollständig clientseitig und erfordert kein Build-System.
 
-### 1.2. Zustandsverwaltung (State Management)
+1.  **Repository klonen:** Klonen Sie das Repository auf Ihr lokales System.
+2.  **Im Browser öffnen:** Öffnen Sie die `index.html`-Datei direkt in einem modernen Webbrowser. Für die volle Funktionalität des `localStorage` wird das Ausführen über einen einfachen lokalen Webserver (z.B. via VS Code Live Server) empfohlen.
 
-Der Anwendungszustand wird clientseitig über den `localStorage` des Browsers verwaltet, was eine sofortige Persistenz ohne Server-Kommunikation ermöglicht.
+## 3. Technologische Architektur & Kernkonzepte
 
-* **`customTemplatesJson`**: Speichert die gesamte, vom Benutzer modifizierte Baumstruktur der Prompts und Ordner als JSON-String. Dies ist der "Single Source of Truth" nach der initialen Ladung.
-* **`favoritePrompts`**: Speichert eine separate, flache Liste von Prompt-IDs, die als Favoriten markiert wurden. Dies entkoppelt die Favoriten-Logik von der Hauptdatenstruktur und ermöglicht einen schnellen Zugriff.
+### 3.1. Dateistruktur
 
-### 1.3. Rendering & Performance
+*   **`index.html`**: Das einzige HTML-Dokument. Dient als App-Shell und enthält Container für dynamische Inhalte sowie eine Sammlung vordefinierter SVG-Templates in `<defs>` zur performanten Klonung.
+*   **`style.css`**: Eine einzelne CSS-Datei, die das gesamte visuelle Design, das responsive Layout, alle Animationen und das "Glassmorphism"-Thema definiert.
+*   **`script.js`**: Das Gehirn der Anwendung. Verwaltet Zustand, Rendering, Benutzerinteraktionen und die Persistenzlogik.
+*   **`templates.json`**: Die initiale Datenquelle (Seed-Daten).
+*   **`manifest.json`**: Definiert das PWA-Verhalten.
 
-* **Dynamisches Rendering:** Alle Karten und Modal-Inhalte werden zur Laufzeit per JavaScript erstellt und in das DOM eingefügt. Dies hält die initiale `index.html` schlank und das Laden extrem schnell.
-* **GPU-Beschleunigung:** Jede Animation und jeder Übergang in der Anwendung ist akribisch darauf optimiert, von der GPU berechnet zu werden. Dies wird durch die ausschließliche Animation der CSS-Eigenschaften `transform`, `opacity` und `filter` erreicht.
-* **Effiziente Event-Handhabung:** Komplexe Interaktionen wie das Parallax-Scrolling werden durch `requestAnimationFrame` gedrosselt, um sicherzustellen, dass DOM-Manipulationen nur einmal pro Frame stattfinden und das UI niemals blockiert wird.
+### 3.2. Zustandsverwaltung & Datenpersistenz
 
-## 2. Visuelles Design & Ästhetik: "Layered Glassmorphism"
+Der Zustand wird über den `localStorage` des Browsers verwaltet, was eine sofortige Persistenz ermöglicht.
 
-Das Design basiert auf einer mehrschichtigen "Glassmorphism"-Ästhetik, die eine visuelle Hierarchie und Tiefe erzeugt.
+*   **`customTemplatesJson`**: Speichert die gesamte, vom Benutzer modifizierte Baumstruktur der Prompts und Ordner. Dies ist der "Single Source of Truth" nach der initialen Ladung.
+*   **`favoritePrompts`**: Eine separate, flache Liste von Prompt-IDs für schnellen Zugriff auf Favoriten.
 
-1.  **Ebene 1: Dynamischer Aurora-Hintergrund (`.aurora-container`)**
-    * Drei große, farbige Formen bewegen und skalieren sich langsam und organisch über lange, asynchrone CSS-Animationen.
-    * `mix-blend-mode: plus-lighter` sorgt für leuchtende, additive Farbüberschneidungen.
-    * `filter: blur(100px)` erzeugt die weichen, diffusen Kanten.
-    * **Parallax-Effekt:** Dieser gesamte Container ist `position: fixed` und wird per JavaScript (`transform: translateY()`) mit reduzierter Geschwindigkeit bewegt, wenn der Benutzer den Hauptinhalt scrollt, was eine beeindruckende Tiefenillusion erzeugt.
+### 3.3. Rendering & Performance
 
-2.  **Ebene 2: Globale Rauschtextur (`body::before`)**
-    * Eine subtile, animierte SVG-Rauschtextur liegt über dem Aurora-Hintergrund und verleiht allen Oberflächen eine taktile, filmische Qualität.
+*   **Dynamisches Rendering:** Alle UI-Karten werden zur Laufzeit per JavaScript (`renderView`) erstellt. Dies hält die `index.html` schlank und das initiale Laden extrem schnell.
+*   **GPU-Beschleunigung:** Alle Animationen nutzen ausschließlich die CSS-Eigenschaften `transform`, `opacity` und `filter`, um von der GPU berechnet zu werden und maximale Flüssigkeit zu gewährleisten.
+*   **Effiziente Event-Handhabung:** Komplexe Events wie Scrolling werden durch `requestAnimationFrame` gedrosselt, um DOM-Manipulationen auf einmal pro Frame zu beschränken.
+*   **View Transitions API:** Die Navigation zwischen Ordnerebenen wird durch `document.startViewTransition` gesteuert, was für nahtlose, animierte Seitenübergänge sorgt.
 
-3.  **Ebene 3: UI-Ebene (Karten, Bars, Modals)**
-    * Alle UI-Elemente schweben über dem Hintergrund. Ihr `backdrop-filter: blur(20px)` lässt den Aurora-Hintergrund durchscheinen und erzeugt den charakteristischen "Milchglas"-Effekt.
-    * Ein feiner, gradientenbasierter Rand (`--glass-border-gradient`) und eine subtile Highlight-Schattierung (`--glass-highlight`) heben die Elemente vom Hintergrund ab und definieren ihre Form.
+## 4. Visuelles Design: "Layered Glassmorphism"
 
-### 2.1. Mikro-Interaktionen & Animationen
+Das Design erzeugt durch mehrere Ebenen eine visuelle Tiefe.
 
-* **Karten-Hover:** Eine sanfte `transform`-Animation hebt die Karte an (`translateY`) und vergrößert sie leicht (`scale`), was eine direkte physische Reaktion auf die Interaktion des Benutzers suggeriert.
-* **Ordner-Icon-Animation:** Bei Hover/Touch wird das SVG-Icon durch `Vivus.js` elegant "gezeichnet".
-* **"Jiggle"-Modus:** Im "Organisieren"-Modus zittern alle Karten durch eine subtile CSS-`transform: rotate()`-Animation, was ihren veränderbaren Zustand visuell kommuniziert.
-* **Kopier-Feedback:** Beim Kopieren eines Prompts pulsiert das Kopier-Icon kurz auf (`transform: scale(1.2)`) und leuchtet in der Akzentfarbe, was eine sofortige, befriedigende Bestätigung der Aktion darstellt.
-* **Modal-Transition:** Das Öffnen und Schließen von Modals wird durch eine kombinierte `opacity`- und `scale`-Animation begleitet, die ein sanftes "Hereinzoomen" und "Herauszoomen" bewirkt.
+1.  **Ebene 1: Aurora-Hintergrund (`.aurora-container`)**: Sich langsam bewegende, weichgezeichnete Farbformen mit einem **Parallax-Effekt**, der durch JavaScript (`updateParallax`) gesteuert wird.
+2.  **Ebene 2: Rauschtextur (`body::before`)**: Eine subtile, animierte SVG-Rauschtextur verleiht allen Oberflächen eine taktile Qualität.
+3.  **Ebene 3: UI-Ebene**: Alle UI-Elemente nutzen `backdrop-filter: blur(20px)`, um den "Milchglas"-Effekt zu erzeugen.
 
-## 3. Layout & Responsivität: Absolute Stabilität
+## 5. Komponenten-Deep-Dive & Funktionszuordnung
 
-Das Layout ist so konzipiert, dass es auf jeder Bildschirmgröße – vom schmalsten Smartphone bis zum Breitbildmonitor – eine perfekte, harmonische und niemals fehlerhafte Darstellung bietet.
+### 5.1. Karten (`.card`) & Container (`#cards-container`)
 
-* **Intelligentes Grid:** Das `auto-fit`-Grid mit `minmax(120px, 1fr)` ist der Kern des Systems. Es erzeugt automatisch die optimale Anzahl von Spalten, stellt aber sicher, dass keine Karte jemals schmaler als `120px` wird.
-* **Strikte Spaltenbegrenzung:** Eine präzise berechnete `max-width` auf dem `.cards-container` stellt sicher, dass **niemals mehr als sechs Spalten** angezeigt werden, selbst auf sehr breiten Bildschirmen.
-* **Größenkontrolle:** Eine `max-width` auf den Karten verhindert, dass diese unnatürlich groß werden. Das Layout behält stets seine Proportionen.
-* **Typografische Integrität:**
-    * **Dynamische Skalierung:** JavaScript (`adjustCardTitleFontSize`) stellt sicher, dass Kartentitel niemals überlaufen, indem die Schriftgröße intelligent reduziert wird.
-    * **Korrekte Silbentrennung:** Die CSS-Eigenschaft `hyphens: auto` sorgt für professionelle, sprachlich korrekte Wortumbrüche, was die Lesbarkeit und Ästhetik maximiert.
-* **Interne Karten-Layouts:**
-    * **Ordner:** Die Verwendung von `justify-content: space-between` garantiert, dass der Titel (oben) und das Icon (unten) immer den maximal möglichen Abstand haben.
-    * **Prompts:** `justify-content: space-between` stellt sicher, dass der Titel, der Inhaltsbereich und die Aktions-Buttons den vertikalen Raum der Karte immer optimal ausnutzen.
+*   **Beschreibung:** Die primären UI-Elemente, die Ordner oder Prompts repräsentieren.
+*   **Rendering:** Dynamisch erstellt in der Funktion `renderView`.
+*   **Layout:** Gesteuert durch ein intelligentes CSS Grid (`grid-template-columns: repeat(auto-fit, minmax(120px, 1fr))`).
+*   **Interaktion:** Gemanagt durch den zentralen Event-Listener in `handleCardContainerClick`.
+*   **Animationen:** Hover-Effekte (`transform`), "Jiggle"-Modus (`@keyframes jiggle`) und die "Zeichnen"-Animation der Ordner-Icons (`setupVivusAnimation`).
 
-## 4. Komponenten & Funktionalität im Detail
+### 5.2. Favoritenleiste (`#favorites-bar`) & Intelligenter Tooltip
 
-### 4.1. Navigations-Elemente
+*   **Beschreibung:** Ein Schnellzugriffs-Dock am unteren Rand für favorisierte Prompts.
+*   **Rendering:** Dynamisch erstellt in `renderFavoritesBar` basierend auf dem `favoritePrompts`-Array.
+*   **Favoriten-"Chips" (`.favorite-item`):** Kompakte Buttons mit Icon und Titel. Ein Klick löst `copyToClipboard` aus und startet eine CSS-Animation (`.copy-success`), die das Icon zu einem Häkchen morpht.
+*   **Globaler Tooltip (`#favorite-tooltip`):**
+    *   **Implementierung:** Ein einziges, globales `div`-Element, das in `createGlobalTooltip` erstellt wird, um Probleme mit dem CSS `stacking context` zu umgehen.
+    *   **Logik:** Die Funktionen `showFavoriteTooltip` und `hideFavoriteTooltip` steuern die Sichtbarkeit und den Inhalt.
+    *   **Intelligenz:** `showFavoriteTooltip` führt eine **Viewport-Kollisionserkennung** durch. Es berechnet die Dimensionen des Tooltips und passt seine `top`- und `left`-Positionen dynamisch an, um sicherzustellen, dass er niemals die Bildschirmränder überragt.
+    *   **Performance:** Ein **Debounce-Mechanismus** (`tooltipTimeout`) verhindert visuelles Flackern bei schnellem Scrollen über die Favoriten.
 
-* **Top-Bar:** Ein `position: fixed` "Glas"-Element, das permanenten Zugriff auf Navigation und Kernaktionen bietet.
-* **Breadcrumbs:** Zeigen den hierarchischen Pfad an und ermöglichen eine schnelle Rückkehr zu übergeordneten Ebenen.
-* **Fixed Back Button:** Ein schwebender Button, der auf allen Unterseiten erscheint und eine schnelle Rückkehr zur Startseite mit einem einzigen Klick ermöglicht.
+### 5.3. Modals
 
-### 4.2. Interaktive Elemente
+*   **Prompt-Modal (`#prompt-modal`):** Dient der Anzeige, dem Kopieren und Bearbeiten von Prompts. Gesteuert durch `openPromptModal` und `closeModal`. Der Bearbeitungszustand wird über `toggleEditMode` verwaltet.
+*   **Weitere Modals:** `create-folder-modal` und `move-item-modal` folgen demselben Prinzip und werden ebenfalls über die zentralen `openModal`/`closeModal`-Funktionen gesteuert.
 
-* **Karten:** Die primären Interaktionselemente, die entweder zu Unterordnern führen oder das Prompt-Modal öffnen.
-* **Prompt-Modal:** Der zentrale Ort für die Interaktion mit einem Prompt, der Lese-, Kopier- und Bearbeitungsfunktionen in einer einzigen, fokussierten Ansicht bündelt.
-* **Favoritenleiste:** Ein `position: fixed` "Glas"-Element am unteren Rand, das als Schnellzugriffs-Dock für die wichtigsten Prompts dient. Sie ist horizontal scrollbar und nur bei Bedarf sichtbar.
-* **Kontextmenü:**
-    * **Robustheit:** Die Event-Handhabung ist so konzipiert, dass ein unbeabsichtigtes sofortiges Schließen verhindert wird.
-    * **Intelligenz:** Das Menü erkennt seine Position relativ zum Viewport und klappt sich automatisch in die entgegengesetzte Richtung auf.
-    * **Kontextsensitivität:** Der Inhalt des Menüs ändert sich je nach angeklicktem Element (Ordner, Prompt, Favorit).
+## 6. Wichtige Workflows: Von der Interaktion zur Funktion
 
-## 5. Barrierefreiheit (Accessibility)
+Dieser Abschnitt schlüsselt die wichtigsten Benutzerinteraktionen auf und ordnet sie den ausführenden JavaScript-Funktionen zu.
 
-Die Anwendung ist mit grundlegenden Barrierefreiheitsmerkmalen ausgestattet:
+*   **App-Start:**
+    1.  `initApp()` wird aufgerufen.
+    2.  `loadJsonData()` prüft `localStorage` auf `customTemplatesJson`.
+    3.  Falls vorhanden: `JSON.parse()` und Aufruf von `processJson()`.
+    4.  Falls nicht: `fetch("templates.json")` und Aufruf von `processJson()`.
+    5.  `processJson()` initialisiert den Zustand und ruft `renderView()` und `renderFavoritesBar()` auf.
 
-* **ARIA-Labels:** Alle ikon-basierten Buttons sind mit `aria-label`-Attributen versehen, um ihre Funktion für Screenreader verständlich zu machen.
-* **Fokus-Management:** Die Anwendung nutzt `:focus-visible`, um nur bei Tastaturnavigation einen klaren Fokus-Indikator anzuzeigen.
-* **Semantik:** Es werden semantische HTML-Elemente (`<main>`, `<header>`, `<nav>`) verwendet, um die Struktur der Seite für assistierende Technologien verständlich zu machen.
+*   **Navigation in einen Ordner:**
+    1.  Benutzer klickt auf eine Ordner-Karte (`.card[data-type="folder"]`).
+    2.  `handleCardContainerClick()` fängt den Klick ab.
+    3.  `navigateToNode(node)` wird aufgerufen.
+    4.  Der aktuelle `currentNode` wird auf den `pathStack` geschoben.
+    5.  Der neue Ordner wird zum `currentNode`.
+    6.  `document.startViewTransition()` wird mit `renderView()` und `updateBreadcrumb()` als Callback aufgerufen, was den animierten Übergang auslöst.
 
-## 6. Datenmanagement & Persistenz
+*   **Einen Favoriten kopieren:**
+    1.  Benutzer klickt auf einen `.favorite-item`.
+    2.  Der Event-Listener ruft `copyToClipboard(content, element)` auf.
+    3.  `navigator.clipboard.writeText()` kopiert den Inhalt.
+    4.  Bei Erfolg wird dem `.favorite-item` die Klasse `.copy-success` hinzugefügt, was die Icon-Morph-Animation in CSS auslöst.
+    5.  `showNotification()` wird aufgerufen, um eine Bestätigung anzuzeigen.
 
-* **Download/Reset:** Der Benutzer hat die volle Kontrolle über seine personalisierten Daten. Er kann jederzeit eine `templates_modified.json`-Datei herunterladen oder alle lokalen Modifikationen zurücksetzen.
-* **Graceful Degradation:** Sollte die initiale `templates.json`-Datei nicht geladen werden können, zeigt die Anwendung eine klare Fehlermeldung an.
+## 7. Mobile-spezifische Verbesserungen
+
+Die Anwendung bietet ein optimiertes Erlebnis auf Touch-Geräten.
+
+*   **Swipe-to-Go-Back:**
+    *   **Implementierung:** Die Funktionen `handleTouchStart`, `handleTouchMove` und `handleTouchEnd` verfolgen die Wischgeste des Benutzers auf dem `.cards-container`.
+    *   **Logik:** Wenn eine ausreichend lange Wischgeste nach rechts (`diffX > swipeThreshold`) erkannt wird, wird `navigateHistory('backward')` aufgerufen.
+*   **Native-ähnliche Navigation:**
+    *   **Technologie:** Die `window.history` API (`pushState`, `onpopstate`) wird in `setupMobileSpecificFeatures` und den Navigationsfunktionen verwendet.
+    *   **Ergebnis:** Jeder Navigationsschritt (Ordner betreten, Modal öffnen) erzeugt einen neuen Eintrag im Browserverlauf. Dadurch kann der Benutzer die "Zurück"-Geste oder den Zurück-Button seines Geräts verwenden, um intuitiv durch die App zu navigieren, genau wie in einer nativen Anwendung. Die `handlePopState`-Funktion verarbeitet diese Aktionen.
+
+## 8. Barrierefreiheit (Accessibility)
+
+*   **ARIA-Labels:** Alle ikon-basierten Buttons sind mit `aria-label`-Attributen versehen.
+*   **Fokus-Management:** `:focus-visible` wird für klare Tastaturfokus-Indikatoren verwendet.
+*   **Semantik:** Die Verwendung von `<main>`, `<header>`, `<nav>` sorgt für eine klare Struktur.
