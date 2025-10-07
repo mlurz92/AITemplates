@@ -122,6 +122,14 @@
         <input type="text" id="prompt-title-input" class="prompt-title-input input" placeholder="Titel der Prompt-Karte" style="display: none;">
         <textarea id="prompt-fulltext" class="prompt-fulltext textarea" readonly></textarea>
         <div class="modal-buttons">
+           <button id="modal-favorite-button" class="btn btn-ghost" aria-label="Zu Favoriten hinzufügen">
+             <svg class="icon icon-star-outline" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+             </svg>
+             <svg class="icon icon-star-filled hidden" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+             </svg>
+           </button>
            <button id="modal-edit-button" class="btn" aria-label="Prompt bearbeiten">
              <svg class="icon icon-edit" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -173,19 +181,6 @@
         </div>
     </div>
 
-    <nav id="mobile-nav" class="mobile-nav hidden">
-      <button id="mobile-home" class="btn btn-ghost mobile-button" aria-label="Home">
-        <svg class="icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>
-        </svg>
-      </button>
-      <button id="mobile-back" class="btn btn-ghost mobile-button" aria-label="Zurück">
-        <svg class="icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-      </button>
-    </nav>
-
     <button id="fixed-back" class="fixed-back hidden" aria-label="Zurück zur Home">
        <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
          <polyline points="15 18 9 12 15 6"></polyline>
@@ -227,6 +222,11 @@
             </svg>
         </defs>
     </svg>
+
+    <div id="favorites-bar" class="favorites-bar hidden">
+      <div id="favorites-container" class="favorites-container"></div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vivus/0.4.6/vivus.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="script.js"></script>
