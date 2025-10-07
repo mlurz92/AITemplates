@@ -271,7 +271,7 @@ body::before {
   min-height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
   will-change: transform;
   transition: padding-bottom var(--duration-3) var(--ease-smooth);
-  max-width: calc(6 * 230px + 5 * 1.5rem);
+  max-width: calc(6 * 140px + 5 * 1.5rem + 2 * clamp(0.8rem, 2.5vw, 1.8rem));
   margin: 0 auto;
 }
 .cards-container.swiping-right { transition-property: none; }
@@ -294,7 +294,7 @@ body::before {
   aspect-ratio: 1 / 1.1;
   cursor: pointer;
   width: 100%;
-  max-width: 230px;
+  max-width: 210px;
   opacity: 0;
   transform: translateY(20px) scale(0.98) translateZ(0);
   will-change: transform, opacity, box-shadow, backdrop-filter;
