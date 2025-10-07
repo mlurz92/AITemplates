@@ -10,7 +10,7 @@ let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCa
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
-let favoritesBarEl, favoritesContainerEl;
+let favoritesBarEl, favoritesContainerEl, auroraContainerEl;
 
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
@@ -26,18 +26,8 @@ const swipeFeedbackThreshold = 5;
 
 const currentTransitionDurationMediumMs = 300;
 let favoritePrompts = [];
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
+let lastScrollY = 0;
+let ticking = false;
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -46,6 +36,7 @@ function initApp() {
     promptFullTextEl = document.getElementById('prompt-fulltext');
     promptTitleInputEl = document.getElementById('prompt-title-input');
     notificationAreaEl = document.getElementById('notification-area');
+    auroraContainerEl = document.getElementById('aurora-container');
     
     createFolderModalEl = document.getElementById('create-folder-modal');
     folderTitleInputEl = document.getElementById('folder-title-input');
@@ -179,7 +170,7 @@ function showContextMenu(x, y, targetElement) {
 
     renameItem.classList.toggle('hidden', type === 'favorite');
     moveItem.classList.toggle('hidden', type === 'favorite');
-    deleteItem.classList.toggle('hidden', type === 'favorite');
+    deleteItem.classList.toggle('hidden', type !== 'folder' && type !== 'prompt');
     dividers[1].classList.toggle('hidden', type === 'favorite');
 
     if (type === 'prompt' || type === 'favorite') {
@@ -352,7 +343,21 @@ function setupEventListeners() {
     
     document.addEventListener('keydown', handleKeyDown);
 
-    window.addEventListener('resize', debounce(adjustCardFontSizes, 150));
+    containerEl.addEventListener('scroll', () => {
+        lastScrollY = containerEl.scrollTop;
+        if (!ticking) {
+            window.requestAnimationFrame(() => {
+                updateParallax();
+                ticking = false;
+            });
+            ticking = true;
+        }
+    });
+}
+
+function updateParallax() {
+    const parallaxFactor = 0.3;
+    auroraContainerEl.style.transform = `translateY(${lastScrollY * parallaxFactor}px)`;
 }
 
 function handleKeyDown(e) {
@@ -667,7 +672,8 @@ function exitRenameMode(card) {
     
     if (input && titleElement) {
         input.remove();
-        titleElement.style.display = '-webkit-box';
+        titleElement.style.display = 'block';
+        adjustCardTitleFontSize(card);
     }
 }
 
@@ -828,7 +834,6 @@ function performViewTransition(updateDomFunction, direction) {
     const transition = document.startViewTransition(updateDomFunction);
     transition.finished.finally(() => {
         delete document.documentElement.dataset.pageTransitionDirection;
-        adjustCardFontSizes();
     });
 }
 
@@ -974,24 +979,19 @@ function loadJsonData(filename) {
         });
 }
 
-function adjustFontSizeForCard(card) {
+function adjustCardTitleFontSize(card) {
     const title = card.querySelector('h3');
     if (!title) return;
-
+    
     const maxFontSize = 16;
-    const minFontSize = 9;
+    const minFontSize = 10;
     let currentSize = maxFontSize;
     title.style.fontSize = `${currentSize}px`;
 
-    while ((title.scrollHeight > title.clientHeight || title.scrollWidth > title.clientWidth) && currentSize > minFontSize) {
-        currentSize -= 1;
+    while (title.scrollHeight > title.clientHeight && currentSize > minFontSize) {
+        currentSize -= 0.5;
         title.style.fontSize = `${currentSize}px`;
     }
-}
-
-function adjustCardFontSizes() {
-    const cards = document.querySelectorAll('.cards-container .card');
-    cards.forEach(adjustFontSizeForCard);
 }
 
 function renderView(node) {
@@ -1005,6 +1005,7 @@ function renderView(node) {
 
     const childNodes = node.items || [];
     const vivusSetups = [];
+    const renderedCards = [];
 
     childNodes.forEach(childNode => {
         const card = document.createElement('div');
@@ -1066,15 +1067,18 @@ function renderView(node) {
         }
         card.appendChild(contentWrapper);
         containerEl.appendChild(card);
+        renderedCards.push(card);
     });
 
     vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
     
-    if(childNodes.length > 0) {
+    if(renderedCards.length > 0) {
         containerEl.scrollTop = currentScroll;
         requestAnimationFrame(() => {
-            document.querySelectorAll('.card').forEach(c => c.classList.add('is-visible'));
-            adjustCardFontSizes();
+            renderedCards.forEach(c => {
+                c.classList.add('is-visible');
+                adjustCardTitleFontSize(c);
+            });
         });
     } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
