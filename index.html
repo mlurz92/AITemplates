@@ -74,6 +74,12 @@
             <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
       </button>
+      <button id="clear-favorites-button" class="btn btn-ghost" aria-label="Alle Favoriten löschen" style="display: none;">
+        <svg class="icon icon-clear-favorites" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+        </svg>
+      </button>
       <button id="fullscreen-button" class="btn btn-ghost fullscreen-toggle" aria-label="Vollbildmodus aktivieren">
          <svg class="icon icon-fullscreen-enter" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
@@ -168,10 +174,10 @@
                  <path d="M5 25 Q25 5, 45 25 T85 25"></path>
             </svg>
             <svg id="svg-template-expand" class="icon icon-expand" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
+                <polyline points="18 15 12 9 6 15"></polyline>
             </svg>
             <svg id="svg-template-collapse" class="icon icon-collapse" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="18 15 12 9 6 15"></polyline>
+                <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
             <svg id="svg-template-copy" class="icon icon-copy" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <rect class="copy-rect" x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -207,12 +213,13 @@
 
     <div id="favorites-bar" class="favorites-bar hidden">
       <div id="favorites-container" class="favorites-container"></div>
-      <div id="favorites-controls" class="favorites-controls">
-          <button id="favorites-expand-toggle" class="btn btn-ghost" aria-label="Favoritenleiste ausklappen">
-              <svg class="icon icon-expand" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#svg-template-expand"></use></svg>
-              <svg class="icon icon-collapse hidden" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#svg-template-collapse"></use></svg>
-          </button>
-      </div>
+    </div>
+
+    <div id="favorites-controls" class="favorites-controls hidden">
+      <button id="favorites-expand-toggle" class="btn btn-ghost" aria-label="Favoritenleiste ausklappen">
+          <svg class="icon icon-expand" width="22" height="22" viewBox="0 0 24 24"><use xlink:href="#svg-template-expand"></use></svg>
+          <svg class="icon icon-collapse hidden" width="22" height="22" viewBox="0 0 24 24"><use xlink:href="#svg-template-collapse"></use></svg>
+      </button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vivus/0.4.6/vivus.min.js"></script>
