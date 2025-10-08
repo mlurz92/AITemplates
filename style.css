@@ -276,6 +276,13 @@ body::before {
 }
 .cards-container.swiping-right { transition-property: none; }
 
+body.favorites-bar-visible .cards-container {
+    padding-bottom: calc(4.5rem + var(--safe-area-inset-bottom));
+}
+body.favorites-bar-visible.favorites-bar-expanded .cards-container {
+    padding-bottom: calc(12rem + var(--safe-area-inset-bottom));
+}
+
 .card {
   background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
   backdrop-filter: blur(var(--blur)) saturate(200%);
@@ -527,6 +534,9 @@ svg.icon { display: block; stroke-width: 2.2; fill: none; stroke-linecap: round;
 body.favorites-bar-visible #notification-area {
     bottom: calc(5rem + var(--safe-area-inset-bottom));
 }
+body.favorites-bar-visible.favorites-bar-expanded #notification-area {
+    bottom: calc(12.5rem + var(--safe-area-inset-bottom));
+}
 
 .notification {
     background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
@@ -608,26 +618,45 @@ body.favorites-bar-visible #notification-area {
     box-shadow: 0 -8px 24px rgba(0,0,0,.3);
     z-index: 998;
     transform: translateY(100%);
-    transition: transform var(--duration-3) var(--ease-smooth);
-    will-change: transform;
-    height: 4.5rem;
+    transition: transform var(--duration-3) var(--ease-smooth), max-height var(--duration-3) var(--ease-smooth);
+    will-change: transform, max-height;
+    max-height: 4.5rem;
+    display: flex;
 }
 .favorites-bar:not(.hidden) {
     transform: translateY(0);
 }
+.favorites-bar.is-expanded {
+    max-height: 12rem;
+}
+
 .favorites-container {
+    flex-grow: 1;
     display: flex;
     gap: 0.6rem;
-    overflow-x: auto;
+    align-items: center;
     padding: 0.75rem clamp(0.75rem, var(--safe-area-inset-left), 1.5rem);
+    padding-right: 3.5rem;
+    overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    -webkit-mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
-    align-items: center;
-    height: 100%;
+    scroll-snap-type: x mandatory;
+}
+.favorites-container.is-scrollable {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 60px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 60px), transparent 100%);
+}
+.favorites-bar.is-expanded .favorites-container {
+    flex-wrap: wrap;
+    align-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+    padding-right: clamp(0.75rem, var(--safe-area-inset-right), 1.5rem);
 }
 .favorites-container::-webkit-scrollbar { display: none; }
+
 .favorite-item {
     position: relative;
     flex-shrink: 0;
@@ -645,6 +674,7 @@ body.favorites-bar-visible #notification-area {
     cursor: pointer;
     transition: background-color var(--duration-2) var(--ease-smooth), border-color var(--duration-2) var(--ease-smooth), transform var(--duration-2) var(--ease-smooth);
     -webkit-tap-highlight-color: transparent;
+    scroll-snap-align: start;
 }
 .favorite-item:hover {
     background: rgba(255,255,255,0.1);
@@ -699,9 +729,26 @@ body.favorites-bar-visible #notification-area {
     100% { transform: scale(1); }
 }
 
+.favorites-controls {
+    position: absolute;
+    right: calc(0.5rem + var(--safe-area-inset-right));
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+}
+#favorites-expand-toggle {
+    padding: 0.6rem;
+}
+#favorites-expand-toggle .icon {
+    transition: transform var(--duration-2) var(--ease-smooth);
+}
+#favorites-expand-toggle .icon.hidden {
+    display: none;
+}
+
 #favorite-tooltip {
     position: fixed;
-    background: var(--glass-highlight), var(--glass-shadow-overlay), rgba(32, 36, 52, 0.75);
+    background: var(--glass-highlight), var(--glass-shadow-overlay), rgba(32, 36, 52, 0.85);
     backdrop-filter: blur(var(--blur)) saturate(200%);
     -webkit-backdrop-filter: blur(var(--blur)) saturate(200%);
     border: 1px solid transparent;
@@ -724,7 +771,7 @@ body.favorites-bar-visible #notification-area {
     transform: translateY(10px);
 }
 #favorite-tooltip.visible {
-    opacity: 0.98;
+    opacity: 0.95;
     visibility: visible;
     transform: translateY(0);
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s 0s;
@@ -767,7 +814,7 @@ body.favorites-bar-visible #notification-area {
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 
 @media (max-width: 420px) {
-  .cards-container { grid-template-columns: repeat(3, 1fr); gap: 0.6rem; padding: 0.6rem; padding-top: calc(5.5rem + var(--safe-area-inset-top)); padding-bottom: calc(5rem + var(--safe-area-inset-bottom)); }
+  .cards-container { grid-template-columns: repeat(3, 1fr); gap: 0.6rem; padding: 0.6rem; padding-top: calc(5.5rem + var(--safe-area-inset-top)); }
   .card { padding: 0.6rem; border-radius: 16px; }
   .folder-icon { width: 40%; }
   .card-buttons { padding-top: 0.4rem; }
@@ -783,7 +830,7 @@ body.favorites-bar-visible #notification-area {
 @media screen and (min-aspect-ratio: 1/1) and (max-height: 500px) {
     .fixed-back { left: calc(0.6rem + var(--safe-area-inset-left)); padding: 0.45rem; }
     .fixed-back svg.icon { width: 20px; height: 20px; }
-    .cards-container { padding-top: calc(5rem + var(--safe-area-inset-top)); padding-bottom: calc(5rem + var(--safe-area-inset-bottom)); }
+    .cards-container { padding-top: calc(5rem + var(--safe-area-inset-top)); }
     .top-bar { min-height: 3.5rem; }
 }
 

@@ -10,9 +10,9 @@ let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCa
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
-let favoritesBarEl, favoritesContainerEl, auroraContainerEl, favoriteTooltipEl;
+let favoritesBarEl, favoritesContainerEl, auroraContainerEl, favoriteTooltipEl, favoritesControls, favoritesExpandToggleBtn;
 
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove, svgTemplateFavoriteCopy, svgTemplateFavoriteCheckmark;
+let svgTemplateFolder, svgTemplateExpand, svgTemplateCollapse, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove, svgTemplateFavoriteCopy, svgTemplateFavoriteCheckmark;
 
 let sortableInstance = null;
 let contextMenu = null;
@@ -62,6 +62,8 @@ function initApp() {
 
     favoritesBarEl = document.getElementById('favorites-bar');
     favoritesContainerEl = document.getElementById('favorites-container');
+    favoritesControls = document.getElementById('favorites-controls');
+    favoritesExpandToggleBtn = document.getElementById('favorites-expand-toggle');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
@@ -84,6 +86,7 @@ function initApp() {
 
     svgTemplateFolder = document.getElementById('svg-template-folder');
     svgTemplateExpand = document.getElementById('svg-template-expand');
+    svgTemplateCollapse = document.getElementById('svg-template-collapse');
     svgTemplateCopy = document.getElementById('svg-template-copy');
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
     svgTemplateDelete = document.getElementById('svg-template-delete');
@@ -294,6 +297,7 @@ function hideContextMenu() {
 
 function navigateToHome() {
     exitOrganizeMode();
+    collapseFavoritesBar();
     if (modalEl.classList.contains('visible')) {
         closeModal();
     }
@@ -356,6 +360,10 @@ function setupEventListeners() {
         document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
         document.addEventListener('mozfullscreenchange', updateFullscreenButton);
         document.addEventListener('MSFullscreenChange', updateFullscreenButton);
+    }
+
+    if (favoritesExpandToggleBtn) {
+        favoritesExpandToggleBtn.addEventListener('click', toggleFavoritesBarExpansion);
     }
 
     modalCloseBtn.addEventListener('click', () => closeModal());
@@ -429,6 +437,8 @@ function handleKeyDown(e) {
             hideContextMenu();
         } else if (document.activeElement.classList.contains('rename-input')) {
             exitRenameMode(document.activeElement.closest('.card'));
+        } else if (favoritesBarEl.classList.contains('is-expanded')) {
+            collapseFavoritesBar();
         } else if (modalEl.classList.contains('visible')) {
             closeModal();
         } else if (createFolderModalEl.classList.contains('visible')) {
@@ -624,6 +634,7 @@ function navigateOneLevelUp() {
         return;
     }
     exitOrganizeMode();
+    collapseFavoritesBar();
     performViewTransition(() => {
         const parentNode = pathStack.pop();
         currentNode = parentNode;
@@ -1154,6 +1165,7 @@ function renderView(node) {
 
 function navigateToNode(node) {
     exitOrganizeMode();
+    collapseFavoritesBar();
     performViewTransition(() => {
         if (currentNode !== node) {
             pathStack.push(currentNode);
@@ -1696,8 +1708,30 @@ function updateFavoriteButton(promptId) {
     modalFavoriteBtn.setAttribute('aria-label', isFavorite ? 'Von Favoriten entfernen' : 'Zu Favoriten hinzufügen');
 }
 
+function toggleFavoritesBarExpansion() {
+    const isExpanded = favoritesBarEl.classList.toggle('is-expanded');
+    document.body.classList.toggle('favorites-bar-expanded', isExpanded);
+    
+    const expandIcon = favoritesExpandToggleBtn.querySelector('.icon-expand');
+    const collapseIcon = favoritesExpandToggleBtn.querySelector('.icon-collapse');
+
+    expandIcon.classList.toggle('hidden', isExpanded);
+    collapseIcon.classList.toggle('hidden', !isExpanded);
+    
+    favoritesExpandToggleBtn.setAttribute('aria-expanded', isExpanded);
+    favoritesExpandToggleBtn.setAttribute('aria-label', isExpanded ? 'Favoritenleiste einklappen' : 'Favoritenleiste ausklappen');
+}
+
+function collapseFavoritesBar() {
+    if (favoritesBarEl.classList.contains('is-expanded')) {
+        toggleFavoritesBarExpansion();
+    }
+}
+
 function renderFavoritesBar() {
     favoritesContainerEl.innerHTML = '';
+    collapseFavoritesBar();
+
     if (favoritePrompts.length === 0) {
         favoritesBarEl.classList.add('hidden');
         document.body.classList.remove('favorites-bar-visible');
@@ -1706,6 +1740,7 @@ function renderFavoritesBar() {
 
     favoritesBarEl.classList.remove('hidden');
     document.body.classList.add('favorites-bar-visible');
+    favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
 
     favoritePrompts.forEach(promptId => {
         const node = findNodeById(jsonData, promptId);
@@ -1748,6 +1783,12 @@ function renderFavoritesBar() {
             favoritesContainerEl.appendChild(favoriteItem);
         }
     });
+
+    setTimeout(() => {
+        const isOverflowing = favoritesContainerEl.scrollWidth > favoritesContainerEl.clientWidth;
+        favoritesControls.classList.toggle('hidden', !isOverflowing);
+        favoritesContainerEl.classList.toggle('is-scrollable', isOverflowing);
+    }, 0);
 }
 
 if (document.readyState === 'loading') {
