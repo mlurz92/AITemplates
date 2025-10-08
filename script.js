@@ -424,6 +424,12 @@ function setupEventListeners() {
             ticking = true;
         }
     });
+
+    if (favoritesContainerEl) {
+        favoritesContainerEl.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+    }
 }
 
 function updateParallax() {
@@ -1552,14 +1558,30 @@ function resetLocalStorage() {
 function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button')); }
 function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.content || '', buttonElement); }
 
-function copyToClipboard(text, buttonElement = null) {
+function copyToClipboard(text, buttonElement = null, node = null) {
     const showSuccess = () => {
         showNotification('Prompt kopiert!', 'success');
         if (buttonElement) {
             const targetElement = buttonElement.closest('.favorite-item') || buttonElement.querySelector('.icon-copy');
             if (targetElement) {
                 targetElement.classList.add('copy-success');
-                setTimeout(() => targetElement.classList.remove('copy-success'), 1200);
+                setTimeout(() => targetElement.classList.remove('copy-success'), 1500);
+            }
+        }
+        if (node && targetElement) {
+            showFavoriteTooltip(targetElement, node);
+            setTimeout(hideFavoriteTooltip, 2000);
+        }
+        if ('vibrate' in navigator && isMobile()) {
+            navigator.vibrate(50);
+        }
+        if (buttonElement && buttonElement.closest('.favorite-item')) {
+            const favoriteItem = buttonElement.closest('.favorite-item');
+            if (favoriteItem && node) {
+                favoriteItem.setAttribute('aria-label', `Kopiert: ${node.title}`);
+                setTimeout(() => {
+                    favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
+                }, 2000);
             }
         }
     };
@@ -1742,6 +1764,12 @@ function renderFavoritesBar() {
     document.body.classList.add('favorites-bar-visible');
     favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
 
+    if (window.innerWidth < 768) {
+        favoritesContainerEl.classList.add('mobile-grid');
+    } else {
+        favoritesContainerEl.classList.remove('mobile-grid');
+    }
+
     favoritePrompts.forEach(promptId => {
         const node = findNodeById(jsonData, promptId);
         if (node && node.type === 'prompt') {
@@ -1749,6 +1777,7 @@ function renderFavoritesBar() {
             favoriteItem.className = 'favorite-item';
             favoriteItem.dataset.id = promptId;
             favoriteItem.dataset.type = 'favorite';
+            favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
 
             const iconWrapper = document.createElement('div');
             iconWrapper.className = 'favorite-item-icon-wrapper';
@@ -1769,8 +1798,12 @@ function renderFavoritesBar() {
             favoriteItem.appendChild(titleSpan);
 
             favoriteItem.addEventListener('click', () => {
-                copyToClipboard(node.content, favoriteItem);
+                copyToClipboard(node.content, favoriteItem, node);
             });
+
+            favoriteItem.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+            }, { passive: false });
 
             favoriteItem.addEventListener('mouseenter', (e) => {
                 showFavoriteTooltip(e.currentTarget, node);

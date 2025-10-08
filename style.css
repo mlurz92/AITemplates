@@ -512,9 +512,9 @@ body.favorites-bar-visible.favorites-bar-expanded .cards-container {
 svg.icon { display: block; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke: currentColor; }
 .icon-copy.copy-success { animation: copy-success-anim 600ms var(--ease-smooth); }
 @keyframes copy-success-anim {
-  0% { transform: scale(1); color: currentColor; }
-  30% { transform: scale(1.2); color: var(--acc-2); }
-  100% { transform: scale(1); color: currentColor; }
+  0% { transform: scale(1); color: currentColor; box-shadow: none; }
+  30% { transform: scale(1.2); color: var(--acc-2); box-shadow: 0 0 10px var(--acc-2); }
+  100% { transform: scale(1); color: currentColor; box-shadow: none; }
 }
 
 
@@ -643,10 +643,13 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
     scroll-snap-type: x mandatory;
 }
 .favorites-container.is-scrollable {
-    -webkit-mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 60px), transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0, black 20px, black calc(100% - 60px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 10px, black calc(100% - 40px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 10px, black calc(100% - 40px), transparent 100%);
 }
 .favorites-bar.is-expanded .favorites-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.8rem;
     flex-wrap: wrap;
     align-content: flex-start;
     overflow-x: hidden;
@@ -675,6 +678,8 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
     transition: background-color var(--duration-2) var(--ease-smooth), border-color var(--duration-2) var(--ease-smooth), transform var(--duration-2) var(--ease-smooth);
     -webkit-tap-highlight-color: transparent;
     scroll-snap-align: start;
+    flex-basis: 120px;
+    min-width: 120px;
 }
 .favorite-item:hover {
     background: rgba(255,255,255,0.1);
@@ -822,9 +827,10 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
   .card-edit-btn, .card-delete-btn { width: 26px; height: 26px; top: -6px; }
   .card-delete-btn { right: -6px; }
   .card-edit-btn { right: 18px; }
-  .favorite-item { height: 38px; padding: 0 0.8rem 0 0.6rem; gap: 0.4rem; font-size: 0.85rem; }
+  .favorite-item { height: 38px; padding: 0 0.8rem 0 0.6rem; gap: 0.4rem; font-size: 0.85rem; flex-basis: 100px; min-width: 100px; }
   .favorite-item-icon-wrapper { width: 20px; height: 20px; }
   .favorite-item-title { max-width: 100px; }
+  .favorites-bar.is-expanded .favorites-container { grid-template-columns: 1fr; }
 }
 
 @media screen and (min-aspect-ratio: 1/1) and (max-height: 500px) {
