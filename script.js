@@ -12,7 +12,7 @@ let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, f
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
 let favoritesBarEl, favoritesContainerEl, auroraContainerEl, favoriteTooltipEl, favoritesControls, favoritesExpandToggleBtn;
 
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCollapse, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove, svgTemplateFavoriteCopy, svgTemplateFavoriteCheckmark;
+let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove, svgTemplateFavoriteCopy, svgTemplateFavoriteCheckmark;
 
 let sortableInstance = null;
 let contextMenu = null;
@@ -87,7 +87,6 @@ function initApp() {
 
     svgTemplateFolder = document.getElementById('svg-template-folder');
     svgTemplateExpand = document.getElementById('svg-template-expand');
-    svgTemplateCollapse = document.getElementById('svg-template-collapse');
     svgTemplateCopy = document.getElementById('svg-template-copy');
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
     svgTemplateDelete = document.getElementById('svg-template-delete');
@@ -1751,14 +1750,7 @@ function updateFavoriteButton(promptId) {
 
 function toggleFavoritesBarExpansion() {
     const isExpanded = favoritesBarEl.classList.toggle('is-expanded');
-    favoritesControls.classList.toggle('is-expanded', isExpanded);
     document.body.classList.toggle('favorites-bar-expanded', isExpanded);
-    
-    const expandIcon = favoritesExpandToggleBtn.querySelector('.icon-expand');
-    const collapseIcon = favoritesExpandToggleBtn.querySelector('.icon-collapse');
-
-    expandIcon.classList.toggle('hidden', isExpanded);
-    collapseIcon.classList.toggle('hidden', !isExpanded);
     
     favoritesExpandToggleBtn.setAttribute('aria-expanded', isExpanded);
     favoritesExpandToggleBtn.setAttribute('aria-label', isExpanded ? 'Favoritenleiste einklappen' : 'Favoritenleiste ausklappen');
@@ -1776,7 +1768,6 @@ function renderFavoritesBar() {
 
     if (favoritePrompts.length === 0) {
         favoritesBarEl.classList.add('hidden');
-        favoritesControls.classList.add('hidden');
         document.body.classList.remove('favorites-bar-visible');
         if (clearFavoritesBtn) {
             clearFavoritesBtn.style.display = 'none';
@@ -1785,7 +1776,6 @@ function renderFavoritesBar() {
     }
 
     favoritesBarEl.classList.remove('hidden');
-    favoritesControls.classList.remove('hidden');
     document.body.classList.add('favorites-bar-visible');
     favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
     

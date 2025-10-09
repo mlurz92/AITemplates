@@ -270,16 +270,16 @@ body::before {
   min-height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
   will-change: transform;
   transition: padding-bottom var(--duration-3) var(--ease-smooth);
-  max-width: calc(6 * 140px + 5 * 1.5rem + 2 * clamp(0.8rem, 2.5vw, 1.8rem));
+  max-width: 1440px;
   margin: 0 auto;
 }
 .cards-container.swiping-right { transition-property: none; }
 
 body.favorites-bar-visible .cards-container {
-    padding-bottom: calc(4.5rem + var(--safe-area-inset-bottom));
+    padding-bottom: calc(6.5rem + var(--safe-area-inset-bottom));
 }
 body.favorites-bar-visible.favorites-bar-expanded .cards-container {
-    padding-bottom: calc(12rem + var(--safe-area-inset-bottom));
+    padding-bottom: calc(15rem + var(--safe-area-inset-bottom));
 }
 
 .card {
@@ -530,10 +530,10 @@ svg.icon { display: block; stroke-width: 2.2; fill: none; stroke-linecap: round;
     transition: bottom var(--duration-3) var(--ease-smooth);
 }
 body.favorites-bar-visible #notification-area {
-    bottom: calc(5rem + var(--safe-area-inset-bottom));
+    bottom: calc(7rem + var(--safe-area-inset-bottom));
 }
 body.favorites-bar-visible.favorites-bar-expanded #notification-area {
-    bottom: calc(12.5rem + var(--safe-area-inset-bottom));
+    bottom: calc(15.5rem + var(--safe-area-inset-bottom));
 }
 
 .notification {
@@ -618,23 +618,23 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
     transform: translateY(100%);
     transition: transform var(--duration-3) var(--ease-smooth), max-height var(--duration-3) var(--ease-smooth);
     will-change: transform, max-height;
-    max-height: 4.5rem;
+    max-height: 6.5rem;
     display: flex;
 }
 .favorites-bar:not(.hidden) {
     transform: translateY(0);
 }
 .favorites-bar.is-expanded {
-    max-height: 12rem;
+    max-height: 15rem;
 }
 
 .favorites-container {
     flex-grow: 1;
     display: flex;
-    gap: 0.6rem;
-    align-items: center;
-    padding: 0.75rem clamp(0.75rem, var(--safe-area-inset-left), 1.5rem);
-    padding-right: clamp(0.75rem, var(--safe-area-inset-right), 1.5rem);
+    gap: 0.8rem;
+    align-items: flex-start;
+    padding: 1rem clamp(0.75rem, var(--safe-area-inset-left), 1.5rem);
+    padding-top: 1.2rem;
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -646,9 +646,8 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
 }
 .favorites-bar.is-expanded .favorites-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 0.8rem;
-    flex-wrap: wrap;
     align-content: flex-start;
     overflow-x: hidden;
     overflow-y: auto;
@@ -661,24 +660,19 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
 .favorite-item {
     position: relative;
     flex-shrink: 0;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 0.5rem;
-    height: 42px;
-    padding: 0 0.8rem 0 0.5rem;
-    border-radius: 999px;
+    height: 4.5rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 12px;
     border: 2px solid;
     background: rgba(255,255,255,0.05);
     color: var(--fg-2);
-    font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
     transition: background-color var(--duration-2) var(--ease-smooth), border-color var(--duration-2) var(--ease-smooth), transform var(--duration-2) var(--ease-smooth), filter var(--duration-2) var(--ease-smooth);
     -webkit-tap-highlight-color: transparent;
     scroll-snap-align: start;
-    flex-basis: 130px;
-    min-width: 130px;
+    flex-basis: 150px;
+    min-width: 150px;
 }
 
 .favorite-item:nth-child(8n+1) { border-color: #8b5cf6; }
@@ -701,17 +695,19 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
 }
 
 .favorite-item-initial {
-    width: 28px;
-    height: 28px;
+    position: absolute;
+    top: 0.6rem;
+    left: 0.8rem;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: currentColor;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: var(--bg-0);
-    flex-shrink: 0;
     text-transform: uppercase;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     opacity: 0.9;
@@ -727,22 +723,32 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
 .favorite-item:nth-child(8n+8) .favorite-item-initial { background: #ff5555; }
 
 .favorite-item-title {
-    white-space: nowrap;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding-left: 32px;
+    padding-right: 28px;
+    white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 70px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     font-size: 0.85rem;
+    line-height: 1.3;
+    align-self: center;
+    padding-top: 0.1rem;
 }
 
 .favorite-item-icon-wrapper {
-    position: relative;
+    position: absolute;
+    bottom: 0.6rem;
+    right: 0.8rem;
     width: 20px;
     height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-    justify-self: end;
 }
 .favorite-item-icon-wrapper svg {
     position: absolute;
@@ -775,25 +781,20 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
 }
 
 .favorites-controls {
-    position: fixed;
+    position: absolute;
+    bottom: 100%;
     right: calc(1rem + var(--safe-area-inset-right));
-    bottom: calc(4.5rem + var(--safe-area-inset-bottom) - 1px);
-    z-index: 999;
-    transition: bottom var(--duration-3) var(--ease-smooth), transform var(--duration-2) var(--ease-smooth), opacity var(--duration-2) var(--ease-smooth);
-    will-change: bottom, transform, opacity;
+    z-index: 1000;
+    transition: opacity var(--duration-2) var(--ease-smooth);
 }
-.favorites-controls.hidden {
+.favorites-bar.hidden .favorites-controls {
     opacity: 0;
     pointer-events: none;
-    transform: scale(0.8);
-}
-.favorites-controls.is-expanded {
-    bottom: calc(12rem + var(--safe-area-inset-bottom) - 1px);
 }
 
 #favorites-expand-toggle {
     width: 52px;
-    height: 36px;
+    height: 32px;
     border-radius: 12px 12px 0 0;
     background: var(--glass-highlight), var(--glass-shadow-overlay), rgba(28, 32, 46, 0.75);
     backdrop-filter: blur(var(--blur)) saturate(180%);
@@ -843,13 +844,10 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
 #favorites-expand-toggle:active {
     transform: translateY(0);
 }
-#favorites-expand-toggle .icon {
+#favorites-expand-toggle .icon-expand-toggle {
     transition: transform var(--duration-3) var(--ease-smooth);
 }
-#favorites-expand-toggle .icon.hidden {
-    display: none;
-}
-.favorites-controls.is-expanded #favorites-expand-toggle .icon {
+.favorites-bar.is-expanded #favorites-expand-toggle .icon-expand-toggle {
     transform: rotate(180deg);
 }
 
@@ -929,22 +927,13 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
   .card-edit-btn, .card-delete-btn { width: 26px; height: 26px; top: -6px; }
   .card-delete-btn { right: -6px; }
   .card-edit-btn { right: 18px; }
-  .favorite-item { height: 38px; padding: 0 0.6rem 0 0.4rem; gap: 0.4rem; flex-basis: 110px; min-width: 110px; }
-  .favorite-item-initial { width: 24px; height: 24px; font-size: 0.85rem; }
-  .favorite-item-title { max-width: 60px; font-size: 0.8rem; }
-  .favorite-item-icon-wrapper { width: 18px; height: 18px; }
+  .favorite-item { height: 4.5rem; padding: 0.5rem 0.6rem; flex-basis: 120px; min-width: 120px; }
+  .favorite-item-initial { width: 22px; height: 22px; font-size: 0.8rem; }
+  .favorite-item-title { font-size: 0.8rem; padding-left: 28px; padding-right: 20px; }
+  .favorite-item-icon-wrapper { width: 18px; height: 18px; bottom: 0.5rem; right: 0.6rem;}
   .favorites-bar.is-expanded .favorites-container { grid-template-columns: 1fr; }
-  .favorites-controls {
-    right: calc(0.75rem + var(--safe-area-inset-right));
-    bottom: calc(4.5rem + var(--safe-area-inset-bottom) - 1px);
-  }
-  .favorites-controls.is-expanded {
-    bottom: calc(12rem + var(--safe-area-inset-bottom) - 1px);
-  }
-  #favorites-expand-toggle {
-    width: 48px;
-    height: 32px;
-  }
+  .favorites-controls { right: calc(0.75rem + var(--safe-area-inset-right)); }
+  #favorites-expand-toggle { width: 48px; height: 32px; }
 }
 
 @media screen and (min-aspect-ratio: 1/1) and (max-height: 500px) {
