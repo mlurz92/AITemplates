@@ -3,10 +3,10 @@
   <defs>
     <!-- Aurora-Gradient fÃ¼r den Hintergrund -->
     <linearGradient id="auroraGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6a11cb;stop-opacity:0.2"></stop>
-      <stop offset="33%" style="stop-color:#2575fc;stop-opacity:0.15"></stop>
-      <stop offset="66%" style="stop-color:#00d2ff;stop-opacity:0.1"></stop>
-      <stop offset="100%" style="stop-color:#3a7bd5;stop-opacity:0.05"></stop>
+      <stop offset="0%" style="stop-color:#7e9dff;stop-opacity:0.24"></stop>
+      <stop offset="35%" style="stop-color:#5fe4ff;stop-opacity:0.18"></stop>
+      <stop offset="70%" style="stop-color:#9ef7d4;stop-opacity:0.14"></stop>
+      <stop offset="100%" style="stop-color:#b3a4ff;stop-opacity:0.1"></stop>
     </linearGradient>
     
     <!-- Glas-Gradient mit mehr Tiefe -->
@@ -38,7 +38,7 @@
   <path width="512" height="512" fill="url(#auroraGradient)" d="M 96,0 L 416,0 A 96,96,0,0,1,512,96 L 512,416 A 96,96,0,0,1,416,512 L 96,512 A 96,96,0,0,1,0,416 L 0,96 A 96,96,0,0,1,96,0" class="olvwKUSF_0"></path>
   
   <!-- Haupt-Hintergrund mit Glas-Effekt -->
-  <path width="448" height="448" fill="url(#glassGradient)" stroke="#ffffff" stroke-width="8" stroke-opacity="0.3" filter="url(#shadow)" d="M 128,32 L 384,32 A 96,96,0,0,1,480,128 L 480,384 A 96,96,0,0,1,384,480 L 128,480 A 96,96,0,0,1,32,384 L 32,128 A 96,96,0,0,1,128,32" class="olvwKUSF_1"></path>
+  <path width="448" height="448" fill="url(#glassGradient)" stroke="#d9f0ff" stroke-width="8" stroke-opacity="0.35" filter="url(#shadow)" d="M 128,32 L 384,32 A 96,96,0,0,1,480,128 L 480,384 A 96,96,0,0,1,384,480 L 128,480 A 96,96,0,0,1,32,384 L 32,128 A 96,96,0,0,1,128,32" class="olvwKUSF_1"></path>
   
   <!-- Lichtreflex auf der Oberkante -->
   <path width="448" height="120" fill="url(#highlightGradient)" opacity="0.6" d="M 128,32 L 384,32 A 96,60,0,0,1,480,92 L 480,92 A 96,60,0,0,1,384,152 L 128,152 A 96,60,0,0,1,32,92 L 32,92 A 96,60,0,0,1,128,32" class="olvwKUSF_2"></path>
@@ -49,13 +49,13 @@
     <path width="224" height="256" fill="#ffffff" fill-opacity="0.95" filter="url(#blur)" d="M 12,0 L 212,0 A 12,12,0,0,1,224,12 L 224,244 A 12,12,0,0,1,212,256 L 12,256 A 12,12,0,0,1,0,244 L 0,12 A 12,12,0,0,1,12,0" class="olvwKUSF_3"></path>
     
     <!-- Dokument-Falten-Effekt mit mehr Details -->
-    <path d="M176 0v80h80" fill="none" stroke="#4a6bff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" class="olvwKUSF_4"></path>
+    <path d="M176 0v80h80" fill="none" stroke="#5fe4ff" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" class="olvwKUSF_4"></path>
     
     <!-- Textlinien mit variabler OpazitÃ¤t fÃ¼r Tiefe -->
-    <path stroke="#4a6bff" stroke-width="16" opacity="0.9" d="M32,64L160,64" class="olvwKUSF_5"></path>
-    <path stroke="#4a6bff" stroke-width="16" opacity="0.8" d="M32,112L160,112" class="olvwKUSF_6"></path>
-    <path stroke="#4a6bff" stroke-width="16" opacity="0.7" d="M32,160L128,160" class="olvwKUSF_7"></path>
-    <path stroke="#4a6bff" stroke-width="16" opacity="0.6" d="M32,208L96,208" class="olvwKUSF_8"></path>
+    <path stroke="#5fe4ff" stroke-width="16" opacity="0.9" d="M32,64L160,64" class="olvwKUSF_5"></path>
+    <path stroke="#7e9dff" stroke-width="16" opacity="0.82" d="M32,112L160,112" class="olvwKUSF_6"></path>
+    <path stroke="#9ef7d4" stroke-width="16" opacity="0.74" d="M32,160L128,160" class="olvwKUSF_7"></path>
+    <path stroke="#b3a4ff" stroke-width="16" opacity="0.68" d="M32,208L96,208" class="olvwKUSF_8"></path>
     
     <!-- Dokument-Icon mit leichtem inneren Schatten -->
     <path width="224" height="256" fill="none" stroke="#ffffff" stroke-width="8" stroke-opacity="0.4" d="M 12,0 L 212,0 A 12,12,0,0,1,224,12 L 224,244 A 12,12,0,0,1,212,256 L 12,256 A 12,12,0,0,1,0,244 L 0,12 A 12,12,0,0,1,12,0" class="olvwKUSF_9"></path>
