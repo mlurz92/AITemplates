@@ -10,18 +10,27 @@ let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCa
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
-let favoritesBarEl, favoritesContainerEl, auroraContainerEl, favoriteTooltipEl, favoritesControls, favoritesExpandToggleBtn;
+let favoritesDockEl, favoritesListEl, favoritesScrollAreaEl, favoritesToggleBtn, auroraContainerEl;
+let favoritesChipResizeObserver = null;
+let favoritesLayoutRaf = null;
+let favoritesHeightSyncRaf = null;
+let favoritesGestureStartX = null;
+let favoritesGestureStartY = null;
+let favoritesGestureLastY = null;
+let favoritesGestureAxis = null;
 
-const rootElement = document.documentElement;
-let rootFontSize = 16;
-let favoriteTitleObserver = null;
+const FAVORITE_ACCENTS = [
+    { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
+    { accent: '#00e6ff', border: 'rgba(0, 230, 255, 0.6)', soft: 'rgba(0, 230, 255, 0.14)', glow: 'rgba(0, 230, 255, 0.35)', text: '#0c0f17' },
+    { accent: '#50fa7b', border: 'rgba(80, 250, 123, 0.58)', soft: 'rgba(80, 250, 123, 0.18)', glow: 'rgba(80, 250, 123, 0.35)', text: '#0c0f17' },
+    { accent: '#ffb86c', border: 'rgba(255, 184, 108, 0.6)', soft: 'rgba(255, 184, 108, 0.18)', glow: 'rgba(255, 184, 108, 0.32)', text: '#0c0f17' },
+    { accent: '#ff79c6', border: 'rgba(255, 121, 198, 0.6)', soft: 'rgba(255, 121, 198, 0.18)', glow: 'rgba(255, 121, 198, 0.34)', text: '#0c0f17' },
+    { accent: '#bd93f9', border: 'rgba(189, 147, 249, 0.6)', soft: 'rgba(189, 147, 249, 0.18)', glow: 'rgba(189, 147, 249, 0.34)', text: '#0c0f17' },
+    { accent: '#f1fa8c', border: 'rgba(241, 250, 140, 0.58)', soft: 'rgba(241, 250, 140, 0.18)', glow: 'rgba(241, 250, 140, 0.3)', text: '#0c0f17' },
+    { accent: '#ff5555', border: 'rgba(255, 85, 85, 0.6)', soft: 'rgba(255, 85, 85, 0.16)', glow: 'rgba(255, 85, 85, 0.32)', text: '#0c0f17' }
+];
 
-const FAVORITE_FONT_MIN_RATIO = 0.45;
-const FAVORITE_FONT_BINARY_PRECISION = 0.2;
-const FAVORITE_FONT_MAX_ITERATIONS = 12;
-const FAVORITE_OVERFLOW_EPSILON = 0.75;
-
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove, svgTemplateFavoriteCopy, svgTemplateFavoriteCheckmark;
+let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
 let sortableInstance = null;
 let contextMenu = null;
@@ -37,8 +46,15 @@ const currentTransitionDurationMediumMs = 300;
 let favoritePrompts = [];
 let lastScrollY = 0;
 let ticking = false;
-let tooltipTimeout = null;
 let resizeRafId = null;
+
+const FAVORITE_CHIP_MIN_WIDTH = 220;
+const FAVORITE_CHIP_MAX_WIDTH = 360;
+const FAVORITE_CHIP_MIN_WIDTH_NARROW = 180;
+const FAVORITE_FULL_LAYOUT_THRESHOLD = 330;
+const FAVORITE_COMPACT_LAYOUT_THRESHOLD = 250;
+const FAVORITE_TITLE_MIN_SCALE = 0.62;
+const FAVORITE_PREVIEW_MIN_SCALE = 0.72;
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -71,10 +87,10 @@ function initApp() {
     appLogoBtn = document.getElementById('app-logo-button');
     clearFavoritesBtn = document.getElementById('clear-favorites-button');
 
-    favoritesBarEl = document.getElementById('favorites-bar');
-    favoritesContainerEl = document.getElementById('favorites-container');
-    favoritesControls = document.getElementById('favorites-controls');
-    favoritesExpandToggleBtn = document.getElementById('favorites-expand-toggle');
+    favoritesDockEl = document.getElementById('favorites-dock');
+    favoritesListEl = document.getElementById('favorites-list');
+    favoritesScrollAreaEl = document.getElementById('favorites-scroll-area');
+    favoritesToggleBtn = document.getElementById('favorites-expand-toggle');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
@@ -102,13 +118,8 @@ function initApp() {
     svgTemplateDelete = document.getElementById('svg-template-delete');
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
-    svgTemplateFavoriteCopy = document.getElementById('svg-template-favorite-copy');
-    svgTemplateFavoriteCheckmark = document.getElementById('svg-template-favorite-checkmark');
 
-    updateRootFontSize();
-    setupFavoriteTitleObserver();
-
-    createGlobalTooltip();
+    updateDockPositioning();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -119,83 +130,6 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
-}
-
-function updateRootFontSize() {
-    rootFontSize = parseFloat(getComputedStyle(rootElement).fontSize) || 16;
-}
-
-function setupFavoriteTitleObserver() {
-    if (typeof ResizeObserver === 'undefined') {
-        return;
-    }
-
-    favoriteTitleObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-            if (entry?.target) {
-                adjustSingleFavoriteTitle(entry.target);
-            }
-        }
-    });
-}
-
-function createGlobalTooltip() {
-    favoriteTooltipEl = document.createElement('div');
-    favoriteTooltipEl.id = 'favorite-tooltip';
-    document.body.appendChild(favoriteTooltipEl);
-}
-
-function showFavoriteTooltip(targetElement, node) {
-    clearTimeout(tooltipTimeout);
-    tooltipTimeout = setTimeout(() => {
-        if (!favoriteTooltipEl) return;
-
-        favoriteTooltipEl.innerHTML = '';
-        const tooltipTitle = document.createElement('strong');
-        tooltipTitle.className = 'favorite-tooltip-title';
-        tooltipTitle.textContent = node.title;
-        const tooltipContent = document.createTextNode((node.content || '').substring(0, 200) + ((node.content || '').length > 200 ? '...' : ''));
-
-        favoriteTooltipEl.appendChild(tooltipTitle);
-        favoriteTooltipEl.appendChild(tooltipContent);
-
-        const targetRect = targetElement.getBoundingClientRect();
-        const viewportMargin = 10;
-
-        favoriteTooltipEl.style.visibility = 'hidden';
-        favoriteTooltipEl.classList.add('visible');
-        const tooltipWidth = favoriteTooltipEl.offsetWidth;
-        const tooltipHeight = favoriteTooltipEl.offsetHeight;
-        favoriteTooltipEl.classList.remove('visible');
-        favoriteTooltipEl.style.visibility = '';
-
-        let top = targetRect.top - tooltipHeight - viewportMargin;
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
-
-        if (left < viewportMargin) {
-            left = viewportMargin;
-        }
-        if (left + tooltipWidth > window.innerWidth - viewportMargin) {
-            left = window.innerWidth - tooltipWidth - viewportMargin;
-        }
-        if (top < viewportMargin) {
-            top = targetRect.bottom + viewportMargin;
-        }
-
-        favoriteTooltipEl.style.top = `${top}px`;
-        favoriteTooltipEl.style.left = `${left}px`;
-        
-        requestAnimationFrame(() => {
-            favoriteTooltipEl.classList.add('visible');
-        });
-    }, 50);
-}
-
-function hideFavoriteTooltip() {
-    clearTimeout(tooltipTimeout);
-    if (favoriteTooltipEl) {
-        favoriteTooltipEl.classList.remove('visible');
-    }
 }
 
 function createContextMenu() {
@@ -253,7 +187,7 @@ function createContextMenu() {
 
 function showContextMenu(x, y, targetElement) {
     const id = targetElement.dataset.id;
-    const type = targetElement.dataset.type || (targetElement.classList.contains('favorite-item') ? 'favorite' : null);
+    const type = targetElement.dataset.type || (targetElement.classList.contains('favorite-chip') ? 'favorite' : null);
     if (!id || !type) return;
 
     const isFavorite = favoritePrompts.includes(id);
@@ -324,6 +258,210 @@ function showContextMenu(x, y, targetElement) {
 
 function hideContextMenu() {
     contextMenu.classList.remove('visible');
+}
+
+function collapseFavoritesBar() {
+    if (!favoritesDockEl) return;
+
+    const activeElement = document.activeElement;
+    if (activeElement && favoritesDockEl.contains(activeElement)) {
+        activeElement.blur();
+    }
+
+    setFavoritesExpanded(false);
+}
+
+function toggleFavoritesExpanded() {
+    if (!favoritesDockEl) return;
+    const shouldExpand = !favoritesDockEl.classList.contains('expanded');
+    setFavoritesExpanded(shouldExpand);
+}
+
+function setFavoritesExpanded(shouldExpand) {
+    if (!favoritesDockEl) return;
+
+    const expanded = Boolean(shouldExpand);
+    favoritesDockEl.classList.toggle('expanded', expanded);
+    favoritesDockEl.classList.toggle('collapsed', !expanded);
+
+    if (favoritesToggleBtn) {
+        favoritesToggleBtn.setAttribute('aria-expanded', String(expanded));
+        const label = expanded ? 'Favoriten-Dashboard minimieren' : 'Favoriten-Dashboard erweitern';
+        favoritesToggleBtn.setAttribute('aria-label', label);
+        favoritesToggleBtn.classList.toggle('is-expanded', expanded);
+        const srText = favoritesToggleBtn.querySelector('.sr-only');
+        if (srText) {
+            srText.textContent = label;
+        }
+    }
+
+    requestFavoritesLayoutFrame();
+}
+
+function handleFavoritesWheel(event) {
+    if (!favoritesDockEl || !favoritesScrollAreaEl) return;
+    if (favoritesDockEl.classList.contains('expanded')) return;
+    if (!favoritesDockEl.classList.contains('overflowing')) return;
+
+    const delta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+    if (delta === 0) return;
+
+    favoritesScrollAreaEl.scrollLeft += delta;
+    updateFavoritesOverflowMarkers();
+    event.preventDefault();
+}
+
+function handleFavoritesTouchStart(event) {
+    if (!favoritesDockEl || !event.touches || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    favoritesGestureStartX = touch.clientX;
+    favoritesGestureStartY = touch.clientY;
+    favoritesGestureLastY = touch.clientY;
+    favoritesGestureAxis = null;
+}
+
+function handleFavoritesTouchMove(event) {
+    if (favoritesGestureStartX === null || !event.touches || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - favoritesGestureStartX;
+    const deltaY = touch.clientY - favoritesGestureStartY;
+
+    if (!favoritesGestureAxis) {
+        if (Math.abs(deltaX) > 18 || Math.abs(deltaY) > 18) {
+            favoritesGestureAxis = Math.abs(deltaX) > Math.abs(deltaY) ? 'x' : 'y';
+        }
+    }
+
+    favoritesGestureLastY = touch.clientY;
+}
+
+function handleFavoritesTouchEnd() {
+    if (favoritesGestureStartY === null) {
+        resetFavoritesGesture();
+        return;
+    }
+
+    if (favoritesGestureAxis === 'y') {
+        const deltaY = (favoritesGestureLastY ?? favoritesGestureStartY) - favoritesGestureStartY;
+        const expanded = favoritesDockEl && favoritesDockEl.classList.contains('expanded');
+        const threshold = 56;
+
+        if (deltaY < -threshold && !expanded) {
+            setFavoritesExpanded(true);
+        } else if (deltaY > threshold && expanded) {
+            setFavoritesExpanded(false);
+        }
+    }
+
+    resetFavoritesGesture();
+}
+
+function resetFavoritesGesture() {
+    favoritesGestureStartX = null;
+    favoritesGestureStartY = null;
+    favoritesGestureLastY = null;
+    favoritesGestureAxis = null;
+}
+
+function updateFavoritesOverflowMarkers() {
+    if (!favoritesDockEl || !favoritesScrollAreaEl) return;
+    if (favoritesDockEl.classList.contains('expanded')) {
+        favoritesDockEl.classList.remove('scroll-left', 'scroll-right');
+        return;
+    }
+
+    const { scrollLeft, scrollWidth, clientWidth } = favoritesScrollAreaEl;
+    const maxScrollLeft = Math.max(0, scrollWidth - clientWidth - 1);
+    favoritesDockEl.classList.toggle('scroll-left', scrollLeft > 1);
+    favoritesDockEl.classList.toggle('scroll-right', scrollLeft < maxScrollLeft);
+}
+
+function requestFavoritesLayoutFrame() {
+    if (favoritesLayoutRaf) {
+        cancelAnimationFrame(favoritesLayoutRaf);
+    }
+    favoritesLayoutRaf = requestAnimationFrame(() => {
+        favoritesLayoutRaf = null;
+        refreshFavoritesLayout();
+    });
+}
+
+function refreshFavoritesLayout() {
+    if (!favoritesDockEl || !favoritesListEl || favoritesDockEl.classList.contains('hidden')) return;
+
+    const scroller = favoritesScrollAreaEl || favoritesListEl;
+    if (!scroller) return;
+
+    applyFavoriteChipMetrics();
+
+    const expanded = favoritesDockEl.classList.contains('expanded');
+    const hasOverflow = !expanded && (scroller.scrollWidth - scroller.clientWidth > 1);
+    const showToggle = hasOverflow || expanded;
+
+    favoritesDockEl.classList.toggle('overflowing', hasOverflow);
+    favoritesDockEl.classList.toggle('can-expand', showToggle);
+
+    if (favoritesToggleBtn) {
+        favoritesToggleBtn.hidden = !showToggle;
+        favoritesToggleBtn.setAttribute('aria-hidden', showToggle ? 'false' : 'true');
+        if (!showToggle) {
+            favoritesToggleBtn.blur();
+        }
+    }
+
+    const chips = Array.from(favoritesListEl.querySelectorAll('.favorite-chip'));
+    if (chips.length === 0) {
+        favoritesDockEl.style.removeProperty('--favorite-chip-height');
+        updateFavoritesOverflowMarkers();
+        return;
+    }
+
+    let maxHeight = 0;
+    chips.forEach((chip) => {
+        chip.style.removeProperty('--favorite-title-scale');
+        chip.style.removeProperty('--favorite-preview-scale');
+        const chipHeight = updateFavoriteChipLayout(chip) || 0;
+        if (chipHeight > maxHeight) {
+            maxHeight = chipHeight;
+        }
+    });
+
+    syncFavoriteChipHeight(maxHeight);
+    updateFavoritesOverflowMarkers();
+}
+
+function updateFavoriteChipLayout(chip) {
+    if (!chip || !chip.isConnected) return 0;
+
+    const width = chip.getBoundingClientRect().width;
+    if (width <= 0) {
+        return Math.ceil(chip.getBoundingClientRect().height);
+    }
+    let layout = 'title';
+
+    if (width >= FAVORITE_FULL_LAYOUT_THRESHOLD) {
+        layout = 'full';
+    } else if (width >= FAVORITE_COMPACT_LAYOUT_THRESHOLD) {
+        layout = 'compact';
+    }
+
+    chip.dataset.layout = layout;
+    applyFavoriteChipContent(chip, layout, width);
+    fitFavoriteChipText(chip, layout);
+
+    return Math.ceil(chip.getBoundingClientRect().height);
+}
+
+function getFavoriteChipObserver() {
+    if (typeof ResizeObserver === 'undefined') {
+        return null;
+    }
+    if (!favoritesChipResizeObserver) {
+        favoritesChipResizeObserver = new ResizeObserver(() => {
+            requestFavoritesLayoutFrame();
+        });
+    }
+    return favoritesChipResizeObserver;
 }
 
 function navigateToHome() {
@@ -397,10 +535,6 @@ function setupEventListeners() {
         document.addEventListener('MSFullscreenChange', updateFullscreenButton);
     }
 
-    if (favoritesExpandToggleBtn) {
-        favoritesExpandToggleBtn.addEventListener('click', toggleFavoritesBarExpansion);
-    }
-
     modalCloseBtn.addEventListener('click', () => closeModal());
     
     if (copyModalButton) {
@@ -437,7 +571,20 @@ function setupEventListeners() {
 
     containerEl.addEventListener('click', handleCardContainerClick);
     containerEl.addEventListener('contextmenu', handleContextMenu);
-    favoritesBarEl.addEventListener('contextmenu', handleContextMenu);
+    if (favoritesDockEl) {
+        favoritesDockEl.addEventListener('contextmenu', handleContextMenu);
+        favoritesDockEl.addEventListener('touchstart', handleFavoritesTouchStart, { passive: true });
+        favoritesDockEl.addEventListener('touchmove', handleFavoritesTouchMove, { passive: true });
+        favoritesDockEl.addEventListener('touchend', handleFavoritesTouchEnd);
+        favoritesDockEl.addEventListener('touchcancel', handleFavoritesTouchEnd);
+    }
+    if (favoritesToggleBtn) {
+        favoritesToggleBtn.addEventListener('click', () => toggleFavoritesExpanded());
+    }
+    if (favoritesScrollAreaEl) {
+        favoritesScrollAreaEl.addEventListener('wheel', handleFavoritesWheel, { passive: false });
+        favoritesScrollAreaEl.addEventListener('scroll', updateFavoritesOverflowMarkers, { passive: true });
+    }
 
     containerEl.addEventListener('dragstart', handleDragStart);
     containerEl.addEventListener('dragover', handleDragOver);
@@ -460,12 +607,6 @@ function setupEventListeners() {
         }
     });
 
-    if (favoritesContainerEl) {
-        favoritesContainerEl.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-        }, { passive: false });
-    }
-
     window.addEventListener('resize', handleWindowResize);
 }
 
@@ -480,8 +621,6 @@ function handleKeyDown(e) {
             hideContextMenu();
         } else if (document.activeElement.classList.contains('rename-input')) {
             exitRenameMode(document.activeElement.closest('.card'));
-        } else if (favoritesBarEl.classList.contains('is-expanded')) {
-            collapseFavoritesBar();
         } else if (modalEl.classList.contains('visible')) {
             closeModal();
         } else if (createFolderModalEl.classList.contains('visible')) {
@@ -497,7 +636,7 @@ function handleContextMenu(e) {
         return;
     }
     
-    const targetElement = e.target.closest('.card, .favorite-item');
+    const targetElement = e.target.closest('.card, .favorite-chip');
     if (!targetElement) return;
     
     e.preventDefault();
@@ -727,7 +866,7 @@ function handleDeleteClick(id, cardElement) {
                     if (favoritePrompts.includes(id)) {
                         favoritePrompts = favoritePrompts.filter(favId => favId !== id);
                         saveFavorites();
-                        renderFavoritesBar();
+                        renderFavoritesDock();
                     }
                     persistJsonData('Element gelöscht!', 'success');
                     renderView(currentNode);
@@ -767,7 +906,7 @@ function startRenamingCard(card) {
                 titleElement.textContent = newTitle;
                 persistJsonData('Umbenennung gespeichert!', 'success');
                 if (favoritePrompts.includes(id)) {
-                    renderFavoritesBar();
+                    renderFavoritesDock();
                 }
             }
         }
@@ -1063,7 +1202,7 @@ function processJson(data) {
     if (isMobile()) {
         window.history.replaceState({ path: [], modalOpen: false }, '', window.location.href);
     }
-    renderFavoritesBar();
+    renderFavoritesDock();
 }
 
 function loadJsonData(filename) {
@@ -1601,7 +1740,7 @@ function clearAllFavorites() {
     if (confirmation) {
         favoritePrompts = [];
         saveFavorites();
-        renderFavoritesBar();
+        renderFavoritesDock();
         showNotification('Alle Favoriten gelöscht!', 'success');
     }
 }
@@ -1609,31 +1748,39 @@ function clearAllFavorites() {
 function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button')); }
 function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.content || '', buttonElement); }
 
-function copyToClipboard(text, buttonElement = null, node = null) {
+function copyToClipboard(text, buttonElement = null, node = null, previewText = '') {
+    const sanitizedPreview = previewText || (node ? getFavoritePreviewText(node.content) : '');
+
     const showSuccess = () => {
         showNotification('Prompt kopiert!', 'success');
+
+        let highlightTarget = null;
+
         if (buttonElement) {
-            const targetElement = buttonElement.closest('.favorite-item') || buttonElement.querySelector('.icon-copy');
-            if (targetElement) {
-                targetElement.classList.add('copy-success');
-                setTimeout(() => targetElement.classList.remove('copy-success'), 1500);
-            }
-        }
-        if (node && targetElement) {
-            showFavoriteTooltip(targetElement, node);
-            setTimeout(hideFavoriteTooltip, 2000);
-        }
-        if ('vibrate' in navigator && isMobile()) {
-            navigator.vibrate(50);
-        }
-        if (buttonElement && buttonElement.closest('.favorite-item')) {
-            const favoriteItem = buttonElement.closest('.favorite-item');
-            if (favoriteItem && node) {
-                favoriteItem.setAttribute('aria-label', `Kopiert: ${node.title}`);
+            const favoriteChip = buttonElement.closest('.favorite-chip');
+            highlightTarget = favoriteChip || buttonElement;
+
+            if (highlightTarget && highlightTarget.classList) {
+                highlightTarget.classList.add('copy-success');
                 setTimeout(() => {
-                    favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
+                    if (highlightTarget.isConnected && highlightTarget.classList) {
+                        highlightTarget.classList.remove('copy-success');
+                    }
+                }, 1200);
+            }
+
+            if (favoriteChip && node) {
+                favoriteChip.setAttribute('aria-label', `Kopiert: ${node.title}`);
+                setTimeout(() => {
+                    if (favoriteChip.isConnected) {
+                        favoriteChip.setAttribute('aria-label', `Kopiere: ${node.title}`);
+                    }
                 }, 2000);
             }
+        }
+
+        if ('vibrate' in navigator && isMobile()) {
+            navigator.vibrate(50);
         }
     };
 
@@ -1770,7 +1917,7 @@ function toggleFavoriteStatus(promptId) {
 
     saveFavorites();
     updateFavoriteButton(promptId);
-    renderFavoritesBar();
+    renderFavoritesDock();
 }
 
 function updateFavoriteButton(promptId) {
@@ -1781,212 +1928,352 @@ function updateFavoriteButton(promptId) {
     modalFavoriteBtn.setAttribute('aria-label', isFavorite ? 'Von Favoriten entfernen' : 'Zu Favoriten hinzufügen');
 }
 
-function toggleFavoritesBarExpansion() {
-    const isExpanded = favoritesBarEl.classList.toggle('is-expanded');
-    document.body.classList.toggle('favorites-bar-expanded', isExpanded);
-
-    favoritesExpandToggleBtn.setAttribute('aria-expanded', isExpanded);
-    favoritesExpandToggleBtn.setAttribute('aria-label', isExpanded ? 'Favoritenleiste einklappen' : 'Favoritenleiste ausklappen');
-
-    requestAnimationFrame(() => adjustFavoriteTitleSizes());
-}
-
-function collapseFavoritesBar() {
-    if (favoritesBarEl.classList.contains('is-expanded')) {
-        toggleFavoritesBarExpansion();
-    }
-}
-
 function handleWindowResize() {
     if (resizeRafId) {
         cancelAnimationFrame(resizeRafId);
     }
     resizeRafId = requestAnimationFrame(() => {
-        updateRootFontSize();
-        updateFavoritesViewportState();
-        adjustFavoriteTitleSizes();
+        updateDockPositioning();
+        requestFavoritesLayoutFrame();
         resizeRafId = null;
     });
 }
 
-function updateFavoritesViewportState() {
-    if (!favoritesContainerEl) return;
-    const useMobileGrid = window.innerWidth < 768;
-    favoritesContainerEl.classList.toggle('mobile-grid', useMobileGrid);
+function updateDockPositioning() {
+    if (!favoritesDockEl) return;
+    const computedStyle = getComputedStyle(document.documentElement);
+    const safeInset = parseFloat(computedStyle.getPropertyValue('--safe-area-inset-bottom')) || 0;
+    favoritesDockEl.style.setProperty('--favorites-safe-offset', `${safeInset}px`);
 }
 
-function adjustFavoriteTitleSizes() {
-    if (!favoritesContainerEl) return;
-    const titleElements = favoritesContainerEl.querySelectorAll('.favorite-item-title');
-    titleElements.forEach((titleEl) => adjustSingleFavoriteTitle(titleEl));
-}
+function applyFavoriteChipMetrics() {
+    if (!favoritesDockEl || !favoritesListEl) return;
 
-function doesFavoriteTitleOverflow(titleEl) {
-    return (
-        titleEl.scrollHeight - titleEl.clientHeight > FAVORITE_OVERFLOW_EPSILON ||
-        titleEl.scrollWidth - titleEl.clientWidth > FAVORITE_OVERFLOW_EPSILON
-    );
-}
+    const scroller = favoritesScrollAreaEl || favoritesListEl;
+    if (!scroller) return;
 
-function adjustSingleFavoriteTitle(titleEl) {
-    if (!titleEl) return;
-
-    titleEl.style.fontSize = '';
-    titleEl.style.lineHeight = '';
-    titleEl.classList.remove('is-condensed');
-
-    const computedTitleStyle = getComputedStyle(titleEl);
-    const defaultFontSize = parseFloat(computedTitleStyle.fontSize) || 14;
-    const minFontSize = Math.max(7, rootFontSize * FAVORITE_FONT_MIN_RATIO);
-
-    if (!doesFavoriteTitleOverflow(titleEl)) {
+    const availableWidth = scroller.clientWidth;
+    const chips = favoritesListEl.querySelectorAll('.favorite-chip');
+    if (availableWidth <= 0 || chips.length === 0) {
         return;
     }
 
-    let low = minFontSize;
-    let high = defaultFontSize;
-    let bestFit = defaultFontSize;
+    const listStyles = getComputedStyle(favoritesListEl);
+    const gap = parseFloat(listStyles.columnGap || listStyles.gap || '0') || 0;
+    const expanded = favoritesDockEl.classList.contains('expanded');
+    const count = chips.length;
 
-    let iterations = 0;
+    let columns = Math.max(1, Math.floor((availableWidth + gap) / (FAVORITE_CHIP_MIN_WIDTH + gap)));
+    columns = Math.min(columns, count);
 
-    while (iterations < FAVORITE_FONT_MAX_ITERATIONS && high - low > FAVORITE_FONT_BINARY_PRECISION) {
-        const mid = (low + high) / 2;
-        titleEl.style.fontSize = `${mid}px`;
-        if (doesFavoriteTitleOverflow(titleEl)) {
-            high = mid;
-        } else {
-            bestFit = mid;
-            low = mid;
-        }
-        iterations += 1;
+    const widthBudget = availableWidth - gap * Math.max(0, columns - 1);
+    let widthCandidate = widthBudget / columns;
+
+    if (!Number.isFinite(widthCandidate) || widthCandidate <= 0) {
+        widthCandidate = availableWidth;
     }
 
-    titleEl.style.fontSize = `${Math.max(minFontSize, Math.min(defaultFontSize, bestFit))}px`;
+    const hasOverflow = count > columns;
+    const minWidth = hasOverflow ? FAVORITE_CHIP_MIN_WIDTH_NARROW : FAVORITE_CHIP_MIN_WIDTH;
+    const maxWidth = expanded ? FAVORITE_CHIP_MAX_WIDTH : Math.min(FAVORITE_CHIP_MAX_WIDTH, availableWidth);
+    const maxAllowedWidth = Math.min(maxWidth, availableWidth);
+    const minAllowedWidth = Math.min(minWidth, maxAllowedWidth);
 
-    if (doesFavoriteTitleOverflow(titleEl)) {
-        titleEl.style.fontSize = `${minFontSize}px`;
-        titleEl.classList.add('is-condensed');
+    let targetWidth = Math.min(maxAllowedWidth, Math.max(minAllowedWidth, widthCandidate));
 
-        let condensedLineHeight = 1.15;
-        while (condensedLineHeight >= 0.95 && doesFavoriteTitleOverflow(titleEl)) {
-            titleEl.style.lineHeight = condensedLineHeight.toString();
-            condensedLineHeight -= 0.05;
-        }
+    if (!expanded && !hasOverflow && count > 0) {
+        const evenWidth = widthBudget / count;
+        targetWidth = Math.min(maxAllowedWidth, Math.max(minAllowedWidth, evenWidth));
+    }
 
-        if (doesFavoriteTitleOverflow(titleEl)) {
-            const heightRatio = titleEl.clientHeight > 0 ? titleEl.clientHeight / titleEl.scrollHeight : 1;
-            const widthRatio = titleEl.clientWidth > 0 ? titleEl.clientWidth / titleEl.scrollWidth : 1;
-            const ratio = Math.max(FAVORITE_FONT_MIN_RATIO, Math.min(heightRatio, widthRatio));
-            const adjustedSize = Math.max(4.5, minFontSize * ratio);
-            titleEl.style.fontSize = `${adjustedSize}px`;
+    const baseHeight = Math.max(88, Math.min(124, targetWidth * 0.48));
+    const widthValue = Math.max(1, Math.round(targetWidth * 100) / 100);
 
-            if (doesFavoriteTitleOverflow(titleEl)) {
-                titleEl.style.lineHeight = '0.95';
-            }
+    favoritesDockEl.style.setProperty('--favorite-chip-width', `${widthValue}px`);
+    favoritesDockEl.style.setProperty('--favorite-chip-base-height', `${Math.round(baseHeight)}px`);
+}
 
-            if (doesFavoriteTitleOverflow(titleEl)) {
-                titleEl.style.lineHeight = '0.9';
-                titleEl.style.fontSize = `${Math.max(4, adjustedSize * 0.9)}px`;
-            }
-        }
+function applyFavoriteChipContent(chip, layout, width) {
+    const titleEl = chip.querySelector('.favorite-chip-title');
+    const previewEl = chip.querySelector('.favorite-chip-preview');
+
+    if (titleEl && chip.dataset.titleFull) {
+        titleEl.textContent = chip.dataset.titleFull;
+    }
+
+    if (!previewEl) {
+        return;
+    }
+
+    const fullPreview = chip.dataset.previewFull || '';
+    if (!fullPreview || layout === 'title') {
+        previewEl.textContent = '';
+        previewEl.hidden = true;
+        chip.dataset.previewLines = '0';
+        return;
+    }
+
+    let maxChars;
+    if (layout === 'full') {
+        maxChars = Math.max(110, Math.floor(width * 0.72));
+    } else if (layout === 'compact') {
+        maxChars = Math.max(70, Math.floor(width * 0.56));
+    } else {
+        maxChars = 0;
+    }
+
+    const previewText = trimPreviewForLayout(fullPreview, maxChars);
+    previewEl.textContent = previewText;
+    if (previewText.length === 0) {
+        previewEl.hidden = true;
+        chip.dataset.previewLines = '0';
+    } else {
+        previewEl.hidden = false;
+        chip.dataset.previewLines = layout === 'full' ? '2' : '1';
     }
 }
 
-function renderFavoritesBar() {
-    if (favoriteTitleObserver) {
-        favoriteTitleObserver.disconnect();
+function trimPreviewForLayout(text, maxChars) {
+    if (!text || maxChars <= 0) {
+        return '';
     }
 
-    favoritesContainerEl.innerHTML = '';
-    collapseFavoritesBar();
+    if (text.length <= maxChars) {
+        return text;
+    }
 
-    if (favoritePrompts.length === 0) {
-        favoritesBarEl.classList.add('hidden');
-        document.body.classList.remove('favorites-bar-visible');
+    let trimmed = text.slice(0, maxChars).trim();
+    if (trimmed.length < text.length) {
+        trimmed = trimmed.replace(/\s+\S*$/, '').trim();
+    }
+
+    return trimmed.length ? `${trimmed}…` : text.slice(0, maxChars);
+}
+
+function fitFavoriteChipText(chip, layout) {
+    const titleEl = chip.querySelector('.favorite-chip-title');
+    const previewEl = chip.querySelector('.favorite-chip-preview');
+
+    if (titleEl) {
+        fitFavoriteTextBlock(chip, titleEl, {
+            lines: layout === 'title' ? 3 : 3,
+            minScale: FAVORITE_TITLE_MIN_SCALE,
+            scaleVar: '--favorite-title-scale'
+        });
+    }
+
+    if (previewEl && !previewEl.hidden) {
+        fitFavoriteTextBlock(chip, previewEl, {
+            lines: layout === 'full' ? 2 : 1,
+            minScale: FAVORITE_PREVIEW_MIN_SCALE,
+            scaleVar: '--favorite-preview-scale'
+        });
+    } else {
+        chip.style.setProperty('--favorite-preview-scale', '1');
+    }
+}
+
+function fitFavoriteTextBlock(chip, element, { lines, minScale, scaleVar }) {
+    if (!chip || !element) return;
+
+    chip.style.setProperty(scaleVar, '1');
+    element.style.maxHeight = 'none';
+
+    const styles = window.getComputedStyle(element);
+    const fontSize = parseFloat(styles.fontSize) || 0;
+    const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.2;
+    if (!lineHeight || !lines) {
+        return;
+    }
+
+    const targetHeight = lineHeight * lines;
+    const scrollHeight = element.scrollHeight;
+
+    if (scrollHeight <= targetHeight + 0.5) {
+        element.style.maxHeight = `${targetHeight}px`;
+        return;
+    }
+
+    let scale = targetHeight / scrollHeight;
+    let appliedHeight = targetHeight;
+
+    if (scale < minScale) {
+        scale = minScale;
+        appliedHeight = scrollHeight * scale;
+    }
+
+    chip.style.setProperty(scaleVar, scale.toFixed(3));
+
+    // Force reflow to ensure scrollHeight updates with new scale
+    void element.offsetHeight;
+
+    const postScaleHeight = element.scrollHeight;
+    appliedHeight = Math.max(appliedHeight, postScaleHeight);
+    element.style.maxHeight = `${appliedHeight}px`;
+}
+
+function syncFavoriteChipHeight(measuredHeight) {
+    if (!favoritesDockEl) return;
+
+    if (favoritesHeightSyncRaf) {
+        cancelAnimationFrame(favoritesHeightSyncRaf);
+    }
+
+    const base = parseFloat(getComputedStyle(favoritesDockEl).getPropertyValue('--favorite-chip-base-height')) || 0;
+    const finalHeight = Math.max(base, measuredHeight || 0);
+
+    favoritesHeightSyncRaf = requestAnimationFrame(() => {
+        favoritesHeightSyncRaf = null;
+        if (finalHeight) {
+            favoritesDockEl.style.setProperty('--favorite-chip-height', `${Math.ceil(finalHeight)}px`);
+        } else {
+            favoritesDockEl.style.removeProperty('--favorite-chip-height');
+        }
+    });
+}
+
+function getFavoritePreviewText(content) {
+    if (!content) return '';
+
+    const normalizedLines = content
+        .replace(/\r\n/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    if (normalizedLines.length === 0) {
+        return '';
+    }
+
+    const previewSource = normalizedLines.slice(0, 3).join(' ');
+    const condensed = previewSource.replace(/\s+/g, ' ').trim();
+
+    if (condensed.length <= 140) {
+        return condensed;
+    }
+
+    return `${condensed.slice(0, 137).trim()}…`;
+}
+
+function renderFavoritesDock() {
+    if (!favoritesDockEl || !favoritesListEl) return;
+
+    if (favoritesChipResizeObserver) {
+        favoritesChipResizeObserver.disconnect();
+    }
+
+    favoritesListEl.innerHTML = '';
+
+    const favoritesWithNodes = favoritePrompts
+        .map((promptId) => {
+            const node = findNodeById(jsonData, promptId);
+            return node && node.type === 'prompt' ? { id: promptId, node } : null;
+        })
+        .filter(Boolean);
+
+    if (favoritesWithNodes.length !== favoritePrompts.length) {
+        favoritePrompts = favoritesWithNodes.map(({ id }) => id);
+        saveFavorites();
+    }
+
+    if (favoritesWithNodes.length === 0) {
+        favoritesDockEl.classList.add('hidden');
+        favoritesDockEl.setAttribute('aria-hidden', 'true');
+        favoritesDockEl.removeAttribute('data-count');
+        document.body.classList.remove('favorites-dock-visible');
+        favoritesDockEl.classList.remove('overflowing', 'scroll-left', 'scroll-right');
+        favoritesDockEl.style.removeProperty('--favorite-chip-height');
+        setFavoritesExpanded(false);
+        if (favoritesToggleBtn) {
+            favoritesToggleBtn.hidden = true;
+            favoritesToggleBtn.setAttribute('aria-hidden', 'true');
+            favoritesToggleBtn.setAttribute('aria-expanded', 'false');
+        }
         if (clearFavoritesBtn) {
             clearFavoritesBtn.style.display = 'none';
         }
         return;
     }
 
-    favoritesBarEl.classList.remove('hidden');
-    document.body.classList.add('favorites-bar-visible');
-    favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
+    favoritesDockEl.classList.remove('hidden');
+    favoritesDockEl.setAttribute('aria-hidden', 'false');
+    favoritesDockEl.setAttribute('data-count', String(favoritesWithNodes.length));
+    document.body.classList.add('favorites-dock-visible');
 
     if (clearFavoritesBtn) {
         clearFavoritesBtn.style.display = 'inline-flex';
     }
 
-    updateFavoritesViewportState();
-
     const fragment = document.createDocumentFragment();
 
-    favoritePrompts.forEach((promptId) => {
-        const node = findNodeById(jsonData, promptId);
-        if (!node || node.type !== 'prompt') {
-            return;
+    favoritesWithNodes.forEach(({ id, node }, index) => {
+        const listItem = document.createElement('li');
+        listItem.className = 'favorites-list-item';
+        listItem.setAttribute('role', 'listitem');
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'favorite-chip';
+        button.dataset.id = id;
+        button.dataset.type = 'favorite';
+        button.setAttribute('aria-label', `Kopiere: ${node.title}`);
+        button.dataset.titleFull = node.title || '';
+
+        const accent = FAVORITE_ACCENTS[index % FAVORITE_ACCENTS.length];
+        if (accent) {
+            button.style.setProperty('--favorite-border', accent.border);
+            button.style.setProperty('--favorite-soft', accent.soft);
+            button.style.setProperty('--favorite-glow', accent.glow);
+            button.style.setProperty('--favorite-accent', accent.accent);
+            button.style.setProperty('--favorite-badge-text', accent.text);
         }
 
-        const favoriteItem = document.createElement('div');
-        favoriteItem.className = 'favorite-item';
-        favoriteItem.dataset.id = promptId;
-        favoriteItem.dataset.type = 'favorite';
-        favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
+        button.style.setProperty('--favorite-seq', String(index));
 
-        const initialBadge = document.createElement('div');
-        initialBadge.className = 'favorite-item-initial';
-        const initialLetter = (node.title || '').trim().charAt(0)?.toUpperCase() || '?';
-        initialBadge.textContent = initialLetter;
+        const badge = document.createElement('span');
+        badge.className = 'favorite-chip-badge';
+        badge.textContent = (node.title || '').trim().charAt(0)?.toUpperCase() || '★';
 
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'favorite-item-title';
-        titleSpan.textContent = node.title;
+        const textWrap = document.createElement('span');
+        textWrap.className = 'favorite-chip-text';
 
-        const iconWrapper = document.createElement('div');
-        iconWrapper.className = 'favorite-item-icon-wrapper';
+        const titleEl = document.createElement('span');
+        titleEl.className = 'favorite-chip-title';
+        titleEl.textContent = node.title || '';
 
-        const copyIcon = svgTemplateFavoriteCopy.cloneNode(true);
-        copyIcon.classList.add('icon-copy');
-        const checkmarkIcon = svgTemplateFavoriteCheckmark.cloneNode(true);
-        checkmarkIcon.classList.add('icon-checkmark');
-
-        iconWrapper.appendChild(copyIcon);
-        iconWrapper.appendChild(checkmarkIcon);
-
-        favoriteItem.appendChild(initialBadge);
-        favoriteItem.appendChild(titleSpan);
-        favoriteItem.appendChild(iconWrapper);
-
-        favoriteItem.addEventListener('click', () => {
-            copyToClipboard(node.content, favoriteItem, node);
-        });
-
-        favoriteItem.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-        }, { passive: false });
-
-        favoriteItem.addEventListener('mouseenter', (e) => {
-            showFavoriteTooltip(e.currentTarget, node);
-        });
-
-        favoriteItem.addEventListener('mouseleave', () => {
-            hideFavoriteTooltip();
-        });
-
-        fragment.appendChild(favoriteItem);
-
-        if (favoriteTitleObserver) {
-            favoriteTitleObserver.observe(titleSpan);
+        const previewText = getFavoritePreviewText(node.content);
+        button.dataset.previewFull = previewText || '';
+        if (previewText) {
+            const previewEl = document.createElement('span');
+            previewEl.className = 'favorite-chip-preview';
+            previewEl.textContent = previewText;
+            textWrap.append(titleEl, previewEl);
+        } else {
+            const previewEl = document.createElement('span');
+            previewEl.className = 'favorite-chip-preview';
+            previewEl.hidden = true;
+            button.dataset.previewFull = '';
+            textWrap.append(titleEl, previewEl);
         }
+
+        button.append(badge, textWrap);
+
+        button.addEventListener('click', () => {
+            copyToClipboard(node.content || '', button, node, previewText);
+        });
+
+        const chipObserver = getFavoriteChipObserver();
+        if (chipObserver) {
+            chipObserver.observe(button);
+        }
+        listItem.appendChild(button);
+        fragment.appendChild(listItem);
     });
 
-    favoritesContainerEl.appendChild(fragment);
+    favoritesListEl.appendChild(fragment);
 
-    requestAnimationFrame(() => {
-        adjustFavoriteTitleSizes();
-        const isOverflowing = favoritesContainerEl.scrollWidth > favoritesContainerEl.clientWidth;
-        favoritesContainerEl.classList.toggle('is-scrollable', isOverflowing);
-    });
+    updateDockPositioning();
+    requestFavoritesLayoutFrame();
 }
 
 if (document.readyState === 'loading') {
