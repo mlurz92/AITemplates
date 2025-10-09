@@ -16,12 +16,23 @@ const rootElement = document.documentElement;
 let rootFontSize = 16;
 let favoriteTitleObserver = null;
 
-const FAVORITE_FONT_MIN_RATIO = 0.45;
+const FAVORITE_FONT_MIN_RATIO = 0.58;
 const FAVORITE_FONT_BINARY_PRECISION = 0.2;
 const FAVORITE_FONT_MAX_ITERATIONS = 12;
 const FAVORITE_OVERFLOW_EPSILON = 0.75;
 
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove, svgTemplateFavoriteCopy, svgTemplateFavoriteCheckmark;
+const FAVORITE_ACCENTS = [
+    { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
+    { accent: '#00e6ff', border: 'rgba(0, 230, 255, 0.6)', soft: 'rgba(0, 230, 255, 0.14)', glow: 'rgba(0, 230, 255, 0.35)', text: '#0c0f17' },
+    { accent: '#50fa7b', border: 'rgba(80, 250, 123, 0.58)', soft: 'rgba(80, 250, 123, 0.18)', glow: 'rgba(80, 250, 123, 0.35)', text: '#0c0f17' },
+    { accent: '#ffb86c', border: 'rgba(255, 184, 108, 0.6)', soft: 'rgba(255, 184, 108, 0.18)', glow: 'rgba(255, 184, 108, 0.32)', text: '#0c0f17' },
+    { accent: '#ff79c6', border: 'rgba(255, 121, 198, 0.6)', soft: 'rgba(255, 121, 198, 0.18)', glow: 'rgba(255, 121, 198, 0.34)', text: '#0c0f17' },
+    { accent: '#bd93f9', border: 'rgba(189, 147, 249, 0.6)', soft: 'rgba(189, 147, 249, 0.18)', glow: 'rgba(189, 147, 249, 0.34)', text: '#0c0f17' },
+    { accent: '#f1fa8c', border: 'rgba(241, 250, 140, 0.58)', soft: 'rgba(241, 250, 140, 0.18)', glow: 'rgba(241, 250, 140, 0.3)', text: '#0c0f17' },
+    { accent: '#ff5555', border: 'rgba(255, 85, 85, 0.6)', soft: 'rgba(255, 85, 85, 0.16)', glow: 'rgba(255, 85, 85, 0.32)', text: '#0c0f17' }
+];
+
+let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
 let sortableInstance = null;
 let contextMenu = null;
@@ -102,8 +113,6 @@ function initApp() {
     svgTemplateDelete = document.getElementById('svg-template-delete');
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
-    svgTemplateFavoriteCopy = document.getElementById('svg-template-favorite-copy');
-    svgTemplateFavoriteCheckmark = document.getElementById('svg-template-favorite-checkmark');
 
     updateRootFontSize();
     setupFavoriteTitleObserver();
@@ -132,9 +141,17 @@ function setupFavoriteTitleObserver() {
 
     favoriteTitleObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
-            if (entry?.target) {
-                adjustSingleFavoriteTitle(entry.target);
-            }
+            const target = entry?.target;
+            if (!target) continue;
+
+            favoriteTitleObserver.unobserve(target);
+            adjustSingleFavoriteTitle(target);
+
+            requestAnimationFrame(() => {
+                if (favoriteTitleObserver && target.isConnected) {
+                    favoriteTitleObserver.observe(target);
+                }
+            });
         }
     });
 }
@@ -145,22 +162,29 @@ function createGlobalTooltip() {
     document.body.appendChild(favoriteTooltipEl);
 }
 
-function showFavoriteTooltip(targetElement, node) {
+function showFavoriteTooltip(targetElement, node, previewText = null) {
     clearTimeout(tooltipTimeout);
     tooltipTimeout = setTimeout(() => {
-        if (!favoriteTooltipEl) return;
+        if (!favoriteTooltipEl || !targetElement || !node) return;
 
-        favoriteTooltipEl.innerHTML = '';
+        const preview = previewText != null ? previewText : getFavoritePreviewText(node.content);
+
+        favoriteTooltipEl.replaceChildren();
+
         const tooltipTitle = document.createElement('strong');
         tooltipTitle.className = 'favorite-tooltip-title';
-        tooltipTitle.textContent = node.title;
-        const tooltipContent = document.createTextNode((node.content || '').substring(0, 200) + ((node.content || '').length > 200 ? '...' : ''));
-
+        tooltipTitle.textContent = node.title || '';
         favoriteTooltipEl.appendChild(tooltipTitle);
-        favoriteTooltipEl.appendChild(tooltipContent);
+
+        if (preview) {
+            const tooltipPreview = document.createElement('span');
+            tooltipPreview.className = 'favorite-tooltip-preview';
+            tooltipPreview.textContent = preview;
+            favoriteTooltipEl.appendChild(tooltipPreview);
+        }
 
         const targetRect = targetElement.getBoundingClientRect();
-        const viewportMargin = 10;
+        const viewportMargin = 12;
 
         favoriteTooltipEl.style.visibility = 'hidden';
         favoriteTooltipEl.classList.add('visible');
@@ -184,11 +208,11 @@ function showFavoriteTooltip(targetElement, node) {
 
         favoriteTooltipEl.style.top = `${top}px`;
         favoriteTooltipEl.style.left = `${left}px`;
-        
+
         requestAnimationFrame(() => {
             favoriteTooltipEl.classList.add('visible');
         });
-    }, 50);
+    }, 60);
 }
 
 function hideFavoriteTooltip() {
@@ -459,12 +483,6 @@ function setupEventListeners() {
             ticking = true;
         }
     });
-
-    if (favoritesContainerEl) {
-        favoritesContainerEl.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-        }, { passive: false });
-    }
 
     window.addEventListener('resize', handleWindowResize);
 }
@@ -1609,31 +1627,44 @@ function clearAllFavorites() {
 function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button')); }
 function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.content || '', buttonElement); }
 
-function copyToClipboard(text, buttonElement = null, node = null) {
+function copyToClipboard(text, buttonElement = null, node = null, previewText = '') {
+    const sanitizedPreview = previewText || (node ? getFavoritePreviewText(node.content) : '');
+
     const showSuccess = () => {
         showNotification('Prompt kopiert!', 'success');
+
+        let highlightTarget = null;
+        let favoriteItemEl = null;
+
         if (buttonElement) {
-            const targetElement = buttonElement.closest('.favorite-item') || buttonElement.querySelector('.icon-copy');
-            if (targetElement) {
-                targetElement.classList.add('copy-success');
-                setTimeout(() => targetElement.classList.remove('copy-success'), 1500);
+            favoriteItemEl = buttonElement.closest('.favorite-item');
+            highlightTarget = favoriteItemEl || buttonElement.querySelector('.icon-copy');
+
+            if (highlightTarget && highlightTarget.classList) {
+                highlightTarget.classList.add('copy-success');
+                setTimeout(() => {
+                    if (highlightTarget.isConnected && highlightTarget.classList) {
+                        highlightTarget.classList.remove('copy-success');
+                    }
+                }, 1500);
             }
         }
-        if (node && targetElement) {
-            showFavoriteTooltip(targetElement, node);
+
+        if (node && favoriteItemEl) {
+            hideFavoriteTooltip();
+            showFavoriteTooltip(favoriteItemEl, node, sanitizedPreview);
             setTimeout(hideFavoriteTooltip, 2000);
+
+            favoriteItemEl.setAttribute('aria-label', `Kopiert: ${node.title}`);
+            setTimeout(() => {
+                if (favoriteItemEl.isConnected) {
+                    favoriteItemEl.setAttribute('aria-label', `Kopiere: ${node.title}`);
+                }
+            }, 2000);
         }
+
         if ('vibrate' in navigator && isMobile()) {
             navigator.vibrate(50);
-        }
-        if (buttonElement && buttonElement.closest('.favorite-item')) {
-            const favoriteItem = buttonElement.closest('.favorite-item');
-            if (favoriteItem && node) {
-                favoriteItem.setAttribute('aria-label', `Kopiert: ${node.title}`);
-                setTimeout(() => {
-                    favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
-                }, 2000);
-            }
         }
     };
 
@@ -1782,19 +1813,40 @@ function updateFavoriteButton(promptId) {
 }
 
 function toggleFavoritesBarExpansion() {
+    if (!favoritesBarEl) return;
+
     const isExpanded = favoritesBarEl.classList.toggle('is-expanded');
     document.body.classList.toggle('favorites-bar-expanded', isExpanded);
 
-    favoritesExpandToggleBtn.setAttribute('aria-expanded', isExpanded);
-    favoritesExpandToggleBtn.setAttribute('aria-label', isExpanded ? 'Favoritenleiste einklappen' : 'Favoritenleiste ausklappen');
+    if (favoritesExpandToggleBtn) {
+        favoritesExpandToggleBtn.setAttribute('aria-expanded', String(isExpanded));
+        favoritesExpandToggleBtn.setAttribute('aria-label', isExpanded ? 'Favoritenleiste einklappen' : 'Favoritenleiste ausklappen');
+    }
+
+    if (!isExpanded) {
+        hideFavoriteTooltip();
+    }
+
+    updateFavoritesViewportState();
 
     requestAnimationFrame(() => adjustFavoriteTitleSizes());
 }
 
 function collapseFavoritesBar() {
-    if (favoritesBarEl.classList.contains('is-expanded')) {
-        toggleFavoritesBarExpansion();
+    if (!favoritesBarEl || !favoritesBarEl.classList.contains('is-expanded')) return;
+
+    favoritesBarEl.classList.remove('is-expanded');
+    document.body.classList.remove('favorites-bar-expanded');
+
+    if (favoritesExpandToggleBtn) {
+        favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
+        favoritesExpandToggleBtn.setAttribute('aria-label', 'Favoritenleiste ausklappen');
     }
+
+    hideFavoriteTooltip();
+    updateFavoritesViewportState();
+
+    requestAnimationFrame(() => adjustFavoriteTitleSizes());
 }
 
 function handleWindowResize() {
@@ -1811,8 +1863,14 @@ function handleWindowResize() {
 
 function updateFavoritesViewportState() {
     if (!favoritesContainerEl) return;
-    const useMobileGrid = window.innerWidth < 768;
-    favoritesContainerEl.classList.toggle('mobile-grid', useMobileGrid);
+    const shouldUseMobileGrid = window.innerWidth < 640;
+
+    if (favoritesBarEl && favoritesBarEl.classList.contains('is-expanded')) {
+        favoritesContainerEl.classList.remove('mobile-grid');
+        return;
+    }
+
+    favoritesContainerEl.classList.toggle('mobile-grid', shouldUseMobileGrid);
 }
 
 function adjustFavoriteTitleSizes() {
@@ -1826,6 +1884,29 @@ function doesFavoriteTitleOverflow(titleEl) {
         titleEl.scrollHeight - titleEl.clientHeight > FAVORITE_OVERFLOW_EPSILON ||
         titleEl.scrollWidth - titleEl.clientWidth > FAVORITE_OVERFLOW_EPSILON
     );
+}
+
+function getFavoritePreviewText(content) {
+    if (!content) return '';
+
+    const normalizedLines = content
+        .replace(/\r\n/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    if (normalizedLines.length === 0) {
+        return '';
+    }
+
+    const previewSource = normalizedLines.slice(0, 3).join(' ');
+    const condensed = previewSource.replace(/\s+/g, ' ').trim();
+
+    if (condensed.length <= 140) {
+        return condensed;
+    }
+
+    return `${condensed.slice(0, 137).trim()}…`;
 }
 
 function adjustSingleFavoriteTitle(titleEl) {
@@ -1893,16 +1974,33 @@ function adjustSingleFavoriteTitle(titleEl) {
 }
 
 function renderFavoritesBar() {
+    if (!favoritesContainerEl || !favoritesBarEl) return;
+
     if (favoriteTitleObserver) {
         favoriteTitleObserver.disconnect();
     }
 
     favoritesContainerEl.innerHTML = '';
+    favoritesContainerEl.classList.remove('is-scrollable', 'mobile-grid');
+
+    const favoritesWithNodes = favoritePrompts
+        .map((promptId) => {
+            const node = findNodeById(jsonData, promptId);
+            return node && node.type === 'prompt' ? { id: promptId, node } : null;
+        })
+        .filter(Boolean);
+
+    if (favoritesWithNodes.length !== favoritePrompts.length) {
+        favoritePrompts = favoritesWithNodes.map(({ id }) => id);
+        saveFavorites();
+    }
+
     collapseFavoritesBar();
 
-    if (favoritePrompts.length === 0) {
+    if (favoritesWithNodes.length === 0) {
         favoritesBarEl.classList.add('hidden');
-        document.body.classList.remove('favorites-bar-visible');
+        favoritesBarEl.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('favorites-bar-visible', 'favorites-bar-expanded');
         if (clearFavoritesBtn) {
             clearFavoritesBtn.style.display = 'none';
         }
@@ -1910,8 +2008,15 @@ function renderFavoritesBar() {
     }
 
     favoritesBarEl.classList.remove('hidden');
+    favoritesBarEl.setAttribute('aria-hidden', 'false');
+    favoritesBarEl.classList.remove('is-expanded');
     document.body.classList.add('favorites-bar-visible');
-    favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('favorites-bar-expanded');
+
+    if (favoritesExpandToggleBtn) {
+        favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
+        favoritesExpandToggleBtn.setAttribute('aria-label', 'Favoritenleiste ausklappen');
+    }
 
     if (clearFavoritesBtn) {
         clearFavoritesBtn.style.display = 'inline-flex';
@@ -1921,57 +2026,72 @@ function renderFavoritesBar() {
 
     const fragment = document.createDocumentFragment();
 
-    favoritePrompts.forEach((promptId) => {
-        const node = findNodeById(jsonData, promptId);
-        if (!node || node.type !== 'prompt') {
-            return;
-        }
-
-        const favoriteItem = document.createElement('div');
+    favoritesWithNodes.forEach(({ id, node }, index) => {
+        const favoriteItem = document.createElement('button');
+        favoriteItem.type = 'button';
         favoriteItem.className = 'favorite-item';
-        favoriteItem.dataset.id = promptId;
+        favoriteItem.dataset.id = id;
         favoriteItem.dataset.type = 'favorite';
+        favoriteItem.setAttribute('role', 'listitem');
         favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
 
-        const initialBadge = document.createElement('div');
+        const accent = FAVORITE_ACCENTS[index % FAVORITE_ACCENTS.length];
+        if (accent) {
+            favoriteItem.style.setProperty('--favorite-border', accent.border);
+            favoriteItem.style.setProperty('--favorite-soft', accent.soft);
+            favoriteItem.style.setProperty('--favorite-glow', accent.glow);
+            favoriteItem.style.setProperty('--favorite-accent', accent.accent);
+            favoriteItem.style.setProperty('--favorite-initial-color', accent.text);
+        }
+
+        const favoriteBody = document.createElement('span');
+        favoriteBody.className = 'favorite-item-body';
+
+        const initialBadge = document.createElement('span');
         initialBadge.className = 'favorite-item-initial';
         const initialLetter = (node.title || '').trim().charAt(0)?.toUpperCase() || '?';
         initialBadge.textContent = initialLetter;
 
+        const textWrapper = document.createElement('span');
+        textWrapper.className = 'favorite-item-text';
+
         const titleSpan = document.createElement('span');
         titleSpan.className = 'favorite-item-title';
-        titleSpan.textContent = node.title;
+        titleSpan.textContent = node.title || '';
 
-        const iconWrapper = document.createElement('div');
-        iconWrapper.className = 'favorite-item-icon-wrapper';
+        textWrapper.appendChild(titleSpan);
 
-        const copyIcon = svgTemplateFavoriteCopy.cloneNode(true);
-        copyIcon.classList.add('icon-copy');
-        const checkmarkIcon = svgTemplateFavoriteCheckmark.cloneNode(true);
-        checkmarkIcon.classList.add('icon-checkmark');
+        const previewText = getFavoritePreviewText(node.content);
+        if (previewText) {
+            const previewSpan = document.createElement('span');
+            previewSpan.className = 'favorite-item-preview';
+            previewSpan.textContent = previewText;
+            textWrapper.appendChild(previewSpan);
+        }
 
-        iconWrapper.appendChild(copyIcon);
-        iconWrapper.appendChild(checkmarkIcon);
-
-        favoriteItem.appendChild(initialBadge);
-        favoriteItem.appendChild(titleSpan);
-        favoriteItem.appendChild(iconWrapper);
+        favoriteBody.appendChild(initialBadge);
+        favoriteBody.appendChild(textWrapper);
+        favoriteItem.appendChild(favoriteBody);
 
         favoriteItem.addEventListener('click', () => {
-            copyToClipboard(node.content, favoriteItem, node);
+            copyToClipboard(node.content || '', favoriteItem, node, previewText);
         });
 
-        favoriteItem.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-        }, { passive: false });
+        const handleTooltip = (event) => {
+            if (isMobile()) {
+                return;
+            }
+            if (event.type === 'focus' && event.currentTarget.matches(':hover')) {
+                return;
+            }
+            showFavoriteTooltip(event.currentTarget, node, previewText);
+        };
 
-        favoriteItem.addEventListener('mouseenter', (e) => {
-            showFavoriteTooltip(e.currentTarget, node);
-        });
-
-        favoriteItem.addEventListener('mouseleave', () => {
-            hideFavoriteTooltip();
-        });
+        favoriteItem.addEventListener('mouseenter', handleTooltip);
+        favoriteItem.addEventListener('mouseleave', hideFavoriteTooltip);
+        favoriteItem.addEventListener('focus', handleTooltip);
+        favoriteItem.addEventListener('blur', hideFavoriteTooltip);
+        favoriteItem.addEventListener('touchstart', () => hideFavoriteTooltip(), { passive: true });
 
         fragment.appendChild(favoriteItem);
 
@@ -1984,8 +2104,9 @@ function renderFavoritesBar() {
 
     requestAnimationFrame(() => {
         adjustFavoriteTitleSizes();
-        const isOverflowing = favoritesContainerEl.scrollWidth > favoritesContainerEl.clientWidth;
-        favoritesContainerEl.classList.toggle('is-scrollable', isOverflowing);
+        const overflowAmount = favoritesContainerEl.scrollWidth - favoritesContainerEl.clientWidth;
+        const shouldMask = !favoritesBarEl.classList.contains('is-expanded') && !favoritesContainerEl.classList.contains('mobile-grid') && overflowAmount > FAVORITE_OVERFLOW_EPSILON;
+        favoritesContainerEl.classList.toggle('is-scrollable', shouldMask);
     });
 }
 
