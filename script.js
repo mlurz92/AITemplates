@@ -14,10 +14,12 @@ let favoritesDockEl, favoritesListEl, favoritesScrollAreaEl, favoritesToggleBtn,
 let favoritesChipResizeObserver = null;
 let favoritesLayoutRaf = null;
 let favoritesHeightSyncRaf = null;
+let favoritesFootprintRaf = null;
 let favoritesGestureStartX = null;
 let favoritesGestureStartY = null;
 let favoritesGestureLastY = null;
 let favoritesGestureAxis = null;
+let favoritesScrollbarHideTimeout = null;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -48,13 +50,17 @@ let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
 
-const FAVORITE_CHIP_MIN_WIDTH = 220;
-const FAVORITE_CHIP_MAX_WIDTH = 360;
-const FAVORITE_CHIP_MIN_WIDTH_NARROW = 180;
-const FAVORITE_FULL_LAYOUT_THRESHOLD = 330;
-const FAVORITE_COMPACT_LAYOUT_THRESHOLD = 250;
-const FAVORITE_TITLE_MIN_SCALE = 0.62;
-const FAVORITE_PREVIEW_MIN_SCALE = 0.72;
+const FAVORITE_CHIP_MIN_WIDTH = 140;
+const FAVORITE_CHIP_MAX_WIDTH = 236;
+const FAVORITE_CHIP_MIN_WIDTH_NARROW = 112;
+const FAVORITE_FULL_LAYOUT_THRESHOLD = 204;
+const FAVORITE_COMPACT_LAYOUT_THRESHOLD = 154;
+const FAVORITE_TITLE_MIN_SCALE = 0.6;
+const FAVORITE_PREVIEW_MIN_SCALE = 0.7;
+
+if (typeof window !== 'undefined' && window.gsap && typeof window.gsap.registerPlugin === 'function' && window.Flip) {
+    window.gsap.registerPlugin(window.Flip);
+}
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -281,8 +287,32 @@ function setFavoritesExpanded(shouldExpand) {
     if (!favoritesDockEl) return;
 
     const expanded = Boolean(shouldExpand);
+    const chips = favoritesListEl ? Array.from(favoritesListEl.querySelectorAll('.favorite-chip')) : [];
+    const scrollFrame = favoritesScrollAreaEl;
+    const canAnimate = typeof window !== 'undefined' && window.gsap;
+    const useFlip = canAnimate && window.Flip && chips.length > 0;
+
+    let flipState = null;
+    if (useFlip) {
+        try {
+            flipState = window.Flip.getState(chips);
+        } catch (err) {
+            flipState = null;
+        }
+    }
+
+    let startHeight = null;
+    if (scrollFrame) {
+        const measured = scrollFrame.getBoundingClientRect().height;
+        if (Number.isFinite(measured) && measured > 0) {
+            startHeight = measured;
+            scrollFrame.style.height = `${measured}px`;
+        }
+    }
+
     favoritesDockEl.classList.toggle('expanded', expanded);
     favoritesDockEl.classList.toggle('collapsed', !expanded);
+    queueUpdateFavoritesFootprint();
 
     if (favoritesToggleBtn) {
         favoritesToggleBtn.setAttribute('aria-expanded', String(expanded));
@@ -295,7 +325,74 @@ function setFavoritesExpanded(shouldExpand) {
         }
     }
 
-    requestFavoritesLayoutFrame();
+    if (favoritesLayoutRaf) {
+        cancelAnimationFrame(favoritesLayoutRaf);
+        favoritesLayoutRaf = null;
+    }
+    refreshFavoritesLayout();
+
+    const runAnimations = () => {
+        if (scrollFrame) {
+            scrollFrame.style.height = 'auto';
+            const targetHeight = scrollFrame.getBoundingClientRect().height;
+            const heightFrom = Number.isFinite(startHeight) && startHeight !== null ? startHeight : targetHeight;
+
+            if (canAnimate && typeof window.gsap.to === 'function' && Number.isFinite(targetHeight)) {
+                if (Number.isFinite(heightFrom)) {
+                    scrollFrame.style.height = `${heightFrom}px`;
+                }
+                window.gsap.to(scrollFrame, {
+                    height: targetHeight,
+                    duration: 0.9,
+                    ease: 'power3.out',
+                    overwrite: true,
+                    onUpdate: () => {
+                        updateFavoritesOverflowMarkers();
+                        queueUpdateFavoritesFootprint();
+                    },
+                    onComplete: () => {
+                        scrollFrame.style.height = '';
+                        updateFavoritesOverflowMarkers();
+                        queueUpdateFavoritesFootprint();
+                    }
+                });
+            } else {
+                scrollFrame.style.height = '';
+                updateFavoritesOverflowMarkers();
+                queueUpdateFavoritesFootprint();
+            }
+        } else {
+            updateFavoritesOverflowMarkers();
+            queueUpdateFavoritesFootprint();
+        }
+
+        if (flipState && canAnimate) {
+            try {
+                window.Flip.from(flipState, {
+                    duration: 0.9,
+                    ease: 'power3.inOut',
+                    absolute: true,
+                    nested: true,
+                    prune: true,
+                    stagger: { each: 0.016, from: 'center', ease: 'power3.out' },
+                    onEnter: elements => {
+                        window.gsap.fromTo(elements, { opacity: 0, scale: 0.9, y: 14 }, { opacity: 1, scale: 1, y: 0, duration: 0.65, ease: 'power3.out', overwrite: true });
+                    },
+                    onLeave: elements => {
+                        window.gsap.to(elements, { opacity: 0, scale: 0.9, duration: 0.45, ease: 'power2.inOut', overwrite: true });
+                    }
+                });
+            } catch (err) {
+                // ignore Flip errors
+            }
+        }
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(runAnimations);
+    } else {
+        runAnimations();
+    }
 }
 
 function handleFavoritesWheel(event) {
@@ -307,8 +404,15 @@ function handleFavoritesWheel(event) {
     if (delta === 0) return;
 
     favoritesScrollAreaEl.scrollLeft += delta;
+    revealFavoritesScrollbar();
     updateFavoritesOverflowMarkers();
     event.preventDefault();
+}
+
+function handleFavoritesScroll() {
+    if (!favoritesScrollAreaEl) return;
+    revealFavoritesScrollbar();
+    updateFavoritesOverflowMarkers();
 }
 
 function handleFavoritesTouchStart(event) {
@@ -318,6 +422,7 @@ function handleFavoritesTouchStart(event) {
     favoritesGestureStartY = touch.clientY;
     favoritesGestureLastY = touch.clientY;
     favoritesGestureAxis = null;
+    revealFavoritesScrollbar();
 }
 
 function handleFavoritesTouchMove(event) {
@@ -376,6 +481,39 @@ function updateFavoritesOverflowMarkers() {
     favoritesDockEl.classList.toggle('scroll-right', scrollLeft < maxScrollLeft);
 }
 
+function revealFavoritesScrollbar() {
+    if (!favoritesScrollAreaEl) return;
+    favoritesScrollAreaEl.classList.add('show-scrollbar');
+    if (favoritesScrollbarHideTimeout) {
+        clearTimeout(favoritesScrollbarHideTimeout);
+    }
+    favoritesScrollbarHideTimeout = window.setTimeout(() => {
+        favoritesScrollAreaEl.classList.remove('show-scrollbar');
+        favoritesScrollbarHideTimeout = null;
+    }, 900);
+}
+
+function queueUpdateFavoritesFootprint() {
+    if (!favoritesDockEl) return;
+    if (favoritesFootprintRaf) {
+        cancelAnimationFrame(favoritesFootprintRaf);
+    }
+    favoritesFootprintRaf = requestAnimationFrame(() => {
+        favoritesFootprintRaf = null;
+        const shouldMeasure = !favoritesDockEl.classList.contains('hidden');
+        if (!shouldMeasure) {
+            document.body.style.removeProperty('--favorites-footprint');
+            return;
+        }
+        const measured = favoritesDockEl.getBoundingClientRect().height;
+        if (Number.isFinite(measured) && measured > 0) {
+            document.body.style.setProperty('--favorites-footprint', `${Math.ceil(measured)}px`);
+        } else {
+            document.body.style.removeProperty('--favorites-footprint');
+        }
+    });
+}
+
 function requestFavoritesLayoutFrame() {
     if (favoritesLayoutRaf) {
         cancelAnimationFrame(favoritesLayoutRaf);
@@ -400,6 +538,12 @@ function refreshFavoritesLayout() {
 
     favoritesDockEl.classList.toggle('overflowing', hasOverflow);
     favoritesDockEl.classList.toggle('can-expand', showToggle);
+
+    if (favoritesScrollAreaEl) {
+        if (!hasOverflow) {
+            favoritesScrollAreaEl.classList.remove('show-scrollbar');
+        }
+    }
 
     if (favoritesToggleBtn) {
         favoritesToggleBtn.hidden = !showToggle;
@@ -583,7 +727,9 @@ function setupEventListeners() {
     }
     if (favoritesScrollAreaEl) {
         favoritesScrollAreaEl.addEventListener('wheel', handleFavoritesWheel, { passive: false });
-        favoritesScrollAreaEl.addEventListener('scroll', updateFavoritesOverflowMarkers, { passive: true });
+        favoritesScrollAreaEl.addEventListener('scroll', handleFavoritesScroll, { passive: true });
+        favoritesScrollAreaEl.addEventListener('pointerdown', revealFavoritesScrollbar, { passive: true });
+        favoritesScrollAreaEl.addEventListener('mouseenter', revealFavoritesScrollbar);
     }
 
     containerEl.addEventListener('dragstart', handleDragStart);
@@ -1241,15 +1387,34 @@ function loadJsonData(filename) {
 function adjustCardTitleFontSize(card) {
     const title = card.querySelector('h3');
     if (!title) return;
-    
-    const maxFontSize = 16;
-    const minFontSize = 10;
-    let currentSize = maxFontSize;
-    title.style.fontSize = `${currentSize}px`;
 
-    while (title.scrollHeight > title.clientHeight && currentSize > minFontSize) {
-        currentSize -= 0.5;
+    const rect = card.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    const maxLines = card.classList.contains('prompt-card') ? 4 : 3;
+    const dynamicMax = Math.min(20, Math.max(13, rect.width * 0.09));
+    const dynamicMin = Math.max(11, dynamicMax * 0.68);
+    let currentSize = dynamicMax;
+
+    title.style.fontSize = `${currentSize}px`;
+    title.style.lineHeight = '1.25';
+
+    const computed = window.getComputedStyle(title);
+    const lineHeight = parseFloat(computed.lineHeight) || currentSize * 1.25;
+    let maxHeight = lineHeight * maxLines;
+    title.style.maxHeight = `${maxHeight}px`;
+
+    while (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
+        currentSize -= 0.25;
         title.style.fontSize = `${currentSize}px`;
+        title.style.lineHeight = '1.25';
+    }
+
+    let lines = maxLines;
+    while (title.scrollHeight > maxHeight + 0.5 && lines < 6) {
+        lines += 1;
+        maxHeight = lineHeight * lines;
+        title.style.maxHeight = `${maxHeight}px`;
     }
 }
 
@@ -1937,6 +2102,7 @@ function handleWindowResize() {
     resizeRafId = requestAnimationFrame(() => {
         updateDockPositioning();
         requestFavoritesLayoutFrame();
+        document.querySelectorAll('.card').forEach((card) => adjustCardTitleFontSize(card));
         resizeRafId = null;
     });
 }
@@ -1965,7 +2131,14 @@ function applyFavoriteChipMetrics() {
     const expanded = favoritesDockEl.classList.contains('expanded');
     const count = chips.length;
 
-    let columns = Math.max(1, Math.floor((availableWidth + gap) / (FAVORITE_CHIP_MIN_WIDTH + gap)));
+    const baseMinWidth = FAVORITE_CHIP_MIN_WIDTH;
+    const compactMinWidth = FAVORITE_CHIP_MIN_WIDTH_NARROW;
+
+    let columns = Math.max(1, Math.floor((availableWidth + gap) / (baseMinWidth + gap)));
+    if (count > columns && baseMinWidth > compactMinWidth) {
+        const compactColumns = Math.max(1, Math.floor((availableWidth + gap) / (compactMinWidth + gap)));
+        columns = Math.max(columns, compactColumns);
+    }
     columns = Math.min(columns, count);
 
     const widthBudget = availableWidth - gap * Math.max(0, columns - 1);
@@ -1976,19 +2149,21 @@ function applyFavoriteChipMetrics() {
     }
 
     const hasOverflow = count > columns;
-    const minWidth = hasOverflow ? FAVORITE_CHIP_MIN_WIDTH_NARROW : FAVORITE_CHIP_MIN_WIDTH;
+    const minWidth = hasOverflow ? compactMinWidth : baseMinWidth;
     const maxWidth = expanded ? FAVORITE_CHIP_MAX_WIDTH : Math.min(FAVORITE_CHIP_MAX_WIDTH, availableWidth);
     const maxAllowedWidth = Math.min(maxWidth, availableWidth);
     const minAllowedWidth = Math.min(minWidth, maxAllowedWidth);
 
     let targetWidth = Math.min(maxAllowedWidth, Math.max(minAllowedWidth, widthCandidate));
 
-    if (!expanded && !hasOverflow && count > 0) {
+    if (!expanded && hasOverflow) {
+        targetWidth = Math.max(minAllowedWidth, targetWidth - 6);
+    } else if (!expanded && !hasOverflow && count > 0) {
         const evenWidth = widthBudget / count;
         targetWidth = Math.min(maxAllowedWidth, Math.max(minAllowedWidth, evenWidth));
     }
 
-    const baseHeight = Math.max(88, Math.min(124, targetWidth * 0.48));
+    const baseHeight = Math.max(58, Math.min(96, targetWidth * 0.45));
     const widthValue = Math.max(1, Math.round(targetWidth * 100) / 100);
 
     favoritesDockEl.style.setProperty('--favorite-chip-width', `${widthValue}px`);
@@ -2008,18 +2183,20 @@ function applyFavoriteChipContent(chip, layout, width) {
     }
 
     const fullPreview = chip.dataset.previewFull || '';
+    const previewLines = layout === 'full' ? '2' : layout === 'compact' ? '1' : '0';
+    chip.dataset.previewLines = previewLines;
+
     if (!fullPreview || layout === 'title') {
         previewEl.textContent = '';
         previewEl.hidden = true;
-        chip.dataset.previewLines = '0';
         return;
     }
 
     let maxChars;
     if (layout === 'full') {
-        maxChars = Math.max(110, Math.floor(width * 0.72));
+        maxChars = Math.max(68, Math.floor(width * 0.64));
     } else if (layout === 'compact') {
-        maxChars = Math.max(70, Math.floor(width * 0.56));
+        maxChars = Math.max(36, Math.floor(width * 0.46));
     } else {
         maxChars = 0;
     }
@@ -2031,7 +2208,7 @@ function applyFavoriteChipContent(chip, layout, width) {
         chip.dataset.previewLines = '0';
     } else {
         previewEl.hidden = false;
-        chip.dataset.previewLines = layout === 'full' ? '2' : '1';
+        chip.dataset.previewLines = previewLines;
     }
 }
 
@@ -2131,6 +2308,7 @@ function syncFavoriteChipHeight(measuredHeight) {
         } else {
             favoritesDockEl.style.removeProperty('--favorite-chip-height');
         }
+        queueUpdateFavoritesFootprint();
     });
 }
 
@@ -2185,6 +2363,10 @@ function renderFavoritesDock() {
         document.body.classList.remove('favorites-dock-visible');
         favoritesDockEl.classList.remove('overflowing', 'scroll-left', 'scroll-right');
         favoritesDockEl.style.removeProperty('--favorite-chip-height');
+        if (favoritesScrollAreaEl) {
+            favoritesScrollAreaEl.classList.remove('show-scrollbar');
+        }
+        document.body.style.removeProperty('--favorites-footprint');
         setFavoritesExpanded(false);
         if (favoritesToggleBtn) {
             favoritesToggleBtn.hidden = true;
@@ -2245,6 +2427,8 @@ function renderFavoritesDock() {
 
         const previewText = getFavoritePreviewText(node.content);
         button.dataset.previewFull = previewText || '';
+        button.dataset.previewLines = '0';
+        button.dataset.layout = 'title';
         if (previewText) {
             const previewEl = document.createElement('span');
             previewEl.className = 'favorite-chip-preview';

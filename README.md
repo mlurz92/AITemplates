@@ -16,6 +16,8 @@ Der **Prompt-Templates Browser** ist eine hochperformante, offline-fähige **Pro
     *   **Event-Handling:** Scroll-Events werden mittels `requestAnimationFrame` gedrosselt (throttled), um Jank zu vermeiden. Passive Event-Listener werden wo immer möglich verwendet.
 *   **PWA-Features:** Eine `manifest.json` ermöglicht die Installation auf Desktop- und Mobilgeräten für ein natives App-Erlebnis.
 *   **Design-Philosophie:** Ein modernes **"Glassmorphism"-UI** mit einem dunklen, durch Aurora-Effekte belebten Hintergrund. Transparente, schwebende Ebenen mit `backdrop-filter` und subtilen Licht- und Schatten-Effekten schaffen eine hochwertige visuelle Tiefe.
+*   **Layout-Schutz für Karten:** CSS-Variablen definieren verbindliche Mindest- und Maximalbreiten sowie -höhen für Prompt- und Ordnerkarten. Das neue Auto-Fit-Grid verteilt die Spalten entsprechend, sodass Beschriftungen nie abgeschnitten oder von anderen UI-Elementen überlagert werden.
+*   **Adaptives Favoriten-Dashboard:** Eine ultra-kompakte Glasleiste nutzt GSAP-Flip-Animationen, dynamische Typografie-Skalierung und auto-hiding Scrollleisten. Breiten- und Höhenmetriken werden per CSS-Variablen und JavaScript so synchronisiert, dass mehr Favoriten-Chips pro Viewport-Breite ohne Überlagerungen sichtbar bleiben und sich das Tab-Fähnchen bündig an der rechten oberen Ecke anlegt.
 
 ---
 
@@ -71,9 +73,9 @@ Die Anwendungslogik wird durch einige globale Variablen gesteuert:
     7.  **Organisationsmodus**: Im Edit-Mode werden zusätzlich Lösch- und Umbenennen-Buttons an den Karten angebracht.
     8.  **Entry-Animation**: Die erstellten Karten sind initial unsichtbar (`opacity: 0`). Über `requestAnimationFrame` wird die Klasse `.is-visible` hinzugefügt, was eine flüssige Fade-In- und Slide-Up-Animation auslöst.
 *   **Layout (`style.css`)**:
-    *   Verwendet ein CSS Grid mit `repeat(auto-fit, minmax(120px, 1fr))`, um ein responsives Spaltenlayout zu erzeugen.
-    *   Eine `max-width` auf dem Container stellt sicher, dass **maximal 6 Spalten** angezeigt werden.
-    *   `clamp()`-Werte und mobile Breakpoints stellen sicher, dass auf schmalen Geräten mindestens drei Karten pro Zeile sichtbar bleiben.
+    *   Ein Auto-Fit-Grid (`repeat(auto-fit, minmax(var(--card-min-width), 1fr))`) hält die Kartenbreiten strikt innerhalb der durch `--card-min-width` und `--card-max-width` definierten Grenzen. So behalten Prompt- und Ordnerkarten ihre ursprünglichen Layoutbeschränkungen, ohne den Nachbarn in die Quere zu kommen.
+    *   Die Variablen `--card-min-width`, `--card-max-width` und `--card-min-height` passen sich stufenlos in Breakpoints an, wodurch die historischen Maße auch bei sehr schmalen Viewports erhalten bleiben.
+    *   `adjustCardTitleFontSize()` misst Breite und Zeilenhöhe pro Karte und skaliert die Typografie selektiv, bis Überschriften, Buttons und der Glasrahmen perfekt zusammenspielen.
 
 ### 3.2 Favoriten-Dock
 
@@ -88,13 +90,13 @@ Die Anwendungslogik wird durch einige globale Variablen gesteuert:
     2.  Entfernt ungültige IDs unmittelbar aus `favoritePrompts`, speichert das Ergebnis und aktualisiert `localStorage`.
     3.  Baut für jeden Knoten ein `<li>` mit einer farblich akzentuierten `.favorite-chip`, setzt Vorschautext, Initial-Badge sowie einen Sequenzindex für gestaffelte Animationen.
     4.  Verknüpft jede Kachel mit `copyToClipboard(...)`, aktualisiert die dynamischen `aria-label`-Texte und toggelt den Body-Status (`.favorites-dock-visible`).
-    5.  `refreshFavoritesLayout()` berechnet die einheitliche Chip-Breite/-Höhe, wechselt abhängig von der verfügbaren Breite zwischen Vorschau-, Kompakt- und Titel-Layout, blendet das Tab-Fähnchen nur bei tatsächlichem Überlauf ein und hält die Glas-Gradienten synchron zum Scroll-Status.
-    6.  Wheel-Scrolling und eine vertikale Swipe-Geste (mobil) toggeln den Expand-Status ohne zusätzliche Bedienelemente.
+    5.  `refreshFavoritesLayout()` verteilt die verfügbare Breite proportional, skaliert Typografie und Vorschautext per `ResizeObserver` und synchronisiert gleichzeitig `--favorites-footprint`, damit der Karten-Grid nie überlappt.
+    6.  Wheel-Scrolling und eine vertikale Swipe-Geste (mobil) toggeln den Expand-Status; horizontale Scrollleisten blenden automatisch ein und wieder aus.
 *   **Layout & Design (`style.css`)**:
-    *   **`.favorites-dock`**: Vollbreites Glas-Panel am unteren Rand mit Safe-Area-Offsets, sanften Ein-/Ausblendungen und konstant verankerten Glas-Gradienten.
-    *   **`.favorites-toggle`**: Ein kleines, rechts andockendes Tab-Fähnchen mit animiertem Pfeil, das Fokus-States respektiert und nur erscheint, wenn Inhalte über eine Zeile hinausreichen.
-    *   **`.favorites-scroll-frame`**: Fixierte Glas-Gradienten deuten horizontale Überläufe an; die Scrollspur besitzt eine unsichtbare Scrollbar, reagiert aber auf Maus- und Touch-Gesten und wechselt im expandierten Zustand in eine mehrreihige Ansicht.
-    *   **`.favorite-chip`**: Einheitliche Breite/Höhe via CSS-Variablen, sanfte Glasflächen, farbige Badges und Texte, die dank Hyphenation und automatischer Skalierung in allen Layout-Stufen vollständig lesbar bleiben.
+    *   **`.favorites-dock`**: Vollbreites Glas-Panel mit Safe-Area-Offsets, auto-hiding Scrollleisten, fein justierten Innenabständen und einem messbaren Fußabdruck (`--favorites-footprint`), damit das Kartenraster niemals überlappt.
+    *   **`.favorites-toggle`**: Ein dezentes, bündig abschließendes Tab-Fähnchen in Glasoptik, das ohne Spalt an der rechten oberen Ecke sitzt, per Hover/Focus subtil glüht und bei Bedarf eine animierte Pfeilspitze zeigt.
+    *   **`.favorites-scroll-frame`**: Semi-transparente Glasleisten, weich ein- und ausblendende Randindikatoren und eine automatisch versteckte Scrollbar, die sowohl Wheel- als auch Touch-Scrolling sofort sichtbar quittiert.
+    *   **`.favorite-chip`**: Einheitliche Breite/Höhe via CSS-Variablen, feinere Abstände, farbige Badges sowie automatische Schrift- und Inhaltsskalierung in allen Layout-Stufen (Vorschau, Kompakt, Titel-only), sodass deutlich mehr Chips nebeneinander passen, ohne Inhalte zu überdecken.
 
 ### 3.3 Modals
 
@@ -146,11 +148,11 @@ Die Anwendung nutzt mehrere Modals für verschiedene Zwecke, die alle dieselbe G
 
 Die Anwendung ist für drei Haupt-Viewport-Größen optimiert:
 
-*   **Desktop (> 1024px)**: Mehrspaltiges Kartenraster (bis zu 6 Spalten). Das Favoriten-Dashboard liegt bündig am unteren Rand, nutzt die Breite für gleichgroße Kacheln mit Vorschau und blendet zusätzliche Reihen über das Tab-Fähnchen oder das Scrollrad ein.
-*   **Tablet (768px - 1024px)**: Reduzierte Spaltenanzahl, adaptive Chip-Breiten und identische Ein-Tipp-Bedienung. Das Tab-Fähnchen bleibt sichtbar, sobald nicht alle Favoriten in eine Zeile passen, und klappt das Panel weich in den Mehrreihenmodus aus.
+*   **Desktop (> 1024px)**: Das Auto-Fit-Grid spannt bis zu sechs Spalten, hält dank `--card-min-width`/`--card-max-width` aber konsequent die klassischen Kartenabmessungen ein. Das Favoriten-Dashboard sitzt glasbündig am unteren Rand, nutzt auto-hiding Scrollleisten und Flip-Animationen, um zusätzliche Reihen weich einzublenden.
+*   **Tablet (768px - 1024px)**: Die Grid-Variablen verschieben sich auf kompaktere Werte, sodass sich die Kartenbreite visuell treu bleibt, während die Favoriten-Chips enger zusammenrücken und der Tab-Trigger weiterhin bündig bleibt.
 *   **Mobil (< 768px)**:
-    *   Mindestens drei Karten pro Zeile im Content-Bereich.
-    *   Die Favoriten-Chips skalieren automatisch in Breite und Typografie, bleiben stets vollständig lesbar und scrollen bei Bedarf horizontal hinter fixierten Glas-Gradienten.
+    *   Mindestens drei Karten pro Zeile im Content-Bereich, ohne dass Beschriftungen abgeschnitten werden.
+    *   Die Favoriten-Chips skalieren automatisch in Breite und Typografie, blenden bei Platzmangel Vorschauzeilen aus und bleiben über Wheel- oder Touch-Gesten mitsamt sanft einblendender Scrollspur bedienbar.
     *   Eine vertikale Swipe-Geste direkt auf dem Dashboard expandiert bzw. kollabiert das Panel ohne den Tab-Button zu treffen; Swipe-to-Go-Back und haptisches Copy-Feedback bleiben aktiv.
 
 ### 5.2 Barrierefreiheit (A11y)
@@ -167,7 +169,8 @@ Die Anwendung ist für drei Haupt-Viewport-Größen optimiert:
 
 ## 6. Abhängigkeiten
 
-Die Anwendung nutzt zwei externe JavaScript-Bibliotheken, die per CDN geladen werden:
+Die Anwendung nutzt drei externe JavaScript-Bibliotheken, die per CDN geladen werden:
 
 1.  **Vivus.js**: Wird für die "Live-Drawing"-Animation der SVG-Pfade der Ordner-Icons bei Hover verwendet.
 2.  **Sortable.js**: Stellt die Kernfunktionalität für das Drag-and-Drop-Umsortieren der Karten im Organisationsmodus bereit.
+3.  **GSAP 3 + Flip Plugin**: Animiert das Favoriten-Dashboard (Expand/Collapse, Reflow der Chips) und sorgt für butterweiche Höhen-Transitionen.
