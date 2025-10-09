@@ -29,6 +29,7 @@ let favoritePrompts = [];
 let lastScrollY = 0;
 let ticking = false;
 let tooltipTimeout = null;
+let resizeRafId = null;
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -434,6 +435,8 @@ function setupEventListeners() {
             e.preventDefault();
         }, { passive: false });
     }
+
+    window.addEventListener('resize', handleWindowResize);
 }
 
 function updateParallax() {
@@ -1751,14 +1754,65 @@ function updateFavoriteButton(promptId) {
 function toggleFavoritesBarExpansion() {
     const isExpanded = favoritesBarEl.classList.toggle('is-expanded');
     document.body.classList.toggle('favorites-bar-expanded', isExpanded);
-    
+
     favoritesExpandToggleBtn.setAttribute('aria-expanded', isExpanded);
     favoritesExpandToggleBtn.setAttribute('aria-label', isExpanded ? 'Favoritenleiste einklappen' : 'Favoritenleiste ausklappen');
+
+    requestAnimationFrame(() => adjustFavoriteTitleSizes());
 }
 
 function collapseFavoritesBar() {
     if (favoritesBarEl.classList.contains('is-expanded')) {
         toggleFavoritesBarExpansion();
+    }
+}
+
+function handleWindowResize() {
+    if (resizeRafId) {
+        cancelAnimationFrame(resizeRafId);
+    }
+    resizeRafId = requestAnimationFrame(() => {
+        updateFavoritesViewportState();
+        adjustFavoriteTitleSizes();
+        resizeRafId = null;
+    });
+}
+
+function updateFavoritesViewportState() {
+    if (!favoritesContainerEl) return;
+    const useMobileGrid = window.innerWidth < 768;
+    favoritesContainerEl.classList.toggle('mobile-grid', useMobileGrid);
+}
+
+function adjustFavoriteTitleSizes() {
+    if (!favoritesContainerEl) return;
+    const titleElements = favoritesContainerEl.querySelectorAll('.favorite-item-title');
+    titleElements.forEach((titleEl) => adjustSingleFavoriteTitle(titleEl));
+}
+
+function adjustSingleFavoriteTitle(titleEl) {
+    if (!titleEl) return;
+
+    titleEl.style.fontSize = '';
+    titleEl.classList.remove('is-condensed');
+
+    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const minFontSize = Math.max(11, rootFontSize * 0.62);
+    let currentFontSize = parseFloat(getComputedStyle(titleEl).fontSize) || minFontSize;
+    let iterations = 0;
+    const maxIterations = 12;
+
+    while (iterations < maxIterations && (titleEl.scrollHeight > titleEl.clientHeight + 0.5 || titleEl.scrollWidth > titleEl.clientWidth + 0.5)) {
+        currentFontSize = Math.max(minFontSize, currentFontSize - 1);
+        titleEl.style.fontSize = `${currentFontSize}px`;
+        iterations += 1;
+        if (currentFontSize === minFontSize) {
+            break;
+        }
+    }
+
+    if (currentFontSize === minFontSize && (titleEl.scrollHeight > titleEl.clientHeight + 0.5 || titleEl.scrollWidth > titleEl.clientWidth + 0.5)) {
+        titleEl.classList.add('is-condensed');
     }
 }
 
@@ -1783,11 +1837,7 @@ function renderFavoritesBar() {
         clearFavoritesBtn.style.display = 'inline-flex';
     }
 
-    if (window.innerWidth < 768) {
-        favoritesContainerEl.classList.add('mobile-grid');
-    } else {
-        favoritesContainerEl.classList.remove('mobile-grid');
-    }
+    updateFavoritesViewportState();
 
     favoritePrompts.forEach(promptId => {
         const node = findNodeById(jsonData, promptId);
@@ -1842,10 +1892,11 @@ function renderFavoritesBar() {
         }
     });
 
-    setTimeout(() => {
+    requestAnimationFrame(() => {
+        adjustFavoriteTitleSizes();
         const isOverflowing = favoritesContainerEl.scrollWidth > favoritesContainerEl.clientWidth;
         favoritesContainerEl.classList.toggle('is-scrollable', isOverflowing);
-    }, 0);
+    });
 }
 
 if (document.readyState === 'loading') {

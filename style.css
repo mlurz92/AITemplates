@@ -261,8 +261,8 @@ body::before {
 
 .cards-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: clamp(0.8rem, 2vw, 1.5rem);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: clamp(0.8rem, 2.2vw, 1.6rem);
   padding: clamp(0.8rem, 2.5vw, 1.8rem);
   padding-top: calc(6rem + var(--safe-area-inset-top));
   padding-bottom: calc(6.5rem + var(--safe-area-inset-bottom));
@@ -280,6 +280,24 @@ body.favorites-bar-visible .cards-container {
 }
 body.favorites-bar-visible.favorites-bar-expanded .cards-container {
     padding-bottom: calc(15rem + var(--safe-area-inset-bottom));
+}
+
+@media (max-width: 1320px) {
+  .cards-container {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1120px) {
+  .cards-container {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .cards-container {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .card {
@@ -659,6 +677,9 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
 
 .favorite-item {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     flex-shrink: 0;
     height: 4.5rem;
     padding: 0.6rem 0.8rem;
@@ -724,20 +745,22 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
 
 .favorite-item-title {
     display: block;
-    width: 100%;
-    height: 100%;
     padding-left: 32px;
-    padding-right: 28px;
+    padding-right: 38px;
+    margin-top: 0.15rem;
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    font-size: 0.85rem;
-    line-height: 1.3;
-    align-self: center;
-    padding-top: 0.1rem;
+    font-size: 0.9rem;
+    line-height: 1.25;
+    max-height: calc(100% - 1.4rem);
+    word-break: break-word;
+    hyphens: auto;
+    transition: font-size var(--duration-1) var(--ease-smooth);
+}
+
+.favorite-item-title.is-condensed {
+    letter-spacing: 0.01em;
 }
 
 .favorite-item-icon-wrapper {
@@ -929,7 +952,7 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
   .card-edit-btn { right: 18px; }
   .favorite-item { height: 4.5rem; padding: 0.5rem 0.6rem; flex-basis: 120px; min-width: 120px; }
   .favorite-item-initial { width: 22px; height: 22px; font-size: 0.8rem; }
-  .favorite-item-title { font-size: 0.8rem; padding-left: 28px; padding-right: 20px; }
+  .favorite-item-title { font-size: 0.8rem; padding-left: 28px; padding-right: 28px; max-height: calc(100% - 1.2rem); }
   .favorite-item-icon-wrapper { width: 18px; height: 18px; bottom: 0.5rem; right: 0.6rem;}
   .favorites-bar.is-expanded .favorites-container { grid-template-columns: 1fr; }
   .favorites-controls { right: calc(0.75rem + var(--safe-area-inset-right)); }
