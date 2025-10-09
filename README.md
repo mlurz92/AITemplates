@@ -73,28 +73,26 @@ Die Anwendungslogik wird durch einige globale Variablen gesteuert:
 *   **Layout (`style.css`)**:
     *   Verwendet ein CSS Grid mit `repeat(auto-fit, minmax(120px, 1fr))`, um ein responsives Spaltenlayout zu erzeugen.
     *   Eine `max-width` auf dem Container stellt sicher, dass **maximal 6 Spalten** angezeigt werden.
-    *   Eine Media Query (`@media (max-width: 420px)`) erzwingt ein **minimales 3-Spalten-Layout** auf schmalen Geräten.
+    *   `clamp()`-Werte und mobile Breakpoints stellen sicher, dass auf schmalen Geräten mindestens drei Karten pro Zeile sichtbar bleiben.
 
 ### 3.2 Favoriten-Dock
 
-*   **Funktion:** `renderFavoritesBar()`
+*   **Funktion:** `renderFavoritesDock()`
 *   **HTML-Struktur (`index.html`)**:
-    *   Ein Hauptcontainer `#favorites-bar` umschließt sowohl den Container für die Kacheln (`#favorites-container`) als auch die Steuerung (`#favorites-controls`). Diese Verschachtelung ist entscheidend für das "Klebezettel"-Layout des Buttons.
+    *   Ein `aside` mit der ID `#favorites-dock` spannt das Dashboard am unteren Viewportrand auf.
+    *   `div.favorites-shell` kapselt das eigentliche Panel, den Tab-Button `#favorites-expand-toggle` und die Scroll-Zone `#favorites-scroll-area`.
+    *   Die ungeordnete Liste `#favorites-list` enthält pro Favorit einen Button `.favorite-chip`, der überall auf der Kachel die Kopieraktion auslöst.
 *   **Logik:**
-    1.  Leert den `#favorites-container`.
-    2.  Iteriert durch das `favoritePrompts`-Array.
-    3.  Für jede ID wird der entsprechende Prompt-Knoten in `jsonData` gesucht.
-    4.  Es wird eine `.favorite-item`-Kachel dynamisch erstellt.
+    1.  Leert die Liste und ordnet die gespeicherten Favoriten-IDs den echten Prompt-Knoten zu.
+    2.  Entfernt ungültige IDs unmittelbar aus `favoritePrompts`, speichert das Ergebnis und aktualisiert `localStorage`.
+    3.  Baut für jeden Knoten ein `<li>` mit einer farblich akzentuierten `.favorite-chip`, setzt Vorschautext, Initial-Badge sowie einen Sequenzindex für gestaffelte Animationen.
+    4.  Verknüpft jede Kachel mit `copyToClipboard(...)`, aktualisiert die dynamischen `aria-label`-Texte und toggelt den Body-Status (`.favorites-dock-visible`).
+    5.  Über `setFavoritesExpanded()` und `refreshFavoritesLayout()` steuert die Logik, ob der Tab-Button sichtbar ist, ob der Bereich in den mehrreihigen Modus expandiert und welche Layout-Stufe (Vorschau, kompakt oder nur Titel) jede Kachel verwendet.
 *   **Layout & Design (`style.css`)**:
-    *   **`.favorite-item`**: Gestaltet als kleine Kachel mit einem 2x2 CSS Grid.
-        *   Das Initial-Icon (`.favorite-item-initial`) belegt die erste Spalte und beide Zeilen.
-        *   Der Titel (`.favorite-item-title`) belegt die zweite Spalte und beide Zeilen, wodurch er den vollen Platz nutzen und zweizeilig umbrechen kann.
-        *   Das Kopieren-Icon (`.favorite-item-icon-wrapper`) ist absolut in der unteren rechten Ecke positioniert und überlagert den Titel bei Bedarf.
-    *   **`.favorites-controls`**: Der Steuerungs-Button ist absolut positioniert (`bottom: 100%`), wodurch er sich direkt an die Oberkante des Docks anheftet.
-*   **Interaktion (`toggleFavoritesBarExpansion`)**:
-    *   Schaltet die Klasse `.is-expanded` auf dem `#favorites-bar` um.
-    *   CSS steuert die Animation der `max-height` des Docks.
-    *   Die Drehung des Pfeil-Icons im Button wird ebenfalls rein per CSS über eine `transform: rotate(180deg)`-Regel auf die `.is-expanded`-Klasse gesteuert.
+    *   **`.favorites-dock`**: Vollbreites Glas-Panel am unteren Viewportrand mit Safe-Area-Puffer, Fade-Edges und weicher Einblendung.
+    *   **`.favorites-shell` & `.favorites-toggle`**: Der Tab-Button sitzt wie ein Fähnchen auf dem Panel, zeigt den Expand-Status animiert an und respektiert Fokus-States für Tastaturbedienung.
+    *   **`.favorites-scroll-area`**: Im kompakten Zustand horizontal scrollbar (auch per Mausrad), blendet dezente Kanten-Schatten ein und schaltet im expandierten Modus auf mehrreihiges Grid mit vertikalem Scrollen.
+    *   **`.favorite-chip`**: Flex-Layout mit Badge, Titel und optionaler Vorschau; `ResizeObserver`-gestützt werden die Layout-Stufen `full`, `compact` und `title` gesetzt, sodass Titel immer vollständig sichtbar bleiben und die Vorschau je nach Platz variiert.
 
 ### 3.3 Modals
 
@@ -136,7 +134,7 @@ Die Anwendung nutzt mehrere Modals für verschiedene Zwecke, die alle dieselbe G
 *   **Aurora-Hintergrund**: Drei große, unscharfe `div`-Elemente mit `mix-blend-mode: plus-lighter` werden per CSS-Keyframe-Animation langsam bewegt, um einen dynamischen, leuchtenden Hintergrund zu erzeugen.
 *   **Parallax-Effekt**: Beim Scrollen der Karten wird der Aurora-Container per `requestAnimationFrame` gedrosselt und mit einem geringeren Faktor verschoben (`transform: translateY(...)`), was einen subtilen Tiefeneffekt erzeugt.
 *   **Glassmorphism**: Alle UI-Elemente wie die Top-Bar, Karten und Modals nutzen `backdrop-filter: blur(...)` und eine semi-transparente Hintergrundfarbe, um den "Milchglas"-Effekt zu erzielen.
-*   **Copy-Feedback**: Beim Kopieren eines Prompts wird eine `.copy-success`-Klasse hinzugefügt, die eine CSS-Animation mit `filter: drop-shadow(...)` auslöst. Dies erzeugt einen organischen "Glow"-Effekt um das Icon. Bei Favoriten-Kacheln erscheint zusätzlich ein animiertes Häkchen.
+*   **Copy-Feedback**: Beim Kopieren eines Prompts wird eine `.copy-success`-Klasse hinzugefügt, die eine CSS-Animation mit `filter: drop-shadow(...)` auslöst und für einen organischen Glow sorgt. Favoriten-Kacheln nutzen denselben Mechanismus, ergänzen ihn aber um eine kurzzeitige Farbumkehr sowie ein temporär angepasstes `aria-label` („Kopiert …“).
 
 ---
 
@@ -146,22 +144,21 @@ Die Anwendung nutzt mehrere Modals für verschiedene Zwecke, die alle dieselbe G
 
 Die Anwendung ist für drei Haupt-Viewport-Größen optimiert:
 
-*   **Desktop (> 1024px)**: Mehrspaltiges Layout (bis zu 6 Spalten), volle Anzeige der Favoritenleiste, Hover-Effekte sind aktiv.
-*   **Tablet (768px - 1024px)**: Reduzierte Spaltenanzahl, kompaktere Darstellung der UI-Elemente.
+*   **Desktop (> 1024px)**: Mehrspaltiges Layout (bis zu 6 Spalten). Die Favoriten erscheinen als schwebende vertikale Docking-Leiste am rechten unteren Bildschirmrand und bleiben jederzeit im Blickfeld.
+*   **Tablet (768px - 1024px)**: Reduzierte Spaltenanzahl, leicht verkürzte Dock-Breite und identische Ein-Tipp-Bedienung.
 *   **Mobil (< 768px)**:
     *   Minimal 3 Spalten für eine dichte Darstellung.
-    *   Die Favoritenleiste ist initial schmaler und kann vertikal expandiert werden.
-    *   Touch-spezifische Interaktionen wie Swipe-to-Go-Back sind aktiv.
-    *   `env(safe-area-inset-*)` wird verwendet, um das Layout an Geräte mit Notches oder Home-Indikatoren (z.B. iPhones) anzupassen.
+    *   Das Favoriten-Dock spannt sich nahezu über die gesamte Breite, wechselt in einen horizontal scrollbaren Slider und berücksichtigt Safe-Area-Insets automatisch.
+    *   Touch-spezifische Interaktionen wie Swipe-to-Go-Back sowie Vibrationsfeedback beim Kopieren bleiben aktiv.
 
 ### 5.2 Barrierefreiheit (A11y)
 
 *   **Semantisches HTML**: Wo immer möglich, werden native HTML-Elemente wie `<button>` und `<nav>` verwendet.
 *   **ARIA-Attribute**:
-    *   Buttons haben aussagekräftige `aria-label`.
-    *   Der Zustand von aufklappbaren Elementen (wie dem Favoriten-Dock) wird über `aria-expanded` kommuniziert.
+    *   Buttons (einschließlich der Favoriten-Kacheln) besitzen sprechende `aria-label`-Texte, die nach dem Kopieren kurzzeitig angepasst werden.
+    *   Das Favoriten-Dock selbst ist als `role="region"` mit benanntem `aria-label` ausgezeichnet.
     *   Der Zustand des Favoriten-Buttons im Modal wird dynamisch aktualisiert (`Zu Favoriten hinzufügen` / `Von Favoriten entfernen`).
-*   **Tastatur-Navigation**: Die Anwendung ist grundsätzlich per Tab-Taste navigierbar. Die `Escape`-Taste hat eine kontextsensitive Funktion: Sie schließt das Kontextmenü, dann das geöffnete Modal, dann das expandierte Favoriten-Dock.
+*   **Tastatur-Navigation**: Die Anwendung ist grundsätzlich per Tab-Taste navigierbar. Die `Escape`-Taste schließt kontextsensitiv zuerst das Kontextmenü, anschließend ein geöffnetes Modal.
 *   **Fokus-Management**: Modals fangen den Fokus ein, und beim Öffnen wird der Fokus auf das erste interaktive Element gesetzt.
 
 ---
