@@ -575,8 +575,8 @@ function setupEventListeners() {
         favoritesDockEl.addEventListener('contextmenu', handleContextMenu);
         favoritesDockEl.addEventListener('touchstart', handleFavoritesTouchStart, { passive: true });
         favoritesDockEl.addEventListener('touchmove', handleFavoritesTouchMove, { passive: true });
-        favoritesDockEl.addEventListener('touchend', handleFavoritesTouchEnd);
-        favoritesDockEl.addEventListener('touchcancel', handleFavoritesTouchEnd);
+        favoritesDockEl.addEventListener('touchend', handleFavoritesTouchEnd, { passive: true });
+        favoritesDockEl.addEventListener('touchcancel', handleFavoritesTouchEnd, { passive: true });
     }
     if (favoritesToggleBtn) {
         favoritesToggleBtn.addEventListener('click', () => toggleFavoritesExpanded());
