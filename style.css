@@ -657,6 +657,8 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
     scrollbar-width: none;
     -ms-overflow-style: none;
     scroll-snap-type: x mandatory;
+    contain: layout paint;
+    will-change: scroll-position;
 }
 .favorites-container.is-scrollable {
     -webkit-mask-image: linear-gradient(to right, transparent 0, black 10px, black calc(100% - 40px), transparent 100%);
@@ -694,6 +696,9 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
     scroll-snap-align: start;
     flex-basis: 150px;
     min-width: 150px;
+    will-change: transform, opacity;
+    contain: layout paint;
+    backface-visibility: hidden;
 }
 
 .favorite-item:nth-child(8n+1) { border-color: #8b5cf6; }
@@ -761,6 +766,7 @@ body.favorites-bar-visible.favorites-bar-expanded #notification-area {
 
 .favorite-item-title.is-condensed {
     letter-spacing: 0.01em;
+    line-height: 1.1;
 }
 
 .favorite-item-icon-wrapper {
@@ -1021,4 +1027,17 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   background: var(--glass-noise);
   opacity: .25;
   pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .aurora-shape {
+    animation: none !important;
+  }
 }

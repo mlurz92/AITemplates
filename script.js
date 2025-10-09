@@ -12,6 +12,15 @@ let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, f
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
 let favoritesBarEl, favoritesContainerEl, auroraContainerEl, favoriteTooltipEl, favoritesControls, favoritesExpandToggleBtn;
 
+const rootElement = document.documentElement;
+let rootFontSize = 16;
+let favoriteTitleObserver = null;
+
+const FAVORITE_FONT_MIN_RATIO = 0.45;
+const FAVORITE_FONT_BINARY_PRECISION = 0.2;
+const FAVORITE_FONT_MAX_ITERATIONS = 12;
+const FAVORITE_OVERFLOW_EPSILON = 0.75;
+
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove, svgTemplateFavoriteCopy, svgTemplateFavoriteCheckmark;
 
 let sortableInstance = null;
@@ -96,6 +105,9 @@ function initApp() {
     svgTemplateFavoriteCopy = document.getElementById('svg-template-favorite-copy');
     svgTemplateFavoriteCheckmark = document.getElementById('svg-template-favorite-checkmark');
 
+    updateRootFontSize();
+    setupFavoriteTitleObserver();
+
     createGlobalTooltip();
     setupEventListeners();
     checkFullscreenSupport();
@@ -107,6 +119,24 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
+}
+
+function updateRootFontSize() {
+    rootFontSize = parseFloat(getComputedStyle(rootElement).fontSize) || 16;
+}
+
+function setupFavoriteTitleObserver() {
+    if (typeof ResizeObserver === 'undefined') {
+        return;
+    }
+
+    favoriteTitleObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+            if (entry?.target) {
+                adjustSingleFavoriteTitle(entry.target);
+            }
+        }
+    });
 }
 
 function createGlobalTooltip() {
@@ -1772,6 +1802,7 @@ function handleWindowResize() {
         cancelAnimationFrame(resizeRafId);
     }
     resizeRafId = requestAnimationFrame(() => {
+        updateRootFontSize();
         updateFavoritesViewportState();
         adjustFavoriteTitleSizes();
         resizeRafId = null;
@@ -1790,33 +1821,82 @@ function adjustFavoriteTitleSizes() {
     titleElements.forEach((titleEl) => adjustSingleFavoriteTitle(titleEl));
 }
 
+function doesFavoriteTitleOverflow(titleEl) {
+    return (
+        titleEl.scrollHeight - titleEl.clientHeight > FAVORITE_OVERFLOW_EPSILON ||
+        titleEl.scrollWidth - titleEl.clientWidth > FAVORITE_OVERFLOW_EPSILON
+    );
+}
+
 function adjustSingleFavoriteTitle(titleEl) {
     if (!titleEl) return;
 
     titleEl.style.fontSize = '';
+    titleEl.style.lineHeight = '';
     titleEl.classList.remove('is-condensed');
 
-    const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    const minFontSize = Math.max(11, rootFontSize * 0.62);
-    let currentFontSize = parseFloat(getComputedStyle(titleEl).fontSize) || minFontSize;
-    let iterations = 0;
-    const maxIterations = 12;
+    const computedTitleStyle = getComputedStyle(titleEl);
+    const defaultFontSize = parseFloat(computedTitleStyle.fontSize) || 14;
+    const minFontSize = Math.max(7, rootFontSize * FAVORITE_FONT_MIN_RATIO);
 
-    while (iterations < maxIterations && (titleEl.scrollHeight > titleEl.clientHeight + 0.5 || titleEl.scrollWidth > titleEl.clientWidth + 0.5)) {
-        currentFontSize = Math.max(minFontSize, currentFontSize - 1);
-        titleEl.style.fontSize = `${currentFontSize}px`;
-        iterations += 1;
-        if (currentFontSize === minFontSize) {
-            break;
-        }
+    if (!doesFavoriteTitleOverflow(titleEl)) {
+        return;
     }
 
-    if (currentFontSize === minFontSize && (titleEl.scrollHeight > titleEl.clientHeight + 0.5 || titleEl.scrollWidth > titleEl.clientWidth + 0.5)) {
+    let low = minFontSize;
+    let high = defaultFontSize;
+    let bestFit = defaultFontSize;
+
+    let iterations = 0;
+
+    while (iterations < FAVORITE_FONT_MAX_ITERATIONS && high - low > FAVORITE_FONT_BINARY_PRECISION) {
+        const mid = (low + high) / 2;
+        titleEl.style.fontSize = `${mid}px`;
+        if (doesFavoriteTitleOverflow(titleEl)) {
+            high = mid;
+        } else {
+            bestFit = mid;
+            low = mid;
+        }
+        iterations += 1;
+    }
+
+    titleEl.style.fontSize = `${Math.max(minFontSize, Math.min(defaultFontSize, bestFit))}px`;
+
+    if (doesFavoriteTitleOverflow(titleEl)) {
+        titleEl.style.fontSize = `${minFontSize}px`;
         titleEl.classList.add('is-condensed');
+
+        let condensedLineHeight = 1.15;
+        while (condensedLineHeight >= 0.95 && doesFavoriteTitleOverflow(titleEl)) {
+            titleEl.style.lineHeight = condensedLineHeight.toString();
+            condensedLineHeight -= 0.05;
+        }
+
+        if (doesFavoriteTitleOverflow(titleEl)) {
+            const heightRatio = titleEl.clientHeight > 0 ? titleEl.clientHeight / titleEl.scrollHeight : 1;
+            const widthRatio = titleEl.clientWidth > 0 ? titleEl.clientWidth / titleEl.scrollWidth : 1;
+            const ratio = Math.max(FAVORITE_FONT_MIN_RATIO, Math.min(heightRatio, widthRatio));
+            const adjustedSize = Math.max(4.5, minFontSize * ratio);
+            titleEl.style.fontSize = `${adjustedSize}px`;
+
+            if (doesFavoriteTitleOverflow(titleEl)) {
+                titleEl.style.lineHeight = '0.95';
+            }
+
+            if (doesFavoriteTitleOverflow(titleEl)) {
+                titleEl.style.lineHeight = '0.9';
+                titleEl.style.fontSize = `${Math.max(4, adjustedSize * 0.9)}px`;
+            }
+        }
     }
 }
 
 function renderFavoritesBar() {
+    if (favoriteTitleObserver) {
+        favoriteTitleObserver.disconnect();
+    }
+
     favoritesContainerEl.innerHTML = '';
     collapseFavoritesBar();
 
@@ -1832,65 +1912,75 @@ function renderFavoritesBar() {
     favoritesBarEl.classList.remove('hidden');
     document.body.classList.add('favorites-bar-visible');
     favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
-    
+
     if (clearFavoritesBtn) {
         clearFavoritesBtn.style.display = 'inline-flex';
     }
 
     updateFavoritesViewportState();
 
-    favoritePrompts.forEach(promptId => {
+    const fragment = document.createDocumentFragment();
+
+    favoritePrompts.forEach((promptId) => {
         const node = findNodeById(jsonData, promptId);
-        if (node && node.type === 'prompt') {
-            const favoriteItem = document.createElement('div');
-            favoriteItem.className = 'favorite-item';
-            favoriteItem.dataset.id = promptId;
-            favoriteItem.dataset.type = 'favorite';
-            favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
+        if (!node || node.type !== 'prompt') {
+            return;
+        }
 
-            const initialBadge = document.createElement('div');
-            initialBadge.className = 'favorite-item-initial';
-            const initialLetter = (node.title && node.title.trim().length > 0) ? node.title.trim().charAt(0).toUpperCase() : '?';
-            initialBadge.textContent = initialLetter;
+        const favoriteItem = document.createElement('div');
+        favoriteItem.className = 'favorite-item';
+        favoriteItem.dataset.id = promptId;
+        favoriteItem.dataset.type = 'favorite';
+        favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
 
-            const titleSpan = document.createElement('span');
-            titleSpan.className = 'favorite-item-title';
-            titleSpan.textContent = node.title;
+        const initialBadge = document.createElement('div');
+        initialBadge.className = 'favorite-item-initial';
+        const initialLetter = (node.title || '').trim().charAt(0)?.toUpperCase() || '?';
+        initialBadge.textContent = initialLetter;
 
-            const iconWrapper = document.createElement('div');
-            iconWrapper.className = 'favorite-item-icon-wrapper';
-            
-            const copyIcon = svgTemplateFavoriteCopy.cloneNode(true);
-            copyIcon.classList.add('icon-copy');
-            const checkmarkIcon = svgTemplateFavoriteCheckmark.cloneNode(true);
-            checkmarkIcon.classList.add('icon-checkmark');
-            
-            iconWrapper.appendChild(copyIcon);
-            iconWrapper.appendChild(checkmarkIcon);
-            
-            favoriteItem.appendChild(initialBadge);
-            favoriteItem.appendChild(titleSpan);
-            favoriteItem.appendChild(iconWrapper);
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'favorite-item-title';
+        titleSpan.textContent = node.title;
 
-            favoriteItem.addEventListener('click', () => {
-                copyToClipboard(node.content, favoriteItem, node);
-            });
+        const iconWrapper = document.createElement('div');
+        iconWrapper.className = 'favorite-item-icon-wrapper';
 
-            favoriteItem.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-            }, { passive: false });
+        const copyIcon = svgTemplateFavoriteCopy.cloneNode(true);
+        copyIcon.classList.add('icon-copy');
+        const checkmarkIcon = svgTemplateFavoriteCheckmark.cloneNode(true);
+        checkmarkIcon.classList.add('icon-checkmark');
 
-            favoriteItem.addEventListener('mouseenter', (e) => {
-                showFavoriteTooltip(e.currentTarget, node);
-            });
-            
-            favoriteItem.addEventListener('mouseleave', () => {
-                hideFavoriteTooltip();
-            });
+        iconWrapper.appendChild(copyIcon);
+        iconWrapper.appendChild(checkmarkIcon);
 
-            favoritesContainerEl.appendChild(favoriteItem);
+        favoriteItem.appendChild(initialBadge);
+        favoriteItem.appendChild(titleSpan);
+        favoriteItem.appendChild(iconWrapper);
+
+        favoriteItem.addEventListener('click', () => {
+            copyToClipboard(node.content, favoriteItem, node);
+        });
+
+        favoriteItem.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+
+        favoriteItem.addEventListener('mouseenter', (e) => {
+            showFavoriteTooltip(e.currentTarget, node);
+        });
+
+        favoriteItem.addEventListener('mouseleave', () => {
+            hideFavoriteTooltip();
+        });
+
+        fragment.appendChild(favoriteItem);
+
+        if (favoriteTitleObserver) {
+            favoriteTitleObserver.observe(titleSpan);
         }
     });
+
+    favoritesContainerEl.appendChild(fragment);
 
     requestAnimationFrame(() => {
         adjustFavoriteTitleSizes();
