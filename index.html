@@ -201,24 +201,20 @@
         </defs>
     </svg>
 
-    <div id="favorites-bar" class="favorites-bar hidden" role="region" aria-labelledby="favorites-label">
-      <div class="favorites-inner">
-        <div class="favorites-header">
-          <div class="favorites-title" id="favorites-label">
-            <span class="favorites-title-icon" aria-hidden="true">★</span>
-            <span class="favorites-title-text">Favoriten</span>
-          </div>
-          <div id="favorites-controls" class="favorites-controls">
-            <button id="favorites-expand-toggle" class="btn btn-ghost" type="button" aria-controls="favorites-container" aria-label="Favoritenleiste ausklappen">
-              <svg class="icon icon-expand-toggle" width="22" height="22" viewBox="0 0 24 24">
-                <use xlink:href="#svg-template-expand"></use>
-              </svg>
-            </button>
-          </div>
+    <aside
+      id="favorites-dock"
+      class="favorites-dock hidden"
+      role="region"
+      aria-label="Favoriten Schnellzugriff"
+    >
+      <div class="favorites-dock-inner">
+        <div class="favorites-dock-header">
+          <span class="favorites-dock-title">Favoriten</span>
+          <span class="favorites-dock-hint">Tippen&nbsp;=&nbsp;Kopieren</span>
         </div>
-        <div id="favorites-container" class="favorites-container" role="list"></div>
+        <ul id="favorites-list" class="favorites-list" role="list"></ul>
       </div>
-    </div>
+    </aside>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vivus/0.4.6/vivus.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>

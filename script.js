@@ -10,16 +10,7 @@ let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCa
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
-let favoritesBarEl, favoritesContainerEl, auroraContainerEl, favoriteTooltipEl, favoritesControls, favoritesExpandToggleBtn;
-
-const rootElement = document.documentElement;
-let rootFontSize = 16;
-let favoriteTitleObserver = null;
-
-const FAVORITE_FONT_MIN_RATIO = 0.58;
-const FAVORITE_FONT_BINARY_PRECISION = 0.2;
-const FAVORITE_FONT_MAX_ITERATIONS = 12;
-const FAVORITE_OVERFLOW_EPSILON = 0.75;
+let favoritesDockEl, favoritesListEl, auroraContainerEl;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -48,7 +39,6 @@ const currentTransitionDurationMediumMs = 300;
 let favoritePrompts = [];
 let lastScrollY = 0;
 let ticking = false;
-let tooltipTimeout = null;
 let resizeRafId = null;
 
 function initApp() {
@@ -82,10 +72,8 @@ function initApp() {
     appLogoBtn = document.getElementById('app-logo-button');
     clearFavoritesBtn = document.getElementById('clear-favorites-button');
 
-    favoritesBarEl = document.getElementById('favorites-bar');
-    favoritesContainerEl = document.getElementById('favorites-container');
-    favoritesControls = document.getElementById('favorites-controls');
-    favoritesExpandToggleBtn = document.getElementById('favorites-expand-toggle');
+    favoritesDockEl = document.getElementById('favorites-dock');
+    favoritesListEl = document.getElementById('favorites-list');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
@@ -114,10 +102,7 @@ function initApp() {
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
 
-    updateRootFontSize();
-    setupFavoriteTitleObserver();
-
-    createGlobalTooltip();
+    updateDockPositioning();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -128,98 +113,6 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
-}
-
-function updateRootFontSize() {
-    rootFontSize = parseFloat(getComputedStyle(rootElement).fontSize) || 16;
-}
-
-function setupFavoriteTitleObserver() {
-    if (typeof ResizeObserver === 'undefined') {
-        return;
-    }
-
-    favoriteTitleObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-            const target = entry?.target;
-            if (!target) continue;
-
-            favoriteTitleObserver.unobserve(target);
-            adjustSingleFavoriteTitle(target);
-
-            requestAnimationFrame(() => {
-                if (favoriteTitleObserver && target.isConnected) {
-                    favoriteTitleObserver.observe(target);
-                }
-            });
-        }
-    });
-}
-
-function createGlobalTooltip() {
-    favoriteTooltipEl = document.createElement('div');
-    favoriteTooltipEl.id = 'favorite-tooltip';
-    document.body.appendChild(favoriteTooltipEl);
-}
-
-function showFavoriteTooltip(targetElement, node, previewText = null) {
-    clearTimeout(tooltipTimeout);
-    tooltipTimeout = setTimeout(() => {
-        if (!favoriteTooltipEl || !targetElement || !node) return;
-
-        const preview = previewText != null ? previewText : getFavoritePreviewText(node.content);
-
-        favoriteTooltipEl.replaceChildren();
-
-        const tooltipTitle = document.createElement('strong');
-        tooltipTitle.className = 'favorite-tooltip-title';
-        tooltipTitle.textContent = node.title || '';
-        favoriteTooltipEl.appendChild(tooltipTitle);
-
-        if (preview) {
-            const tooltipPreview = document.createElement('span');
-            tooltipPreview.className = 'favorite-tooltip-preview';
-            tooltipPreview.textContent = preview;
-            favoriteTooltipEl.appendChild(tooltipPreview);
-        }
-
-        const targetRect = targetElement.getBoundingClientRect();
-        const viewportMargin = 12;
-
-        favoriteTooltipEl.style.visibility = 'hidden';
-        favoriteTooltipEl.classList.add('visible');
-        const tooltipWidth = favoriteTooltipEl.offsetWidth;
-        const tooltipHeight = favoriteTooltipEl.offsetHeight;
-        favoriteTooltipEl.classList.remove('visible');
-        favoriteTooltipEl.style.visibility = '';
-
-        let top = targetRect.top - tooltipHeight - viewportMargin;
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
-
-        if (left < viewportMargin) {
-            left = viewportMargin;
-        }
-        if (left + tooltipWidth > window.innerWidth - viewportMargin) {
-            left = window.innerWidth - tooltipWidth - viewportMargin;
-        }
-        if (top < viewportMargin) {
-            top = targetRect.bottom + viewportMargin;
-        }
-
-        favoriteTooltipEl.style.top = `${top}px`;
-        favoriteTooltipEl.style.left = `${left}px`;
-
-        requestAnimationFrame(() => {
-            favoriteTooltipEl.classList.add('visible');
-        });
-    }, 60);
-}
-
-function hideFavoriteTooltip() {
-    clearTimeout(tooltipTimeout);
-    if (favoriteTooltipEl) {
-        favoriteTooltipEl.classList.remove('visible');
-    }
 }
 
 function createContextMenu() {
@@ -277,7 +170,7 @@ function createContextMenu() {
 
 function showContextMenu(x, y, targetElement) {
     const id = targetElement.dataset.id;
-    const type = targetElement.dataset.type || (targetElement.classList.contains('favorite-item') ? 'favorite' : null);
+    const type = targetElement.dataset.type || (targetElement.classList.contains('favorite-chip') ? 'favorite' : null);
     if (!id || !type) return;
 
     const isFavorite = favoritePrompts.includes(id);
@@ -421,10 +314,6 @@ function setupEventListeners() {
         document.addEventListener('MSFullscreenChange', updateFullscreenButton);
     }
 
-    if (favoritesExpandToggleBtn) {
-        favoritesExpandToggleBtn.addEventListener('click', toggleFavoritesBarExpansion);
-    }
-
     modalCloseBtn.addEventListener('click', () => closeModal());
     
     if (copyModalButton) {
@@ -461,7 +350,9 @@ function setupEventListeners() {
 
     containerEl.addEventListener('click', handleCardContainerClick);
     containerEl.addEventListener('contextmenu', handleContextMenu);
-    favoritesBarEl.addEventListener('contextmenu', handleContextMenu);
+    if (favoritesDockEl) {
+        favoritesDockEl.addEventListener('contextmenu', handleContextMenu);
+    }
 
     containerEl.addEventListener('dragstart', handleDragStart);
     containerEl.addEventListener('dragover', handleDragOver);
@@ -498,8 +389,6 @@ function handleKeyDown(e) {
             hideContextMenu();
         } else if (document.activeElement.classList.contains('rename-input')) {
             exitRenameMode(document.activeElement.closest('.card'));
-        } else if (favoritesBarEl.classList.contains('is-expanded')) {
-            collapseFavoritesBar();
         } else if (modalEl.classList.contains('visible')) {
             closeModal();
         } else if (createFolderModalEl.classList.contains('visible')) {
@@ -515,7 +404,7 @@ function handleContextMenu(e) {
         return;
     }
     
-    const targetElement = e.target.closest('.card, .favorite-item');
+    const targetElement = e.target.closest('.card, .favorite-chip');
     if (!targetElement) return;
     
     e.preventDefault();
@@ -745,7 +634,7 @@ function handleDeleteClick(id, cardElement) {
                     if (favoritePrompts.includes(id)) {
                         favoritePrompts = favoritePrompts.filter(favId => favId !== id);
                         saveFavorites();
-                        renderFavoritesBar();
+                        renderFavoritesDock();
                     }
                     persistJsonData('Element gelöscht!', 'success');
                     renderView(currentNode);
@@ -785,7 +674,7 @@ function startRenamingCard(card) {
                 titleElement.textContent = newTitle;
                 persistJsonData('Umbenennung gespeichert!', 'success');
                 if (favoritePrompts.includes(id)) {
-                    renderFavoritesBar();
+                    renderFavoritesDock();
                 }
             }
         }
@@ -1081,7 +970,7 @@ function processJson(data) {
     if (isMobile()) {
         window.history.replaceState({ path: [], modalOpen: false }, '', window.location.href);
     }
-    renderFavoritesBar();
+    renderFavoritesDock();
 }
 
 function loadJsonData(filename) {
@@ -1619,7 +1508,7 @@ function clearAllFavorites() {
     if (confirmation) {
         favoritePrompts = [];
         saveFavorites();
-        renderFavoritesBar();
+        renderFavoritesDock();
         showNotification('Alle Favoriten gelöscht!', 'success');
     }
 }
@@ -1634,11 +1523,10 @@ function copyToClipboard(text, buttonElement = null, node = null, previewText = 
         showNotification('Prompt kopiert!', 'success');
 
         let highlightTarget = null;
-        let favoriteItemEl = null;
 
         if (buttonElement) {
-            favoriteItemEl = buttonElement.closest('.favorite-item');
-            highlightTarget = favoriteItemEl || buttonElement.querySelector('.icon-copy');
+            const favoriteChip = buttonElement.closest('.favorite-chip');
+            highlightTarget = favoriteChip || buttonElement;
 
             if (highlightTarget && highlightTarget.classList) {
                 highlightTarget.classList.add('copy-success');
@@ -1646,21 +1534,17 @@ function copyToClipboard(text, buttonElement = null, node = null, previewText = 
                     if (highlightTarget.isConnected && highlightTarget.classList) {
                         highlightTarget.classList.remove('copy-success');
                     }
-                }, 1500);
+                }, 1200);
             }
-        }
 
-        if (node && favoriteItemEl) {
-            hideFavoriteTooltip();
-            showFavoriteTooltip(favoriteItemEl, node, sanitizedPreview);
-            setTimeout(hideFavoriteTooltip, 2000);
-
-            favoriteItemEl.setAttribute('aria-label', `Kopiert: ${node.title}`);
-            setTimeout(() => {
-                if (favoriteItemEl.isConnected) {
-                    favoriteItemEl.setAttribute('aria-label', `Kopiere: ${node.title}`);
-                }
-            }, 2000);
+            if (favoriteChip && node) {
+                favoriteChip.setAttribute('aria-label', `Kopiert: ${node.title}`);
+                setTimeout(() => {
+                    if (favoriteChip.isConnected) {
+                        favoriteChip.setAttribute('aria-label', `Kopiere: ${node.title}`);
+                    }
+                }, 2000);
+            }
         }
 
         if ('vibrate' in navigator && isMobile()) {
@@ -1801,7 +1685,7 @@ function toggleFavoriteStatus(promptId) {
 
     saveFavorites();
     updateFavoriteButton(promptId);
-    renderFavoritesBar();
+    renderFavoritesDock();
 }
 
 function updateFavoriteButton(promptId) {
@@ -1812,78 +1696,21 @@ function updateFavoriteButton(promptId) {
     modalFavoriteBtn.setAttribute('aria-label', isFavorite ? 'Von Favoriten entfernen' : 'Zu Favoriten hinzufügen');
 }
 
-function toggleFavoritesBarExpansion() {
-    if (!favoritesBarEl) return;
-
-    const isExpanded = favoritesBarEl.classList.toggle('is-expanded');
-    document.body.classList.toggle('favorites-bar-expanded', isExpanded);
-
-    if (favoritesExpandToggleBtn) {
-        favoritesExpandToggleBtn.setAttribute('aria-expanded', String(isExpanded));
-        favoritesExpandToggleBtn.setAttribute('aria-label', isExpanded ? 'Favoritenleiste einklappen' : 'Favoritenleiste ausklappen');
-    }
-
-    if (!isExpanded) {
-        hideFavoriteTooltip();
-    }
-
-    updateFavoritesViewportState();
-
-    requestAnimationFrame(() => adjustFavoriteTitleSizes());
-}
-
-function collapseFavoritesBar() {
-    if (!favoritesBarEl || !favoritesBarEl.classList.contains('is-expanded')) return;
-
-    favoritesBarEl.classList.remove('is-expanded');
-    document.body.classList.remove('favorites-bar-expanded');
-
-    if (favoritesExpandToggleBtn) {
-        favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
-        favoritesExpandToggleBtn.setAttribute('aria-label', 'Favoritenleiste ausklappen');
-    }
-
-    hideFavoriteTooltip();
-    updateFavoritesViewportState();
-
-    requestAnimationFrame(() => adjustFavoriteTitleSizes());
-}
-
 function handleWindowResize() {
     if (resizeRafId) {
         cancelAnimationFrame(resizeRafId);
     }
     resizeRafId = requestAnimationFrame(() => {
-        updateRootFontSize();
-        updateFavoritesViewportState();
-        adjustFavoriteTitleSizes();
+        updateDockPositioning();
         resizeRafId = null;
     });
 }
 
-function updateFavoritesViewportState() {
-    if (!favoritesContainerEl) return;
-    const shouldUseMobileGrid = window.innerWidth < 640;
-
-    if (favoritesBarEl && favoritesBarEl.classList.contains('is-expanded')) {
-        favoritesContainerEl.classList.remove('mobile-grid');
-        return;
-    }
-
-    favoritesContainerEl.classList.toggle('mobile-grid', shouldUseMobileGrid);
-}
-
-function adjustFavoriteTitleSizes() {
-    if (!favoritesContainerEl) return;
-    const titleElements = favoritesContainerEl.querySelectorAll('.favorite-item-title');
-    titleElements.forEach((titleEl) => adjustSingleFavoriteTitle(titleEl));
-}
-
-function doesFavoriteTitleOverflow(titleEl) {
-    return (
-        titleEl.scrollHeight - titleEl.clientHeight > FAVORITE_OVERFLOW_EPSILON ||
-        titleEl.scrollWidth - titleEl.clientWidth > FAVORITE_OVERFLOW_EPSILON
-    );
+function updateDockPositioning() {
+    if (!favoritesDockEl) return;
+    const computedStyle = getComputedStyle(document.documentElement);
+    const safeInset = parseFloat(computedStyle.getPropertyValue('--safe-area-inset-bottom')) || 0;
+    favoritesDockEl.style.setProperty('--favorites-safe-offset', `${safeInset}px`);
 }
 
 function getFavoritePreviewText(content) {
@@ -1909,79 +1736,10 @@ function getFavoritePreviewText(content) {
     return `${condensed.slice(0, 137).trim()}…`;
 }
 
-function adjustSingleFavoriteTitle(titleEl) {
-    if (!titleEl) return;
+function renderFavoritesDock() {
+    if (!favoritesDockEl || !favoritesListEl) return;
 
-    titleEl.style.fontSize = '';
-    titleEl.style.lineHeight = '';
-    titleEl.classList.remove('is-condensed');
-
-    const computedTitleStyle = getComputedStyle(titleEl);
-    const defaultFontSize = parseFloat(computedTitleStyle.fontSize) || 14;
-    const minFontSize = Math.max(7, rootFontSize * FAVORITE_FONT_MIN_RATIO);
-
-    if (!doesFavoriteTitleOverflow(titleEl)) {
-        return;
-    }
-
-    let low = minFontSize;
-    let high = defaultFontSize;
-    let bestFit = defaultFontSize;
-
-    let iterations = 0;
-
-    while (iterations < FAVORITE_FONT_MAX_ITERATIONS && high - low > FAVORITE_FONT_BINARY_PRECISION) {
-        const mid = (low + high) / 2;
-        titleEl.style.fontSize = `${mid}px`;
-        if (doesFavoriteTitleOverflow(titleEl)) {
-            high = mid;
-        } else {
-            bestFit = mid;
-            low = mid;
-        }
-        iterations += 1;
-    }
-
-    titleEl.style.fontSize = `${Math.max(minFontSize, Math.min(defaultFontSize, bestFit))}px`;
-
-    if (doesFavoriteTitleOverflow(titleEl)) {
-        titleEl.style.fontSize = `${minFontSize}px`;
-        titleEl.classList.add('is-condensed');
-
-        let condensedLineHeight = 1.15;
-        while (condensedLineHeight >= 0.95 && doesFavoriteTitleOverflow(titleEl)) {
-            titleEl.style.lineHeight = condensedLineHeight.toString();
-            condensedLineHeight -= 0.05;
-        }
-
-        if (doesFavoriteTitleOverflow(titleEl)) {
-            const heightRatio = titleEl.clientHeight > 0 ? titleEl.clientHeight / titleEl.scrollHeight : 1;
-            const widthRatio = titleEl.clientWidth > 0 ? titleEl.clientWidth / titleEl.scrollWidth : 1;
-            const ratio = Math.max(FAVORITE_FONT_MIN_RATIO, Math.min(heightRatio, widthRatio));
-            const adjustedSize = Math.max(4.5, minFontSize * ratio);
-            titleEl.style.fontSize = `${adjustedSize}px`;
-
-            if (doesFavoriteTitleOverflow(titleEl)) {
-                titleEl.style.lineHeight = '0.95';
-            }
-
-            if (doesFavoriteTitleOverflow(titleEl)) {
-                titleEl.style.lineHeight = '0.9';
-                titleEl.style.fontSize = `${Math.max(4, adjustedSize * 0.9)}px`;
-            }
-        }
-    }
-}
-
-function renderFavoritesBar() {
-    if (!favoritesContainerEl || !favoritesBarEl) return;
-
-    if (favoriteTitleObserver) {
-        favoriteTitleObserver.disconnect();
-    }
-
-    favoritesContainerEl.innerHTML = '';
-    favoritesContainerEl.classList.remove('is-scrollable', 'mobile-grid');
+    favoritesListEl.innerHTML = '';
 
     const favoritesWithNodes = favoritePrompts
         .map((promptId) => {
@@ -1995,119 +1753,85 @@ function renderFavoritesBar() {
         saveFavorites();
     }
 
-    collapseFavoritesBar();
-
     if (favoritesWithNodes.length === 0) {
-        favoritesBarEl.classList.add('hidden');
-        favoritesBarEl.setAttribute('aria-hidden', 'true');
-        document.body.classList.remove('favorites-bar-visible', 'favorites-bar-expanded');
+        favoritesDockEl.classList.add('hidden');
+        favoritesDockEl.setAttribute('aria-hidden', 'true');
+        favoritesDockEl.removeAttribute('data-count');
+        document.body.classList.remove('favorites-dock-visible');
         if (clearFavoritesBtn) {
             clearFavoritesBtn.style.display = 'none';
         }
         return;
     }
 
-    favoritesBarEl.classList.remove('hidden');
-    favoritesBarEl.setAttribute('aria-hidden', 'false');
-    favoritesBarEl.classList.remove('is-expanded');
-    document.body.classList.add('favorites-bar-visible');
-    document.body.classList.remove('favorites-bar-expanded');
-
-    if (favoritesExpandToggleBtn) {
-        favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
-        favoritesExpandToggleBtn.setAttribute('aria-label', 'Favoritenleiste ausklappen');
-    }
+    favoritesDockEl.classList.remove('hidden');
+    favoritesDockEl.setAttribute('aria-hidden', 'false');
+    favoritesDockEl.setAttribute('data-count', String(favoritesWithNodes.length));
+    document.body.classList.add('favorites-dock-visible');
 
     if (clearFavoritesBtn) {
         clearFavoritesBtn.style.display = 'inline-flex';
     }
 
-    updateFavoritesViewportState();
-
     const fragment = document.createDocumentFragment();
 
     favoritesWithNodes.forEach(({ id, node }, index) => {
-        const favoriteItem = document.createElement('button');
-        favoriteItem.type = 'button';
-        favoriteItem.className = 'favorite-item';
-        favoriteItem.dataset.id = id;
-        favoriteItem.dataset.type = 'favorite';
-        favoriteItem.setAttribute('role', 'listitem');
-        favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
+        const listItem = document.createElement('li');
+        listItem.className = 'favorites-list-item';
+        listItem.setAttribute('role', 'listitem');
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'favorite-chip';
+        button.dataset.id = id;
+        button.dataset.type = 'favorite';
+        button.setAttribute('aria-label', `Kopiere: ${node.title}`);
 
         const accent = FAVORITE_ACCENTS[index % FAVORITE_ACCENTS.length];
         if (accent) {
-            favoriteItem.style.setProperty('--favorite-border', accent.border);
-            favoriteItem.style.setProperty('--favorite-soft', accent.soft);
-            favoriteItem.style.setProperty('--favorite-glow', accent.glow);
-            favoriteItem.style.setProperty('--favorite-accent', accent.accent);
-            favoriteItem.style.setProperty('--favorite-initial-color', accent.text);
+            button.style.setProperty('--favorite-border', accent.border);
+            button.style.setProperty('--favorite-soft', accent.soft);
+            button.style.setProperty('--favorite-glow', accent.glow);
+            button.style.setProperty('--favorite-accent', accent.accent);
+            button.style.setProperty('--favorite-badge-text', accent.text);
         }
 
-        const favoriteBody = document.createElement('span');
-        favoriteBody.className = 'favorite-item-body';
+        button.style.setProperty('--favorite-seq', String(index));
 
-        const initialBadge = document.createElement('span');
-        initialBadge.className = 'favorite-item-initial';
-        const initialLetter = (node.title || '').trim().charAt(0)?.toUpperCase() || '?';
-        initialBadge.textContent = initialLetter;
+        const badge = document.createElement('span');
+        badge.className = 'favorite-chip-badge';
+        badge.textContent = (node.title || '').trim().charAt(0)?.toUpperCase() || '★';
 
-        const textWrapper = document.createElement('span');
-        textWrapper.className = 'favorite-item-text';
+        const textWrap = document.createElement('span');
+        textWrap.className = 'favorite-chip-text';
 
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'favorite-item-title';
-        titleSpan.textContent = node.title || '';
-
-        textWrapper.appendChild(titleSpan);
+        const titleEl = document.createElement('span');
+        titleEl.className = 'favorite-chip-title';
+        titleEl.textContent = node.title || '';
 
         const previewText = getFavoritePreviewText(node.content);
         if (previewText) {
-            const previewSpan = document.createElement('span');
-            previewSpan.className = 'favorite-item-preview';
-            previewSpan.textContent = previewText;
-            textWrapper.appendChild(previewSpan);
+            const previewEl = document.createElement('span');
+            previewEl.className = 'favorite-chip-preview';
+            previewEl.textContent = previewText;
+            textWrap.append(titleEl, previewEl);
+        } else {
+            textWrap.appendChild(titleEl);
         }
 
-        favoriteBody.appendChild(initialBadge);
-        favoriteBody.appendChild(textWrapper);
-        favoriteItem.appendChild(favoriteBody);
+        button.append(badge, textWrap);
 
-        favoriteItem.addEventListener('click', () => {
-            copyToClipboard(node.content || '', favoriteItem, node, previewText);
+        button.addEventListener('click', () => {
+            copyToClipboard(node.content || '', button, node, previewText);
         });
 
-        const handleTooltip = (event) => {
-            if (isMobile()) {
-                return;
-            }
-            if (event.type === 'focus' && event.currentTarget.matches(':hover')) {
-                return;
-            }
-            showFavoriteTooltip(event.currentTarget, node, previewText);
-        };
-
-        favoriteItem.addEventListener('mouseenter', handleTooltip);
-        favoriteItem.addEventListener('mouseleave', hideFavoriteTooltip);
-        favoriteItem.addEventListener('focus', handleTooltip);
-        favoriteItem.addEventListener('blur', hideFavoriteTooltip);
-        favoriteItem.addEventListener('touchstart', () => hideFavoriteTooltip(), { passive: true });
-
-        fragment.appendChild(favoriteItem);
-
-        if (favoriteTitleObserver) {
-            favoriteTitleObserver.observe(titleSpan);
-        }
+        listItem.appendChild(button);
+        fragment.appendChild(listItem);
     });
 
-    favoritesContainerEl.appendChild(fragment);
+    favoritesListEl.appendChild(fragment);
 
-    requestAnimationFrame(() => {
-        adjustFavoriteTitleSizes();
-        const overflowAmount = favoritesContainerEl.scrollWidth - favoritesContainerEl.clientWidth;
-        const shouldMask = !favoritesBarEl.classList.contains('is-expanded') && !favoritesContainerEl.classList.contains('mobile-grid') && overflowAmount > FAVORITE_OVERFLOW_EPSILON;
-        favoritesContainerEl.classList.toggle('is-scrollable', shouldMask);
-    });
+    updateDockPositioning();
 }
 
 if (document.readyState === 'loading') {
