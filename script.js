@@ -621,6 +621,8 @@ function handleKeyDown(e) {
             hideContextMenu();
         } else if (document.activeElement.classList.contains('rename-input')) {
             exitRenameMode(document.activeElement.closest('.card'));
+        } else if (favoritesDockEl && favoritesDockEl.classList.contains('expanded')) {
+            collapseFavoritesBar();
         } else if (modalEl.classList.contains('visible')) {
             closeModal();
         } else if (createFolderModalEl.classList.contains('visible')) {
