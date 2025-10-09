@@ -8,16 +8,31 @@ const favoritesKey = 'favoritePrompts';
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCancelBtn;
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn, themeToggleBtn, themeMetaTag;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
 let favoritesDockEl, favoritesListEl, favoritesScrollAreaEl, favoritesToggleBtn, auroraContainerEl;
 let favoritesChipResizeObserver = null;
 let favoritesLayoutRaf = null;
 let favoritesHeightSyncRaf = null;
+let favoritesFootprintRaf = null;
+let cardsLayoutObserver = null;
+let cardsLayoutRaf = null;
 let favoritesGestureStartX = null;
 let favoritesGestureStartY = null;
 let favoritesGestureLastY = null;
 let favoritesGestureAxis = null;
+let favoritesScrollbarHideTimeout = null;
+
+const THEME_STORAGE_KEY = 'promptTemplatesTheme';
+const THEME_META_COLORS = { dark: '#0c0f17', light: '#f4f7fb' };
+const CARD_LAYOUT_CONFIG = {
+    baseWidth: 236,
+    baseHeight: 228,
+    minColumns: 3,
+    maxColumns: 6,
+    minScale: 0.34,
+    maxScale: 1.12
+};
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -37,6 +52,8 @@ let contextMenu = null;
 let dragSource = null;
 let dragTarget = null;
 let springLoadTimeout = null;
+let systemThemeMediaQuery = null;
+let hasStoredThemePreference = false;
 
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 const swipeThreshold = 50;
@@ -48,13 +65,17 @@ let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
 
-const FAVORITE_CHIP_MIN_WIDTH = 220;
-const FAVORITE_CHIP_MAX_WIDTH = 360;
-const FAVORITE_CHIP_MIN_WIDTH_NARROW = 180;
-const FAVORITE_FULL_LAYOUT_THRESHOLD = 330;
-const FAVORITE_COMPACT_LAYOUT_THRESHOLD = 250;
-const FAVORITE_TITLE_MIN_SCALE = 0.62;
-const FAVORITE_PREVIEW_MIN_SCALE = 0.72;
+const FAVORITE_CHIP_MIN_WIDTH = 140;
+const FAVORITE_CHIP_MAX_WIDTH = 236;
+const FAVORITE_CHIP_MIN_WIDTH_NARROW = 112;
+const FAVORITE_FULL_LAYOUT_THRESHOLD = 204;
+const FAVORITE_COMPACT_LAYOUT_THRESHOLD = 154;
+const FAVORITE_TITLE_MIN_SCALE = 0.6;
+const FAVORITE_PREVIEW_MIN_SCALE = 0.7;
+
+if (typeof window !== 'undefined' && window.gsap && typeof window.gsap.registerPlugin === 'function' && window.Flip) {
+    window.gsap.registerPlugin(window.Flip);
+}
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -86,6 +107,8 @@ function initApp() {
     organizeBtn = document.getElementById('organize-button');
     appLogoBtn = document.getElementById('app-logo-button');
     clearFavoritesBtn = document.getElementById('clear-favorites-button');
+    themeToggleBtn = document.getElementById('theme-toggle');
+    themeMetaTag = document.querySelector('meta[name="theme-color"]');
 
     favoritesDockEl = document.getElementById('favorites-dock');
     favoritesListEl = document.getElementById('favorites-list');
@@ -119,7 +142,9 @@ function initApp() {
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
 
+    initializeThemeControls();
     updateDockPositioning();
+    setupCardLayoutManagement();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -130,6 +155,162 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
+}
+
+function initializeThemeControls() {
+    if (typeof document === 'undefined') return;
+
+    let storedTheme = null;
+    try {
+        storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    } catch (error) {
+        storedTheme = null;
+    }
+
+    const normalizedStored = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : null;
+    hasStoredThemePreference = Boolean(normalizedStored);
+
+    const prefersLight = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    const initialTheme = normalizedStored || (prefersLight ? 'light' : 'dark');
+
+    applyTheme(initialTheme, { skipStorage: !normalizedStored });
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', handleThemeToggle);
+    }
+
+    if (!hasStoredThemePreference && typeof window !== 'undefined' && window.matchMedia) {
+        systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+        const handleSystemThemeChange = (event) => {
+            if (hasStoredThemePreference) return;
+            applyTheme(event.matches ? 'light' : 'dark', { skipStorage: true });
+        };
+        if (typeof systemThemeMediaQuery.addEventListener === 'function') {
+            systemThemeMediaQuery.addEventListener('change', handleSystemThemeChange);
+        } else if (typeof systemThemeMediaQuery.addListener === 'function') {
+            systemThemeMediaQuery.addListener(handleSystemThemeChange);
+        }
+    }
+}
+
+function applyTheme(theme, options = {}) {
+    if (typeof document === 'undefined') return;
+    const { skipStorage = false } = options;
+    const normalized = theme === 'light' ? 'light' : 'dark';
+
+    document.body.setAttribute('data-theme', normalized);
+    document.documentElement.style.setProperty('color-scheme', normalized);
+
+    if (themeMetaTag) {
+        const colorValue = THEME_META_COLORS[normalized] || THEME_META_COLORS.dark;
+        themeMetaTag.setAttribute('content', colorValue);
+    }
+
+    if (themeToggleBtn) {
+        const nextTheme = normalized === 'light' ? 'dark' : 'light';
+        const label = nextTheme === 'light' ? 'In hellen Modus wechseln' : 'In dunklen Modus wechseln';
+        themeToggleBtn.setAttribute('aria-label', label);
+        themeToggleBtn.setAttribute('aria-pressed', normalized === 'light' ? 'true' : 'false');
+        const srLabel = themeToggleBtn.querySelector('.sr-only');
+        if (srLabel) srLabel.textContent = label;
+    }
+
+    if (!skipStorage) {
+        try {
+            localStorage.setItem(THEME_STORAGE_KEY, normalized);
+            hasStoredThemePreference = true;
+        } catch (error) {
+            console.warn('Konnte Theme-Präferenz nicht speichern:', error);
+        }
+    }
+}
+
+function handleThemeToggle() {
+    const currentTheme = document.body.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+    applyTheme(nextTheme);
+}
+
+function setupCardLayoutManagement() {
+    if (!containerEl) return;
+
+    queueCardLayoutUpdate();
+
+    if (typeof ResizeObserver !== 'undefined') {
+        if (cardsLayoutObserver) {
+            cardsLayoutObserver.disconnect();
+        }
+        cardsLayoutObserver = new ResizeObserver(() => queueCardLayoutUpdate());
+        cardsLayoutObserver.observe(containerEl);
+    }
+
+    if (typeof window !== 'undefined') {
+        window.addEventListener('orientationchange', queueCardLayoutUpdate);
+    }
+}
+
+function queueCardLayoutUpdate() {
+    if (!containerEl) return;
+    if (cardsLayoutRaf) {
+        cancelAnimationFrame(cardsLayoutRaf);
+    }
+    cardsLayoutRaf = requestAnimationFrame(() => {
+        cardsLayoutRaf = null;
+        updateCardLayout();
+    });
+}
+
+function updateCardLayout() {
+    if (!containerEl) return;
+    const rect = containerEl.getBoundingClientRect();
+    const containerWidth = rect.width;
+    if (!Number.isFinite(containerWidth) || containerWidth <= 0) {
+        return;
+    }
+
+    const computedStyle = window.getComputedStyle(containerEl);
+    let currentGap = parseFloat(computedStyle.columnGap || computedStyle.gap || '0');
+    if (!Number.isFinite(currentGap) || currentGap < 0) {
+        currentGap = 16;
+    }
+
+    let columns = Math.floor((containerWidth + currentGap) / (CARD_LAYOUT_CONFIG.baseWidth + currentGap));
+    columns = Math.min(Math.max(columns, CARD_LAYOUT_CONFIG.minColumns), CARD_LAYOUT_CONFIG.maxColumns);
+
+    const dynamicGap = Math.max(8, Math.min(28, containerWidth / (columns * 9.5)));
+    if (Math.abs(dynamicGap - currentGap) > 0.5) {
+        containerEl.style.setProperty('--card-gap', `${dynamicGap}px`);
+        currentGap = dynamicGap;
+    }
+
+    const availableWidth = containerWidth - currentGap * (columns - 1);
+    const rawColumnWidth = availableWidth / columns;
+
+    let scale = rawColumnWidth / CARD_LAYOUT_CONFIG.baseWidth;
+    if (!Number.isFinite(scale) || scale <= 0) {
+        scale = 1;
+    }
+    scale = Math.min(Math.max(scale, CARD_LAYOUT_CONFIG.minScale), CARD_LAYOUT_CONFIG.maxScale);
+
+    let appliedWidth = CARD_LAYOUT_CONFIG.baseWidth * scale;
+    if (appliedWidth > rawColumnWidth && rawColumnWidth > 0) {
+        appliedWidth = rawColumnWidth;
+        scale = appliedWidth / CARD_LAYOUT_CONFIG.baseWidth;
+    }
+
+    const appliedHeight = Math.max(CARD_LAYOUT_CONFIG.baseHeight * scale, CARD_LAYOUT_CONFIG.baseHeight * CARD_LAYOUT_CONFIG.minScale);
+
+    containerEl.style.setProperty('--card-columns', `${columns}`);
+    containerEl.style.setProperty('--card-column-width', `${appliedWidth}px`);
+    containerEl.style.setProperty('--card-column-height', `${appliedHeight}px`);
+    containerEl.style.setProperty('--card-scale', scale.toFixed(3));
+    containerEl.dataset.cardColumns = String(columns);
+
+    const cards = containerEl.querySelectorAll('.card');
+    cards.forEach((card) => {
+        card.style.setProperty('--card-scale', scale.toFixed(3));
+        adjustCardTitleFontSize(card);
+    });
 }
 
 function createContextMenu() {
@@ -281,8 +462,32 @@ function setFavoritesExpanded(shouldExpand) {
     if (!favoritesDockEl) return;
 
     const expanded = Boolean(shouldExpand);
+    const chips = favoritesListEl ? Array.from(favoritesListEl.querySelectorAll('.favorite-chip')) : [];
+    const scrollFrame = favoritesScrollAreaEl;
+    const canAnimate = typeof window !== 'undefined' && window.gsap;
+    const useFlip = canAnimate && window.Flip && chips.length > 0;
+
+    let flipState = null;
+    if (useFlip) {
+        try {
+            flipState = window.Flip.getState(chips);
+        } catch (err) {
+            flipState = null;
+        }
+    }
+
+    let startHeight = null;
+    if (scrollFrame) {
+        const measured = scrollFrame.getBoundingClientRect().height;
+        if (Number.isFinite(measured) && measured > 0) {
+            startHeight = measured;
+            scrollFrame.style.height = `${measured}px`;
+        }
+    }
+
     favoritesDockEl.classList.toggle('expanded', expanded);
     favoritesDockEl.classList.toggle('collapsed', !expanded);
+    queueUpdateFavoritesFootprint();
 
     if (favoritesToggleBtn) {
         favoritesToggleBtn.setAttribute('aria-expanded', String(expanded));
@@ -295,7 +500,75 @@ function setFavoritesExpanded(shouldExpand) {
         }
     }
 
-    requestFavoritesLayoutFrame();
+    if (favoritesLayoutRaf) {
+        cancelAnimationFrame(favoritesLayoutRaf);
+        favoritesLayoutRaf = null;
+    }
+    refreshFavoritesLayout();
+    queueCardLayoutUpdate();
+
+    const runAnimations = () => {
+        if (scrollFrame) {
+            scrollFrame.style.height = 'auto';
+            const targetHeight = scrollFrame.getBoundingClientRect().height;
+            const heightFrom = Number.isFinite(startHeight) && startHeight !== null ? startHeight : targetHeight;
+
+            if (canAnimate && typeof window.gsap.to === 'function' && Number.isFinite(targetHeight)) {
+                if (Number.isFinite(heightFrom)) {
+                    scrollFrame.style.height = `${heightFrom}px`;
+                }
+                window.gsap.to(scrollFrame, {
+                    height: targetHeight,
+                    duration: 0.9,
+                    ease: 'power3.out',
+                    overwrite: true,
+                    onUpdate: () => {
+                        updateFavoritesOverflowMarkers();
+                        queueUpdateFavoritesFootprint();
+                    },
+                    onComplete: () => {
+                        scrollFrame.style.height = '';
+                        updateFavoritesOverflowMarkers();
+                        queueUpdateFavoritesFootprint();
+                    }
+                });
+            } else {
+                scrollFrame.style.height = '';
+                updateFavoritesOverflowMarkers();
+                queueUpdateFavoritesFootprint();
+            }
+        } else {
+            updateFavoritesOverflowMarkers();
+            queueUpdateFavoritesFootprint();
+        }
+
+        if (flipState && canAnimate) {
+            try {
+                window.Flip.from(flipState, {
+                    duration: 0.9,
+                    ease: 'power3.inOut',
+                    absolute: true,
+                    nested: true,
+                    prune: true,
+                    stagger: { each: 0.016, from: 'center', ease: 'power3.out' },
+                    onEnter: elements => {
+                        window.gsap.fromTo(elements, { opacity: 0, scale: 0.9, y: 14 }, { opacity: 1, scale: 1, y: 0, duration: 0.65, ease: 'power3.out', overwrite: true });
+                    },
+                    onLeave: elements => {
+                        window.gsap.to(elements, { opacity: 0, scale: 0.9, duration: 0.45, ease: 'power2.inOut', overwrite: true });
+                    }
+                });
+            } catch (err) {
+                // ignore Flip errors
+            }
+        }
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(runAnimations);
+    } else {
+        runAnimations();
+    }
 }
 
 function handleFavoritesWheel(event) {
@@ -307,8 +580,15 @@ function handleFavoritesWheel(event) {
     if (delta === 0) return;
 
     favoritesScrollAreaEl.scrollLeft += delta;
+    revealFavoritesScrollbar();
     updateFavoritesOverflowMarkers();
     event.preventDefault();
+}
+
+function handleFavoritesScroll() {
+    if (!favoritesScrollAreaEl) return;
+    revealFavoritesScrollbar();
+    updateFavoritesOverflowMarkers();
 }
 
 function handleFavoritesTouchStart(event) {
@@ -318,6 +598,7 @@ function handleFavoritesTouchStart(event) {
     favoritesGestureStartY = touch.clientY;
     favoritesGestureLastY = touch.clientY;
     favoritesGestureAxis = null;
+    revealFavoritesScrollbar();
 }
 
 function handleFavoritesTouchMove(event) {
@@ -376,6 +657,39 @@ function updateFavoritesOverflowMarkers() {
     favoritesDockEl.classList.toggle('scroll-right', scrollLeft < maxScrollLeft);
 }
 
+function revealFavoritesScrollbar() {
+    if (!favoritesScrollAreaEl) return;
+    favoritesScrollAreaEl.classList.add('show-scrollbar');
+    if (favoritesScrollbarHideTimeout) {
+        clearTimeout(favoritesScrollbarHideTimeout);
+    }
+    favoritesScrollbarHideTimeout = window.setTimeout(() => {
+        favoritesScrollAreaEl.classList.remove('show-scrollbar');
+        favoritesScrollbarHideTimeout = null;
+    }, 900);
+}
+
+function queueUpdateFavoritesFootprint() {
+    if (!favoritesDockEl) return;
+    if (favoritesFootprintRaf) {
+        cancelAnimationFrame(favoritesFootprintRaf);
+    }
+    favoritesFootprintRaf = requestAnimationFrame(() => {
+        favoritesFootprintRaf = null;
+        const shouldMeasure = !favoritesDockEl.classList.contains('hidden');
+        if (!shouldMeasure) {
+            document.body.style.removeProperty('--favorites-footprint');
+            return;
+        }
+        const measured = favoritesDockEl.getBoundingClientRect().height;
+        if (Number.isFinite(measured) && measured > 0) {
+            document.body.style.setProperty('--favorites-footprint', `${Math.ceil(measured)}px`);
+        } else {
+            document.body.style.removeProperty('--favorites-footprint');
+        }
+    });
+}
+
 function requestFavoritesLayoutFrame() {
     if (favoritesLayoutRaf) {
         cancelAnimationFrame(favoritesLayoutRaf);
@@ -400,6 +714,12 @@ function refreshFavoritesLayout() {
 
     favoritesDockEl.classList.toggle('overflowing', hasOverflow);
     favoritesDockEl.classList.toggle('can-expand', showToggle);
+
+    if (favoritesScrollAreaEl) {
+        if (!hasOverflow) {
+            favoritesScrollAreaEl.classList.remove('show-scrollbar');
+        }
+    }
 
     if (favoritesToggleBtn) {
         favoritesToggleBtn.hidden = !showToggle;
@@ -583,7 +903,9 @@ function setupEventListeners() {
     }
     if (favoritesScrollAreaEl) {
         favoritesScrollAreaEl.addEventListener('wheel', handleFavoritesWheel, { passive: false });
-        favoritesScrollAreaEl.addEventListener('scroll', updateFavoritesOverflowMarkers, { passive: true });
+        favoritesScrollAreaEl.addEventListener('scroll', handleFavoritesScroll, { passive: true });
+        favoritesScrollAreaEl.addEventListener('pointerdown', revealFavoritesScrollbar, { passive: true });
+        favoritesScrollAreaEl.addEventListener('mouseenter', revealFavoritesScrollbar);
     }
 
     containerEl.addEventListener('dragstart', handleDragStart);
@@ -932,6 +1254,7 @@ function exitRenameMode(card) {
         input.remove();
         titleElement.style.display = 'block';
         adjustCardTitleFontSize(card);
+        queueCardLayoutUpdate();
     }
 }
 
@@ -1241,15 +1564,36 @@ function loadJsonData(filename) {
 function adjustCardTitleFontSize(card) {
     const title = card.querySelector('h3');
     if (!title) return;
-    
-    const maxFontSize = 16;
-    const minFontSize = 10;
-    let currentSize = maxFontSize;
-    title.style.fontSize = `${currentSize}px`;
 
-    while (title.scrollHeight > title.clientHeight && currentSize > minFontSize) {
-        currentSize -= 0.5;
+    const rect = card.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    const maxLines = card.classList.contains('prompt-card') ? 4 : 3;
+    const widthRatio = rect.width / CARD_LAYOUT_CONFIG.baseWidth;
+    const baseTarget = card.classList.contains('prompt-card') ? 18 : 17;
+    const dynamicMax = Math.min(26, Math.max(12, baseTarget * widthRatio + 6));
+    const dynamicMin = Math.max(11, dynamicMax * 0.68);
+    let currentSize = dynamicMax;
+
+    title.style.fontSize = `${currentSize}px`;
+    title.style.lineHeight = '1.25';
+
+    const computed = window.getComputedStyle(title);
+    const lineHeight = parseFloat(computed.lineHeight) || currentSize * 1.25;
+    let maxHeight = lineHeight * maxLines;
+    title.style.maxHeight = `${maxHeight}px`;
+
+    while (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
+        currentSize -= 0.25;
         title.style.fontSize = `${currentSize}px`;
+        title.style.lineHeight = '1.25';
+    }
+
+    let lines = maxLines;
+    while (title.scrollHeight > maxHeight + 0.5 && lines < 6) {
+        lines += 1;
+        maxHeight = lineHeight * lines;
+        title.style.maxHeight = `${maxHeight}px`;
     }
 }
 
@@ -1340,9 +1684,14 @@ function renderView(node) {
                 c.classList.add('is-visible');
                 adjustCardTitleFontSize(c);
             });
+            queueCardLayoutUpdate();
         });
     } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
+    }
+
+    if (renderedCards.length === 0) {
+        queueCardLayoutUpdate();
     }
 }
 
@@ -1937,6 +2286,7 @@ function handleWindowResize() {
     resizeRafId = requestAnimationFrame(() => {
         updateDockPositioning();
         requestFavoritesLayoutFrame();
+        queueCardLayoutUpdate();
         resizeRafId = null;
     });
 }
@@ -1965,7 +2315,14 @@ function applyFavoriteChipMetrics() {
     const expanded = favoritesDockEl.classList.contains('expanded');
     const count = chips.length;
 
-    let columns = Math.max(1, Math.floor((availableWidth + gap) / (FAVORITE_CHIP_MIN_WIDTH + gap)));
+    const baseMinWidth = FAVORITE_CHIP_MIN_WIDTH;
+    const compactMinWidth = FAVORITE_CHIP_MIN_WIDTH_NARROW;
+
+    let columns = Math.max(1, Math.floor((availableWidth + gap) / (baseMinWidth + gap)));
+    if (count > columns && baseMinWidth > compactMinWidth) {
+        const compactColumns = Math.max(1, Math.floor((availableWidth + gap) / (compactMinWidth + gap)));
+        columns = Math.max(columns, compactColumns);
+    }
     columns = Math.min(columns, count);
 
     const widthBudget = availableWidth - gap * Math.max(0, columns - 1);
@@ -1976,19 +2333,21 @@ function applyFavoriteChipMetrics() {
     }
 
     const hasOverflow = count > columns;
-    const minWidth = hasOverflow ? FAVORITE_CHIP_MIN_WIDTH_NARROW : FAVORITE_CHIP_MIN_WIDTH;
+    const minWidth = hasOverflow ? compactMinWidth : baseMinWidth;
     const maxWidth = expanded ? FAVORITE_CHIP_MAX_WIDTH : Math.min(FAVORITE_CHIP_MAX_WIDTH, availableWidth);
     const maxAllowedWidth = Math.min(maxWidth, availableWidth);
     const minAllowedWidth = Math.min(minWidth, maxAllowedWidth);
 
     let targetWidth = Math.min(maxAllowedWidth, Math.max(minAllowedWidth, widthCandidate));
 
-    if (!expanded && !hasOverflow && count > 0) {
+    if (!expanded && hasOverflow) {
+        targetWidth = Math.max(minAllowedWidth, targetWidth - 6);
+    } else if (!expanded && !hasOverflow && count > 0) {
         const evenWidth = widthBudget / count;
         targetWidth = Math.min(maxAllowedWidth, Math.max(minAllowedWidth, evenWidth));
     }
 
-    const baseHeight = Math.max(88, Math.min(124, targetWidth * 0.48));
+    const baseHeight = Math.max(58, Math.min(96, targetWidth * 0.45));
     const widthValue = Math.max(1, Math.round(targetWidth * 100) / 100);
 
     favoritesDockEl.style.setProperty('--favorite-chip-width', `${widthValue}px`);
@@ -2008,18 +2367,20 @@ function applyFavoriteChipContent(chip, layout, width) {
     }
 
     const fullPreview = chip.dataset.previewFull || '';
+    const previewLines = layout === 'full' ? '2' : layout === 'compact' ? '1' : '0';
+    chip.dataset.previewLines = previewLines;
+
     if (!fullPreview || layout === 'title') {
         previewEl.textContent = '';
         previewEl.hidden = true;
-        chip.dataset.previewLines = '0';
         return;
     }
 
     let maxChars;
     if (layout === 'full') {
-        maxChars = Math.max(110, Math.floor(width * 0.72));
+        maxChars = Math.max(68, Math.floor(width * 0.64));
     } else if (layout === 'compact') {
-        maxChars = Math.max(70, Math.floor(width * 0.56));
+        maxChars = Math.max(36, Math.floor(width * 0.46));
     } else {
         maxChars = 0;
     }
@@ -2031,7 +2392,7 @@ function applyFavoriteChipContent(chip, layout, width) {
         chip.dataset.previewLines = '0';
     } else {
         previewEl.hidden = false;
-        chip.dataset.previewLines = layout === 'full' ? '2' : '1';
+        chip.dataset.previewLines = previewLines;
     }
 }
 
@@ -2131,6 +2492,7 @@ function syncFavoriteChipHeight(measuredHeight) {
         } else {
             favoritesDockEl.style.removeProperty('--favorite-chip-height');
         }
+        queueUpdateFavoritesFootprint();
     });
 }
 
@@ -2185,6 +2547,10 @@ function renderFavoritesDock() {
         document.body.classList.remove('favorites-dock-visible');
         favoritesDockEl.classList.remove('overflowing', 'scroll-left', 'scroll-right');
         favoritesDockEl.style.removeProperty('--favorite-chip-height');
+        if (favoritesScrollAreaEl) {
+            favoritesScrollAreaEl.classList.remove('show-scrollbar');
+        }
+        document.body.style.removeProperty('--favorites-footprint');
         setFavoritesExpanded(false);
         if (favoritesToggleBtn) {
             favoritesToggleBtn.hidden = true;
@@ -2245,6 +2611,8 @@ function renderFavoritesDock() {
 
         const previewText = getFavoritePreviewText(node.content);
         button.dataset.previewFull = previewText || '';
+        button.dataset.previewLines = '0';
+        button.dataset.layout = 'title';
         if (previewText) {
             const previewEl = document.createElement('span');
             previewEl.className = 'favorite-chip-preview';

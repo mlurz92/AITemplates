@@ -74,6 +74,23 @@
             <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
       </button>
+      <button id="theme-toggle" class="btn btn-ghost theme-toggle" aria-label="Darstellung wechseln" type="button">
+        <svg class="theme-toggle-icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <circle class="theme-toggle-orb" cx="32" cy="32" r="14"></circle>
+          <g class="theme-toggle-rays" stroke-linecap="round" stroke-width="4">
+            <line x1="32" y1="8" x2="32" y2="0"></line>
+            <line x1="32" y1="64" x2="32" y2="56"></line>
+            <line x1="8" y1="32" x2="0" y2="32"></line>
+            <line x1="64" y1="32" x2="56" y2="32"></line>
+            <line x1="50.91" y1="13.09" x2="56.97" y2="7.03"></line>
+            <line x1="13.09" y1="50.91" x2="7.03" y2="56.97"></line>
+            <line x1="50.91" y1="50.91" x2="56.97" y2="56.97"></line>
+            <line x1="13.09" y1="13.09" x2="7.03" y2="7.03"></line>
+          </g>
+          <path class="theme-toggle-moon" d="M44 18a18 18 0 1 1-18 28 15 15 0 0 0 18-28z"></path>
+        </svg>
+        <span class="sr-only">Darstellung wechseln</span>
+      </button>
       <button id="clear-favorites-button" class="btn btn-ghost" aria-label="Alle Favoriten löschen" style="display: none;">
         <svg class="icon icon-clear-favorites" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -233,6 +250,8 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vivus/0.4.6/vivus.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Flip.min.js"></script>
     <script src="script.js"></script>
 
   </body>
