@@ -1151,7 +1151,7 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
 .top-bar:hover::before, .card:hover::before, .modal .modal-content:hover::before, .context-menu:hover::before, .notification:hover::before, .favorite-chip:hover::before {
   opacity: 1;
 }
-.top-bar::after, .card::after, .modal .modal-content::after, .context-menu::after, .notification::after, .favorite-chip::after {
+.top-bar::after, .card::after, .modal .modal-content::after, .context-menu::after, .notification::after {
   content: "";
   position: absolute;
   inset: 0;
