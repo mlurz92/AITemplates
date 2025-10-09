@@ -1134,7 +1134,7 @@ html[data-page-transition-direction="forward"]::view-transition-new(root) { anim
 html[data-page-transition-direction="backward"]::view-transition-old(root) { animation-name: slide-to-right-vt; }
 html[data-page-transition-direction="backward"]::view-transition-new(root) { animation-name: slide-from-left-vt; }
 
-.top-bar::before, .card::before, .modal .modal-content::before, .context-menu::before, .notification::before, .favorite-chip::before {
+.top-bar::before, .card::before, .modal .modal-content::before, .context-menu::before, .notification::before {
   content: "";
   position: absolute;
   inset: 0;
