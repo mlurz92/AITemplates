@@ -48,13 +48,17 @@ let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
 
-const FAVORITE_CHIP_MIN_WIDTH = 220;
-const FAVORITE_CHIP_MAX_WIDTH = 360;
-const FAVORITE_CHIP_MIN_WIDTH_NARROW = 180;
-const FAVORITE_FULL_LAYOUT_THRESHOLD = 330;
-const FAVORITE_COMPACT_LAYOUT_THRESHOLD = 250;
-const FAVORITE_TITLE_MIN_SCALE = 0.62;
-const FAVORITE_PREVIEW_MIN_SCALE = 0.72;
+const FAVORITE_CHIP_MIN_WIDTH = 180;
+const FAVORITE_CHIP_MAX_WIDTH = 320;
+const FAVORITE_CHIP_MIN_WIDTH_NARROW = 150;
+const FAVORITE_FULL_LAYOUT_THRESHOLD = 260;
+const FAVORITE_COMPACT_LAYOUT_THRESHOLD = 210;
+const FAVORITE_TITLE_MIN_SCALE = 0.68;
+const FAVORITE_PREVIEW_MIN_SCALE = 0.78;
+
+if (typeof window !== 'undefined' && window.gsap && typeof window.gsap.registerPlugin === 'function' && window.Flip) {
+    window.gsap.registerPlugin(window.Flip);
+}
 
 function initApp() {
     modalEl = document.getElementById('prompt-modal');
@@ -281,6 +285,29 @@ function setFavoritesExpanded(shouldExpand) {
     if (!favoritesDockEl) return;
 
     const expanded = Boolean(shouldExpand);
+    const chips = favoritesListEl ? Array.from(favoritesListEl.querySelectorAll('.favorite-chip')) : [];
+    const scrollFrame = favoritesScrollAreaEl;
+    const canAnimate = typeof window !== 'undefined' && window.gsap;
+    const useFlip = canAnimate && window.Flip && chips.length > 0;
+
+    let flipState = null;
+    if (useFlip) {
+        try {
+            flipState = window.Flip.getState(chips);
+        } catch (err) {
+            flipState = null;
+        }
+    }
+
+    let startHeight = null;
+    if (scrollFrame) {
+        const measured = scrollFrame.getBoundingClientRect().height;
+        if (Number.isFinite(measured) && measured > 0) {
+            startHeight = measured;
+            scrollFrame.style.height = `${measured}px`;
+        }
+    }
+
     favoritesDockEl.classList.toggle('expanded', expanded);
     favoritesDockEl.classList.toggle('collapsed', !expanded);
 
@@ -295,7 +322,69 @@ function setFavoritesExpanded(shouldExpand) {
         }
     }
 
-    requestFavoritesLayoutFrame();
+    if (favoritesLayoutRaf) {
+        cancelAnimationFrame(favoritesLayoutRaf);
+        favoritesLayoutRaf = null;
+    }
+    refreshFavoritesLayout();
+
+    const runAnimations = () => {
+        if (scrollFrame) {
+            scrollFrame.style.height = 'auto';
+            const targetHeight = scrollFrame.getBoundingClientRect().height;
+            const heightFrom = Number.isFinite(startHeight) && startHeight !== null ? startHeight : targetHeight;
+
+            if (canAnimate && typeof window.gsap.to === 'function' && Number.isFinite(targetHeight)) {
+                if (Number.isFinite(heightFrom)) {
+                    scrollFrame.style.height = `${heightFrom}px`;
+                }
+                window.gsap.to(scrollFrame, {
+                    height: targetHeight,
+                    duration: 0.65,
+                    ease: 'power3.out',
+                    overwrite: true,
+                    onUpdate: () => {
+                        updateFavoritesOverflowMarkers();
+                    },
+                    onComplete: () => {
+                        scrollFrame.style.height = '';
+                        updateFavoritesOverflowMarkers();
+                    }
+                });
+            } else {
+                scrollFrame.style.height = '';
+                updateFavoritesOverflowMarkers();
+            }
+        } else {
+            updateFavoritesOverflowMarkers();
+        }
+
+        if (flipState && canAnimate) {
+            try {
+                window.Flip.from(flipState, {
+                    duration: 0.65,
+                    ease: 'power3.out',
+                    absolute: true,
+                    nested: true,
+                    stagger: 0.02,
+                    onEnter: elements => {
+                        window.gsap.fromTo(elements, { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.4, ease: 'power2.out', overwrite: true });
+                    },
+                    onLeave: elements => {
+                        window.gsap.to(elements, { opacity: 0, scale: 0.95, duration: 0.3, ease: 'power1.in', overwrite: true });
+                    }
+                });
+            } catch (err) {
+                // ignore Flip errors
+            }
+        }
+    };
+
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(runAnimations);
+    } else {
+        runAnimations();
+    }
 }
 
 function handleFavoritesWheel(event) {
@@ -1988,7 +2077,7 @@ function applyFavoriteChipMetrics() {
         targetWidth = Math.min(maxAllowedWidth, Math.max(minAllowedWidth, evenWidth));
     }
 
-    const baseHeight = Math.max(88, Math.min(124, targetWidth * 0.48));
+    const baseHeight = Math.max(72, Math.min(110, targetWidth * 0.44));
     const widthValue = Math.max(1, Math.round(targetWidth * 100) / 100);
 
     favoritesDockEl.style.setProperty('--favorite-chip-width', `${widthValue}px`);
@@ -2008,18 +2097,20 @@ function applyFavoriteChipContent(chip, layout, width) {
     }
 
     const fullPreview = chip.dataset.previewFull || '';
+    const previewLines = layout === 'full' ? '2' : layout === 'compact' ? '1' : '0';
+    chip.dataset.previewLines = previewLines;
+
     if (!fullPreview || layout === 'title') {
         previewEl.textContent = '';
         previewEl.hidden = true;
-        chip.dataset.previewLines = '0';
         return;
     }
 
     let maxChars;
     if (layout === 'full') {
-        maxChars = Math.max(110, Math.floor(width * 0.72));
+        maxChars = Math.max(90, Math.floor(width * 0.68));
     } else if (layout === 'compact') {
-        maxChars = Math.max(70, Math.floor(width * 0.56));
+        maxChars = Math.max(55, Math.floor(width * 0.5));
     } else {
         maxChars = 0;
     }
@@ -2031,7 +2122,7 @@ function applyFavoriteChipContent(chip, layout, width) {
         chip.dataset.previewLines = '0';
     } else {
         previewEl.hidden = false;
-        chip.dataset.previewLines = layout === 'full' ? '2' : '1';
+        chip.dataset.previewLines = previewLines;
     }
 }
 
@@ -2245,6 +2336,8 @@ function renderFavoritesDock() {
 
         const previewText = getFavoritePreviewText(node.content);
         button.dataset.previewFull = previewText || '';
+        button.dataset.previewLines = '0';
+        button.dataset.layout = 'title';
         if (previewText) {
             const previewEl = document.createElement('span');
             previewEl.className = 'favorite-chip-preview';
