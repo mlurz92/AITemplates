@@ -10,18 +10,20 @@ let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCa
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
-let favoritesBarEl, favoritesContainerEl, auroraContainerEl, favoriteTooltipEl, favoritesControls, favoritesExpandToggleBtn;
+let favoritesDockEl, favoritesListEl, auroraContainerEl;
 
-const rootElement = document.documentElement;
-let rootFontSize = 16;
-let favoriteTitleObserver = null;
+const FAVORITE_ACCENTS = [
+    { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
+    { accent: '#00e6ff', border: 'rgba(0, 230, 255, 0.6)', soft: 'rgba(0, 230, 255, 0.14)', glow: 'rgba(0, 230, 255, 0.35)', text: '#0c0f17' },
+    { accent: '#50fa7b', border: 'rgba(80, 250, 123, 0.58)', soft: 'rgba(80, 250, 123, 0.18)', glow: 'rgba(80, 250, 123, 0.35)', text: '#0c0f17' },
+    { accent: '#ffb86c', border: 'rgba(255, 184, 108, 0.6)', soft: 'rgba(255, 184, 108, 0.18)', glow: 'rgba(255, 184, 108, 0.32)', text: '#0c0f17' },
+    { accent: '#ff79c6', border: 'rgba(255, 121, 198, 0.6)', soft: 'rgba(255, 121, 198, 0.18)', glow: 'rgba(255, 121, 198, 0.34)', text: '#0c0f17' },
+    { accent: '#bd93f9', border: 'rgba(189, 147, 249, 0.6)', soft: 'rgba(189, 147, 249, 0.18)', glow: 'rgba(189, 147, 249, 0.34)', text: '#0c0f17' },
+    { accent: '#f1fa8c', border: 'rgba(241, 250, 140, 0.58)', soft: 'rgba(241, 250, 140, 0.18)', glow: 'rgba(241, 250, 140, 0.3)', text: '#0c0f17' },
+    { accent: '#ff5555', border: 'rgba(255, 85, 85, 0.6)', soft: 'rgba(255, 85, 85, 0.16)', glow: 'rgba(255, 85, 85, 0.32)', text: '#0c0f17' }
+];
 
-const FAVORITE_FONT_MIN_RATIO = 0.45;
-const FAVORITE_FONT_BINARY_PRECISION = 0.2;
-const FAVORITE_FONT_MAX_ITERATIONS = 12;
-const FAVORITE_OVERFLOW_EPSILON = 0.75;
-
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove, svgTemplateFavoriteCopy, svgTemplateFavoriteCheckmark;
+let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
 let sortableInstance = null;
 let contextMenu = null;
@@ -37,7 +39,6 @@ const currentTransitionDurationMediumMs = 300;
 let favoritePrompts = [];
 let lastScrollY = 0;
 let ticking = false;
-let tooltipTimeout = null;
 let resizeRafId = null;
 
 function initApp() {
@@ -71,10 +72,8 @@ function initApp() {
     appLogoBtn = document.getElementById('app-logo-button');
     clearFavoritesBtn = document.getElementById('clear-favorites-button');
 
-    favoritesBarEl = document.getElementById('favorites-bar');
-    favoritesContainerEl = document.getElementById('favorites-container');
-    favoritesControls = document.getElementById('favorites-controls');
-    favoritesExpandToggleBtn = document.getElementById('favorites-expand-toggle');
+    favoritesDockEl = document.getElementById('favorites-dock');
+    favoritesListEl = document.getElementById('favorites-list');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
@@ -102,13 +101,8 @@ function initApp() {
     svgTemplateDelete = document.getElementById('svg-template-delete');
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
-    svgTemplateFavoriteCopy = document.getElementById('svg-template-favorite-copy');
-    svgTemplateFavoriteCheckmark = document.getElementById('svg-template-favorite-checkmark');
 
-    updateRootFontSize();
-    setupFavoriteTitleObserver();
-
-    createGlobalTooltip();
+    updateDockPositioning();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -119,83 +113,6 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
-}
-
-function updateRootFontSize() {
-    rootFontSize = parseFloat(getComputedStyle(rootElement).fontSize) || 16;
-}
-
-function setupFavoriteTitleObserver() {
-    if (typeof ResizeObserver === 'undefined') {
-        return;
-    }
-
-    favoriteTitleObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-            if (entry?.target) {
-                adjustSingleFavoriteTitle(entry.target);
-            }
-        }
-    });
-}
-
-function createGlobalTooltip() {
-    favoriteTooltipEl = document.createElement('div');
-    favoriteTooltipEl.id = 'favorite-tooltip';
-    document.body.appendChild(favoriteTooltipEl);
-}
-
-function showFavoriteTooltip(targetElement, node) {
-    clearTimeout(tooltipTimeout);
-    tooltipTimeout = setTimeout(() => {
-        if (!favoriteTooltipEl) return;
-
-        favoriteTooltipEl.innerHTML = '';
-        const tooltipTitle = document.createElement('strong');
-        tooltipTitle.className = 'favorite-tooltip-title';
-        tooltipTitle.textContent = node.title;
-        const tooltipContent = document.createTextNode((node.content || '').substring(0, 200) + ((node.content || '').length > 200 ? '...' : ''));
-
-        favoriteTooltipEl.appendChild(tooltipTitle);
-        favoriteTooltipEl.appendChild(tooltipContent);
-
-        const targetRect = targetElement.getBoundingClientRect();
-        const viewportMargin = 10;
-
-        favoriteTooltipEl.style.visibility = 'hidden';
-        favoriteTooltipEl.classList.add('visible');
-        const tooltipWidth = favoriteTooltipEl.offsetWidth;
-        const tooltipHeight = favoriteTooltipEl.offsetHeight;
-        favoriteTooltipEl.classList.remove('visible');
-        favoriteTooltipEl.style.visibility = '';
-
-        let top = targetRect.top - tooltipHeight - viewportMargin;
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipWidth / 2);
-
-        if (left < viewportMargin) {
-            left = viewportMargin;
-        }
-        if (left + tooltipWidth > window.innerWidth - viewportMargin) {
-            left = window.innerWidth - tooltipWidth - viewportMargin;
-        }
-        if (top < viewportMargin) {
-            top = targetRect.bottom + viewportMargin;
-        }
-
-        favoriteTooltipEl.style.top = `${top}px`;
-        favoriteTooltipEl.style.left = `${left}px`;
-        
-        requestAnimationFrame(() => {
-            favoriteTooltipEl.classList.add('visible');
-        });
-    }, 50);
-}
-
-function hideFavoriteTooltip() {
-    clearTimeout(tooltipTimeout);
-    if (favoriteTooltipEl) {
-        favoriteTooltipEl.classList.remove('visible');
-    }
 }
 
 function createContextMenu() {
@@ -253,7 +170,7 @@ function createContextMenu() {
 
 function showContextMenu(x, y, targetElement) {
     const id = targetElement.dataset.id;
-    const type = targetElement.dataset.type || (targetElement.classList.contains('favorite-item') ? 'favorite' : null);
+    const type = targetElement.dataset.type || (targetElement.classList.contains('favorite-chip') ? 'favorite' : null);
     if (!id || !type) return;
 
     const isFavorite = favoritePrompts.includes(id);
@@ -324,6 +241,15 @@ function showContextMenu(x, y, targetElement) {
 
 function hideContextMenu() {
     contextMenu.classList.remove('visible');
+}
+
+function collapseFavoritesBar() {
+    if (!favoritesDockEl) return;
+
+    const activeElement = document.activeElement;
+    if (activeElement && favoritesDockEl.contains(activeElement)) {
+        activeElement.blur();
+    }
 }
 
 function navigateToHome() {
@@ -397,10 +323,6 @@ function setupEventListeners() {
         document.addEventListener('MSFullscreenChange', updateFullscreenButton);
     }
 
-    if (favoritesExpandToggleBtn) {
-        favoritesExpandToggleBtn.addEventListener('click', toggleFavoritesBarExpansion);
-    }
-
     modalCloseBtn.addEventListener('click', () => closeModal());
     
     if (copyModalButton) {
@@ -437,7 +359,9 @@ function setupEventListeners() {
 
     containerEl.addEventListener('click', handleCardContainerClick);
     containerEl.addEventListener('contextmenu', handleContextMenu);
-    favoritesBarEl.addEventListener('contextmenu', handleContextMenu);
+    if (favoritesDockEl) {
+        favoritesDockEl.addEventListener('contextmenu', handleContextMenu);
+    }
 
     containerEl.addEventListener('dragstart', handleDragStart);
     containerEl.addEventListener('dragover', handleDragOver);
@@ -460,12 +384,6 @@ function setupEventListeners() {
         }
     });
 
-    if (favoritesContainerEl) {
-        favoritesContainerEl.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-        }, { passive: false });
-    }
-
     window.addEventListener('resize', handleWindowResize);
 }
 
@@ -480,8 +398,6 @@ function handleKeyDown(e) {
             hideContextMenu();
         } else if (document.activeElement.classList.contains('rename-input')) {
             exitRenameMode(document.activeElement.closest('.card'));
-        } else if (favoritesBarEl.classList.contains('is-expanded')) {
-            collapseFavoritesBar();
         } else if (modalEl.classList.contains('visible')) {
             closeModal();
         } else if (createFolderModalEl.classList.contains('visible')) {
@@ -497,7 +413,7 @@ function handleContextMenu(e) {
         return;
     }
     
-    const targetElement = e.target.closest('.card, .favorite-item');
+    const targetElement = e.target.closest('.card, .favorite-chip');
     if (!targetElement) return;
     
     e.preventDefault();
@@ -727,7 +643,7 @@ function handleDeleteClick(id, cardElement) {
                     if (favoritePrompts.includes(id)) {
                         favoritePrompts = favoritePrompts.filter(favId => favId !== id);
                         saveFavorites();
-                        renderFavoritesBar();
+                        renderFavoritesDock();
                     }
                     persistJsonData('Element gelöscht!', 'success');
                     renderView(currentNode);
@@ -767,7 +683,7 @@ function startRenamingCard(card) {
                 titleElement.textContent = newTitle;
                 persistJsonData('Umbenennung gespeichert!', 'success');
                 if (favoritePrompts.includes(id)) {
-                    renderFavoritesBar();
+                    renderFavoritesDock();
                 }
             }
         }
@@ -1063,7 +979,7 @@ function processJson(data) {
     if (isMobile()) {
         window.history.replaceState({ path: [], modalOpen: false }, '', window.location.href);
     }
-    renderFavoritesBar();
+    renderFavoritesDock();
 }
 
 function loadJsonData(filename) {
@@ -1601,7 +1517,7 @@ function clearAllFavorites() {
     if (confirmation) {
         favoritePrompts = [];
         saveFavorites();
-        renderFavoritesBar();
+        renderFavoritesDock();
         showNotification('Alle Favoriten gelöscht!', 'success');
     }
 }
@@ -1609,31 +1525,39 @@ function clearAllFavorites() {
 function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button')); }
 function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.content || '', buttonElement); }
 
-function copyToClipboard(text, buttonElement = null, node = null) {
+function copyToClipboard(text, buttonElement = null, node = null, previewText = '') {
+    const sanitizedPreview = previewText || (node ? getFavoritePreviewText(node.content) : '');
+
     const showSuccess = () => {
         showNotification('Prompt kopiert!', 'success');
+
+        let highlightTarget = null;
+
         if (buttonElement) {
-            const targetElement = buttonElement.closest('.favorite-item') || buttonElement.querySelector('.icon-copy');
-            if (targetElement) {
-                targetElement.classList.add('copy-success');
-                setTimeout(() => targetElement.classList.remove('copy-success'), 1500);
-            }
-        }
-        if (node && targetElement) {
-            showFavoriteTooltip(targetElement, node);
-            setTimeout(hideFavoriteTooltip, 2000);
-        }
-        if ('vibrate' in navigator && isMobile()) {
-            navigator.vibrate(50);
-        }
-        if (buttonElement && buttonElement.closest('.favorite-item')) {
-            const favoriteItem = buttonElement.closest('.favorite-item');
-            if (favoriteItem && node) {
-                favoriteItem.setAttribute('aria-label', `Kopiert: ${node.title}`);
+            const favoriteChip = buttonElement.closest('.favorite-chip');
+            highlightTarget = favoriteChip || buttonElement;
+
+            if (highlightTarget && highlightTarget.classList) {
+                highlightTarget.classList.add('copy-success');
                 setTimeout(() => {
-                    favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
+                    if (highlightTarget.isConnected && highlightTarget.classList) {
+                        highlightTarget.classList.remove('copy-success');
+                    }
+                }, 1200);
+            }
+
+            if (favoriteChip && node) {
+                favoriteChip.setAttribute('aria-label', `Kopiert: ${node.title}`);
+                setTimeout(() => {
+                    if (favoriteChip.isConnected) {
+                        favoriteChip.setAttribute('aria-label', `Kopiere: ${node.title}`);
+                    }
                 }, 2000);
             }
+        }
+
+        if ('vibrate' in navigator && isMobile()) {
+            navigator.vibrate(50);
         }
     };
 
@@ -1770,7 +1694,7 @@ function toggleFavoriteStatus(promptId) {
 
     saveFavorites();
     updateFavoriteButton(promptId);
-    renderFavoritesBar();
+    renderFavoritesDock();
 }
 
 function updateFavoriteButton(promptId) {
@@ -1781,212 +1705,142 @@ function updateFavoriteButton(promptId) {
     modalFavoriteBtn.setAttribute('aria-label', isFavorite ? 'Von Favoriten entfernen' : 'Zu Favoriten hinzufügen');
 }
 
-function toggleFavoritesBarExpansion() {
-    const isExpanded = favoritesBarEl.classList.toggle('is-expanded');
-    document.body.classList.toggle('favorites-bar-expanded', isExpanded);
-
-    favoritesExpandToggleBtn.setAttribute('aria-expanded', isExpanded);
-    favoritesExpandToggleBtn.setAttribute('aria-label', isExpanded ? 'Favoritenleiste einklappen' : 'Favoritenleiste ausklappen');
-
-    requestAnimationFrame(() => adjustFavoriteTitleSizes());
-}
-
-function collapseFavoritesBar() {
-    if (favoritesBarEl.classList.contains('is-expanded')) {
-        toggleFavoritesBarExpansion();
-    }
-}
-
 function handleWindowResize() {
     if (resizeRafId) {
         cancelAnimationFrame(resizeRafId);
     }
     resizeRafId = requestAnimationFrame(() => {
-        updateRootFontSize();
-        updateFavoritesViewportState();
-        adjustFavoriteTitleSizes();
+        updateDockPositioning();
         resizeRafId = null;
     });
 }
 
-function updateFavoritesViewportState() {
-    if (!favoritesContainerEl) return;
-    const useMobileGrid = window.innerWidth < 768;
-    favoritesContainerEl.classList.toggle('mobile-grid', useMobileGrid);
+function updateDockPositioning() {
+    if (!favoritesDockEl) return;
+    const computedStyle = getComputedStyle(document.documentElement);
+    const safeInset = parseFloat(computedStyle.getPropertyValue('--safe-area-inset-bottom')) || 0;
+    favoritesDockEl.style.setProperty('--favorites-safe-offset', `${safeInset}px`);
 }
 
-function adjustFavoriteTitleSizes() {
-    if (!favoritesContainerEl) return;
-    const titleElements = favoritesContainerEl.querySelectorAll('.favorite-item-title');
-    titleElements.forEach((titleEl) => adjustSingleFavoriteTitle(titleEl));
+function getFavoritePreviewText(content) {
+    if (!content) return '';
+
+    const normalizedLines = content
+        .replace(/\r\n/g, '\n')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    if (normalizedLines.length === 0) {
+        return '';
+    }
+
+    const previewSource = normalizedLines.slice(0, 3).join(' ');
+    const condensed = previewSource.replace(/\s+/g, ' ').trim();
+
+    if (condensed.length <= 140) {
+        return condensed;
+    }
+
+    return `${condensed.slice(0, 137).trim()}…`;
 }
 
-function doesFavoriteTitleOverflow(titleEl) {
-    return (
-        titleEl.scrollHeight - titleEl.clientHeight > FAVORITE_OVERFLOW_EPSILON ||
-        titleEl.scrollWidth - titleEl.clientWidth > FAVORITE_OVERFLOW_EPSILON
-    );
-}
+function renderFavoritesDock() {
+    if (!favoritesDockEl || !favoritesListEl) return;
 
-function adjustSingleFavoriteTitle(titleEl) {
-    if (!titleEl) return;
+    favoritesListEl.innerHTML = '';
 
-    titleEl.style.fontSize = '';
-    titleEl.style.lineHeight = '';
-    titleEl.classList.remove('is-condensed');
+    const favoritesWithNodes = favoritePrompts
+        .map((promptId) => {
+            const node = findNodeById(jsonData, promptId);
+            return node && node.type === 'prompt' ? { id: promptId, node } : null;
+        })
+        .filter(Boolean);
 
-    const computedTitleStyle = getComputedStyle(titleEl);
-    const defaultFontSize = parseFloat(computedTitleStyle.fontSize) || 14;
-    const minFontSize = Math.max(7, rootFontSize * FAVORITE_FONT_MIN_RATIO);
-
-    if (!doesFavoriteTitleOverflow(titleEl)) {
-        return;
+    if (favoritesWithNodes.length !== favoritePrompts.length) {
+        favoritePrompts = favoritesWithNodes.map(({ id }) => id);
+        saveFavorites();
     }
 
-    let low = minFontSize;
-    let high = defaultFontSize;
-    let bestFit = defaultFontSize;
-
-    let iterations = 0;
-
-    while (iterations < FAVORITE_FONT_MAX_ITERATIONS && high - low > FAVORITE_FONT_BINARY_PRECISION) {
-        const mid = (low + high) / 2;
-        titleEl.style.fontSize = `${mid}px`;
-        if (doesFavoriteTitleOverflow(titleEl)) {
-            high = mid;
-        } else {
-            bestFit = mid;
-            low = mid;
-        }
-        iterations += 1;
-    }
-
-    titleEl.style.fontSize = `${Math.max(minFontSize, Math.min(defaultFontSize, bestFit))}px`;
-
-    if (doesFavoriteTitleOverflow(titleEl)) {
-        titleEl.style.fontSize = `${minFontSize}px`;
-        titleEl.classList.add('is-condensed');
-
-        let condensedLineHeight = 1.15;
-        while (condensedLineHeight >= 0.95 && doesFavoriteTitleOverflow(titleEl)) {
-            titleEl.style.lineHeight = condensedLineHeight.toString();
-            condensedLineHeight -= 0.05;
-        }
-
-        if (doesFavoriteTitleOverflow(titleEl)) {
-            const heightRatio = titleEl.clientHeight > 0 ? titleEl.clientHeight / titleEl.scrollHeight : 1;
-            const widthRatio = titleEl.clientWidth > 0 ? titleEl.clientWidth / titleEl.scrollWidth : 1;
-            const ratio = Math.max(FAVORITE_FONT_MIN_RATIO, Math.min(heightRatio, widthRatio));
-            const adjustedSize = Math.max(4.5, minFontSize * ratio);
-            titleEl.style.fontSize = `${adjustedSize}px`;
-
-            if (doesFavoriteTitleOverflow(titleEl)) {
-                titleEl.style.lineHeight = '0.95';
-            }
-
-            if (doesFavoriteTitleOverflow(titleEl)) {
-                titleEl.style.lineHeight = '0.9';
-                titleEl.style.fontSize = `${Math.max(4, adjustedSize * 0.9)}px`;
-            }
-        }
-    }
-}
-
-function renderFavoritesBar() {
-    if (favoriteTitleObserver) {
-        favoriteTitleObserver.disconnect();
-    }
-
-    favoritesContainerEl.innerHTML = '';
-    collapseFavoritesBar();
-
-    if (favoritePrompts.length === 0) {
-        favoritesBarEl.classList.add('hidden');
-        document.body.classList.remove('favorites-bar-visible');
+    if (favoritesWithNodes.length === 0) {
+        favoritesDockEl.classList.add('hidden');
+        favoritesDockEl.setAttribute('aria-hidden', 'true');
+        favoritesDockEl.removeAttribute('data-count');
+        document.body.classList.remove('favorites-dock-visible');
         if (clearFavoritesBtn) {
             clearFavoritesBtn.style.display = 'none';
         }
         return;
     }
 
-    favoritesBarEl.classList.remove('hidden');
-    document.body.classList.add('favorites-bar-visible');
-    favoritesExpandToggleBtn.setAttribute('aria-expanded', 'false');
+    favoritesDockEl.classList.remove('hidden');
+    favoritesDockEl.setAttribute('aria-hidden', 'false');
+    favoritesDockEl.setAttribute('data-count', String(favoritesWithNodes.length));
+    document.body.classList.add('favorites-dock-visible');
 
     if (clearFavoritesBtn) {
         clearFavoritesBtn.style.display = 'inline-flex';
     }
 
-    updateFavoritesViewportState();
-
     const fragment = document.createDocumentFragment();
 
-    favoritePrompts.forEach((promptId) => {
-        const node = findNodeById(jsonData, promptId);
-        if (!node || node.type !== 'prompt') {
-            return;
+    favoritesWithNodes.forEach(({ id, node }, index) => {
+        const listItem = document.createElement('li');
+        listItem.className = 'favorites-list-item';
+        listItem.setAttribute('role', 'listitem');
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'favorite-chip';
+        button.dataset.id = id;
+        button.dataset.type = 'favorite';
+        button.setAttribute('aria-label', `Kopiere: ${node.title}`);
+
+        const accent = FAVORITE_ACCENTS[index % FAVORITE_ACCENTS.length];
+        if (accent) {
+            button.style.setProperty('--favorite-border', accent.border);
+            button.style.setProperty('--favorite-soft', accent.soft);
+            button.style.setProperty('--favorite-glow', accent.glow);
+            button.style.setProperty('--favorite-accent', accent.accent);
+            button.style.setProperty('--favorite-badge-text', accent.text);
         }
 
-        const favoriteItem = document.createElement('div');
-        favoriteItem.className = 'favorite-item';
-        favoriteItem.dataset.id = promptId;
-        favoriteItem.dataset.type = 'favorite';
-        favoriteItem.setAttribute('aria-label', `Kopiere: ${node.title}`);
+        button.style.setProperty('--favorite-seq', String(index));
 
-        const initialBadge = document.createElement('div');
-        initialBadge.className = 'favorite-item-initial';
-        const initialLetter = (node.title || '').trim().charAt(0)?.toUpperCase() || '?';
-        initialBadge.textContent = initialLetter;
+        const badge = document.createElement('span');
+        badge.className = 'favorite-chip-badge';
+        badge.textContent = (node.title || '').trim().charAt(0)?.toUpperCase() || '★';
 
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'favorite-item-title';
-        titleSpan.textContent = node.title;
+        const textWrap = document.createElement('span');
+        textWrap.className = 'favorite-chip-text';
 
-        const iconWrapper = document.createElement('div');
-        iconWrapper.className = 'favorite-item-icon-wrapper';
+        const titleEl = document.createElement('span');
+        titleEl.className = 'favorite-chip-title';
+        titleEl.textContent = node.title || '';
 
-        const copyIcon = svgTemplateFavoriteCopy.cloneNode(true);
-        copyIcon.classList.add('icon-copy');
-        const checkmarkIcon = svgTemplateFavoriteCheckmark.cloneNode(true);
-        checkmarkIcon.classList.add('icon-checkmark');
-
-        iconWrapper.appendChild(copyIcon);
-        iconWrapper.appendChild(checkmarkIcon);
-
-        favoriteItem.appendChild(initialBadge);
-        favoriteItem.appendChild(titleSpan);
-        favoriteItem.appendChild(iconWrapper);
-
-        favoriteItem.addEventListener('click', () => {
-            copyToClipboard(node.content, favoriteItem, node);
-        });
-
-        favoriteItem.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-        }, { passive: false });
-
-        favoriteItem.addEventListener('mouseenter', (e) => {
-            showFavoriteTooltip(e.currentTarget, node);
-        });
-
-        favoriteItem.addEventListener('mouseleave', () => {
-            hideFavoriteTooltip();
-        });
-
-        fragment.appendChild(favoriteItem);
-
-        if (favoriteTitleObserver) {
-            favoriteTitleObserver.observe(titleSpan);
+        const previewText = getFavoritePreviewText(node.content);
+        if (previewText) {
+            const previewEl = document.createElement('span');
+            previewEl.className = 'favorite-chip-preview';
+            previewEl.textContent = previewText;
+            textWrap.append(titleEl, previewEl);
+        } else {
+            textWrap.appendChild(titleEl);
         }
+
+        button.append(badge, textWrap);
+
+        button.addEventListener('click', () => {
+            copyToClipboard(node.content || '', button, node, previewText);
+        });
+
+        listItem.appendChild(button);
+        fragment.appendChild(listItem);
     });
 
-    favoritesContainerEl.appendChild(fragment);
+    favoritesListEl.appendChild(fragment);
 
-    requestAnimationFrame(() => {
-        adjustFavoriteTitleSizes();
-        const isOverflowing = favoritesContainerEl.scrollWidth > favoritesContainerEl.clientWidth;
-        favoritesContainerEl.classList.toggle('is-scrollable', isOverflowing);
-    });
+    updateDockPositioning();
 }
 
 if (document.readyState === 'loading') {

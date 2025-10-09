@@ -198,26 +198,23 @@
                 <line x1="21" y1="3" x2="14" y2="10"></line>
                 <line x1="3" y1="21" x2="10" y2="14"></line>
             </svg>
-            <svg id="svg-template-favorite-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            <svg id="svg-template-favorite-checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
         </defs>
     </svg>
 
-    <div id="favorites-bar" class="favorites-bar hidden">
-      <div id="favorites-container" class="favorites-container"></div>
-      <div id="favorites-controls" class="favorites-controls">
-        <button id="favorites-expand-toggle" class="btn btn-ghost" aria-label="Favoritenleiste ausklappen">
-            <svg class="icon icon-expand-toggle" width="22" height="22" viewBox="0 0 24 24">
-                <use xlink:href="#svg-template-expand"></use>
-            </svg>
-        </button>
+    <aside
+      id="favorites-dock"
+      class="favorites-dock hidden"
+      role="region"
+      aria-label="Favoriten Schnellzugriff"
+    >
+      <div class="favorites-dock-inner">
+        <div class="favorites-dock-header">
+          <span class="favorites-dock-title">Favoriten</span>
+          <span class="favorites-dock-hint">Tippen&nbsp;=&nbsp;Kopieren</span>
+        </div>
+        <ul id="favorites-list" class="favorites-list" role="list"></ul>
       </div>
-    </div>
+    </aside>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vivus/0.4.6/vivus.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
