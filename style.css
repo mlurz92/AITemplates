@@ -315,7 +315,7 @@ body.favorites-bar-visible.favorites-bar-expanded .cards-container {
   justify-content: flex-start;
   position: relative;
   overflow: hidden;
-  aspect-ratio: 1 / 1.1;
+  aspect-ratio: 1 / 0.8;
   cursor: pointer;
   width: 100%;
   max-width: 210px;
