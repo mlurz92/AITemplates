@@ -535,7 +535,7 @@ function setFavoritesExpanded(shouldExpand) {
                 }
                 window.gsap.to(scrollFrame, {
                     height: targetHeight,
-                    duration: 0.9,
+                    duration: 0.5,
                     ease: 'power3.out',
                     overwrite: true,
                     onUpdate: () => {
