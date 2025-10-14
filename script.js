@@ -1765,9 +1765,9 @@ function setCardExpansionById(cardId, expanded, options = {}) {
         if (hasGsap) {
             if (shouldAnimate) {
                 window.gsap.to(expandIcon, {
-                    duration: 0.36,
+                    duration: ANIMATION_SETTINGS.duration,
                     rotate: targetRotation,
-                    ease: 'expo.out'
+                    ease: ANIMATION_SETTINGS.ease
                 });
             } else {
                 window.gsap.set(expandIcon, { rotate: targetRotation });
