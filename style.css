@@ -418,7 +418,7 @@ body::before {
   -webkit-hyphens: auto;
   hyphens: auto;
   text-wrap: pretty;
-  font-size: clamp(0.95rem, 1.8vw, 1.2rem);
+  font-size: clamp(0.85rem, 1.6vw, 1.1rem);
   letter-spacing: 0.012em;
   flex: 0 1 auto;
   min-height: 0;
