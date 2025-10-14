@@ -36,13 +36,14 @@
   --glass-shadow-overlay: radial-gradient(150% 120% at 70% 90%, rgba(0,0,0,0.4), rgba(0,0,0,0) 80%);
   --glass-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /><feColorMatrix type='saturate' values='0' /><feComponentTransfer><feFuncA type='table' tableValues='0 0 .06 0' /></feComponentTransfer></filter><rect width='200' height='200' filter='url(%23f)' /></svg>");
   --glass-border-gradient: linear-gradient(130deg, var(--acc-2) 0%, var(--acc-1) 100%);
-  --font-ui: "Plus Jakarta Sans", "Inter", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-ui: "Roboto", "Inter", "SF Pro Text", "Segoe UI", "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-size-base: clamp(15px, 0.35vw + 14px, 18px);
   --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
   --fs-1: clamp(28px, 4vw, 40px);
   --fs-2: clamp(18px, 2.2vw, 22px);
-  --fs-3: 14.5px;
+  --fs-3: clamp(13px, 0.26vw + 12.6px, 16px);
   --ease-smooth: cubic-bezier(.22,.61,.36,1);
   --timing-function-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   --duration-1: 160ms;
@@ -57,6 +58,7 @@
 
 html {
   background: var(--bg-0);
+  font-size: var(--font-size-base);
 }
 
 html, body {
@@ -65,6 +67,7 @@ html, body {
   color: var(--fg-1);
   font-family: var(--font-ui);
   font-weight: var(--fw-regular);
+  font-size: 1rem;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;

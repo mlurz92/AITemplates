@@ -20,6 +20,9 @@ let favoritesGestureStartY = null;
 let favoritesGestureLastY = null;
 let favoritesGestureAxis = null;
 let favoritesScrollbarHideTimeout = null;
+let favoritesScrollTarget = null;
+let favoritesScrollAnimationFrame = null;
+let fontLoadListenersRegistered = false;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -137,6 +140,7 @@ function initApp() {
 
     updateDockPositioning();
     requestCardLayoutFrame();
+    setupFontLoadSync();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -147,6 +151,62 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
+}
+
+function setupFontLoadSync() {
+    if (fontLoadListenersRegistered || typeof document === 'undefined') return;
+
+    const scheduleLayout = () => requestCardLayoutFrame();
+
+    const observeFontFaces = (event) => {
+        if (!event || !Array.isArray(event.fontfaces)) {
+            scheduleLayout();
+            return;
+        }
+
+        const usesRoboto = event.fontfaces.some((face) => {
+            if (!face || !face.family) return false;
+            return face.family.toLowerCase().includes('roboto');
+        });
+
+        if (usesRoboto) {
+            scheduleLayout();
+        }
+    };
+
+    if (document.fonts) {
+        fontLoadListenersRegistered = true;
+        const { fonts } = document;
+
+        if (typeof fonts.ready?.then === 'function') {
+            fonts.ready.then(scheduleLayout).catch(() => {});
+        }
+
+        if (typeof fonts.addEventListener === 'function') {
+            fonts.addEventListener('loadingdone', observeFontFaces);
+        } else if ('onloadingdone' in fonts) {
+            const originalHandler = fonts.onloadingdone;
+            fonts.onloadingdone = (event) => {
+                if (typeof originalHandler === 'function') {
+                    originalHandler.call(fonts, event);
+                }
+                observeFontFaces(event);
+            };
+        }
+
+        if (typeof fonts.load === 'function') {
+            fonts.load("1rem 'Roboto'").then(scheduleLayout).catch(() => {});
+        }
+
+        scheduleLayout();
+        return;
+    }
+
+    const fontLink = document.querySelector('link[href*="fonts.googleapis.com"]');
+    if (fontLink) {
+        fontLoadListenersRegistered = true;
+        fontLink.addEventListener('load', scheduleLayout, { once: true });
+    }
 }
 
 function createContextMenu() {
@@ -298,6 +358,7 @@ function setFavoritesExpanded(shouldExpand) {
     if (!favoritesDockEl) return;
 
     const expanded = Boolean(shouldExpand);
+    stopFavoritesSmoothScroll();
     const chips = favoritesListEl ? Array.from(favoritesListEl.querySelectorAll('.favorite-chip')) : [];
     const scrollFrame = favoritesScrollAreaEl;
     const canAnimate = typeof window !== 'undefined' && window.gsap;
@@ -411,28 +472,101 @@ function handleFavoritesWheel(event) {
     if (favoritesDockEl.classList.contains('expanded')) return;
     if (!favoritesDockEl.classList.contains('overflowing')) return;
 
-    const delta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
-    if (delta === 0) return;
+    const rawDelta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+    if (rawDelta === 0) return;
 
-    favoritesScrollAreaEl.scrollLeft += delta;
-    revealFavoritesScrollbar();
-    updateFavoritesOverflowMarkers();
     event.preventDefault();
+
+    let delta = rawDelta;
+    if (event.deltaMode === 1) {
+        delta *= 16;
+    } else if (event.deltaMode === 2) {
+        delta *= favoritesScrollAreaEl.clientWidth || 1;
+    }
+
+    const { scrollLeft, scrollWidth, clientWidth } = favoritesScrollAreaEl;
+    const maxScrollLeft = Math.max(0, scrollWidth - clientWidth);
+    const currentTarget = Number.isFinite(favoritesScrollTarget) ? favoritesScrollTarget : scrollLeft;
+    const proposedTarget = currentTarget + delta * 0.9;
+
+    favoritesScrollTarget = Math.min(maxScrollLeft, Math.max(0, proposedTarget));
+    startFavoritesSmoothScroll();
 }
 
 function handleFavoritesScroll() {
     if (!favoritesScrollAreaEl) return;
     revealFavoritesScrollbar();
     updateFavoritesOverflowMarkers();
+    if (!favoritesDockEl || favoritesDockEl.classList.contains('expanded')) {
+        return;
+    }
+    favoritesScrollTarget = favoritesScrollAreaEl.scrollLeft;
+}
+
+function startFavoritesSmoothScroll() {
+    if (!favoritesScrollAreaEl) {
+        stopFavoritesSmoothScroll();
+        return;
+    }
+
+    if (!Number.isFinite(favoritesScrollTarget)) {
+        favoritesScrollTarget = favoritesScrollAreaEl.scrollLeft;
+    }
+
+    const animate = () => {
+        if (!favoritesScrollAreaEl) {
+            favoritesScrollAnimationFrame = null;
+            return;
+        }
+
+        const current = favoritesScrollAreaEl.scrollLeft;
+        const target = Number.isFinite(favoritesScrollTarget) ? favoritesScrollTarget : current;
+        const distance = target - current;
+
+        if (Math.abs(distance) <= 0.5) {
+            favoritesScrollAreaEl.scrollLeft = target;
+            favoritesScrollAnimationFrame = null;
+            revealFavoritesScrollbar();
+            updateFavoritesOverflowMarkers();
+            return;
+        }
+
+        const step = distance * 0.22;
+        favoritesScrollAreaEl.scrollLeft = current + step;
+        revealFavoritesScrollbar();
+        favoritesScrollAnimationFrame = requestAnimationFrame(animate);
+        updateFavoritesOverflowMarkers();
+    };
+
+    revealFavoritesScrollbar();
+    updateFavoritesOverflowMarkers();
+
+    if (!favoritesScrollAnimationFrame) {
+        favoritesScrollAnimationFrame = requestAnimationFrame(animate);
+    }
+}
+
+function stopFavoritesSmoothScroll() {
+    if (favoritesScrollAnimationFrame) {
+        cancelAnimationFrame(favoritesScrollAnimationFrame);
+        favoritesScrollAnimationFrame = null;
+    }
+    favoritesScrollTarget = null;
 }
 
 function handleFavoritesTouchStart(event) {
     if (!favoritesDockEl || !event.touches || event.touches.length !== 1) return;
+    stopFavoritesSmoothScroll();
     const touch = event.touches[0];
     favoritesGestureStartX = touch.clientX;
     favoritesGestureStartY = touch.clientY;
     favoritesGestureLastY = touch.clientY;
     favoritesGestureAxis = null;
+    revealFavoritesScrollbar();
+}
+
+function handleFavoritesPointerDown() {
+    stopFavoritesSmoothScroll();
     revealFavoritesScrollbar();
 }
 
@@ -546,6 +680,10 @@ function refreshFavoritesLayout() {
     const expanded = favoritesDockEl.classList.contains('expanded');
     const hasOverflow = !expanded && (scroller.scrollWidth - scroller.clientWidth > 1);
     const showToggle = hasOverflow || expanded;
+
+    if (!hasOverflow) {
+        stopFavoritesSmoothScroll();
+    }
 
     favoritesDockEl.classList.toggle('overflowing', hasOverflow);
     favoritesDockEl.classList.toggle('can-expand', showToggle);
@@ -739,7 +877,7 @@ function setupEventListeners() {
     if (favoritesScrollAreaEl) {
         favoritesScrollAreaEl.addEventListener('wheel', handleFavoritesWheel, { passive: false });
         favoritesScrollAreaEl.addEventListener('scroll', handleFavoritesScroll, { passive: true });
-        favoritesScrollAreaEl.addEventListener('pointerdown', revealFavoritesScrollbar, { passive: true });
+        favoritesScrollAreaEl.addEventListener('pointerdown', handleFavoritesPointerDown, { passive: true });
         favoritesScrollAreaEl.addEventListener('mouseenter', revealFavoritesScrollbar);
     }
 
