@@ -49,6 +49,16 @@ let favoritePrompts = [];
 let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
+let cardLayoutRafId = null;
+
+const CARD_LAYOUT = {
+    minColumns: 3,
+    maxColumns: 6,
+    referenceWidth: 232,
+    minGap: 12,
+    maxGap: 28,
+    gapFactor: 0.08
+};
 
 const FAVORITE_CHIP_MIN_WIDTH = 140;
 const FAVORITE_CHIP_MAX_WIDTH = 236;
@@ -126,6 +136,7 @@ function initApp() {
     svgTemplateMove = document.getElementById('svg-template-move');
 
     updateDockPositioning();
+    requestCardLayoutFrame();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -1509,6 +1520,8 @@ function renderView(node) {
     } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
     }
+
+    requestCardLayoutFrame();
 }
 
 function navigateToNode(node) {
@@ -2095,6 +2108,37 @@ function updateFavoriteButton(promptId) {
     modalFavoriteBtn.setAttribute('aria-label', isFavorite ? 'Von Favoriten entfernen' : 'Zu Favoriten hinzufügen');
 }
 
+function requestCardLayoutFrame() {
+    if (cardLayoutRafId) {
+        cancelAnimationFrame(cardLayoutRafId);
+    }
+    cardLayoutRafId = requestAnimationFrame(() => {
+        cardLayoutRafId = null;
+        applyCardLayoutMetrics();
+    });
+}
+
+function applyCardLayoutMetrics() {
+    if (!containerEl) return;
+
+    const containerWidth = containerEl.clientWidth;
+    if (!containerWidth) return;
+
+    let columns = Math.round(containerWidth / CARD_LAYOUT.referenceWidth);
+    if (!columns) columns = CARD_LAYOUT.minColumns;
+    columns = Math.min(Math.max(columns, CARD_LAYOUT.minColumns), CARD_LAYOUT.maxColumns);
+
+    const widthPerColumn = containerWidth / columns;
+    const dynamicGap = widthPerColumn * CARD_LAYOUT.gapFactor;
+    const gap = Math.min(CARD_LAYOUT.maxGap, Math.max(CARD_LAYOUT.minGap, dynamicGap));
+
+    containerEl.style.setProperty('--card-columns', columns);
+    containerEl.style.setProperty('--card-gap', `${gap}px`);
+
+    const cards = containerEl.querySelectorAll('.card');
+    cards.forEach((card) => adjustCardTitleFontSize(card));
+}
+
 function handleWindowResize() {
     if (resizeRafId) {
         cancelAnimationFrame(resizeRafId);
@@ -2102,7 +2146,7 @@ function handleWindowResize() {
     resizeRafId = requestAnimationFrame(() => {
         updateDockPositioning();
         requestFavoritesLayoutFrame();
-        document.querySelectorAll('.card').forEach((card) => adjustCardTitleFontSize(card));
+        requestCardLayoutFrame();
         resizeRafId = null;
     });
 }

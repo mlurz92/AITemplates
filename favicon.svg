@@ -3,10 +3,10 @@
   <defs>
     <!-- Aurora-Gradient für den Hintergrund -->
     <linearGradient id="auroraGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6a11cb;stop-opacity:0.2" />
-      <stop offset="33%" style="stop-color:#2575fc;stop-opacity:0.15" />
-      <stop offset="66%" style="stop-color:#00d2ff;stop-opacity:0.1" />
-      <stop offset="100%" style="stop-color:#3a7bd5;stop-opacity:0.05" />
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.24" />
+      <stop offset="35%" style="stop-color:#5ee7ff;stop-opacity:0.16" />
+      <stop offset="70%" style="stop-color:#38bdf8;stop-opacity:0.12" />
+      <stop offset="100%" style="stop-color:#14b8a6;stop-opacity:0.08" />
     </linearGradient>
     
     <!-- Glas-Gradient mit mehr Tiefe -->
@@ -52,14 +52,14 @@
           fill="#ffffff" fill-opacity="0.95" filter="url(#blur)"/>
     
     <!-- Dokument-Falten-Effekt mit mehr Details -->
-    <path d="M176 0v80h80" fill="none" stroke="#4a6bff" stroke-width="24" 
+    <path d="M176 0v80h80" fill="none" stroke="#8b5cf6" stroke-width="24"
           stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
-    
+
     <!-- Textlinien mit variabler Opazität für Tiefe -->
-    <line x1="32" y1="64" x2="160" y2="64" stroke="#4a6bff" stroke-width="16" opacity="0.9"/>
-    <line x1="32" y1="112" x2="160" y2="112" stroke="#4a6bff" stroke-width="16" opacity="0.8"/>
-    <line x1="32" y1="160" x2="128" y2="160" stroke="#4a6bff" stroke-width="16" opacity="0.7"/>
-    <line x1="32" y1="208" x2="96" y2="208" stroke="#4a6bff" stroke-width="16" opacity="0.6"/>
+    <line x1="32" y1="64" x2="160" y2="64" stroke="#5ee7ff" stroke-width="16" opacity="0.9"/>
+    <line x1="32" y1="112" x2="160" y2="112" stroke="#5ee7ff" stroke-width="16" opacity="0.8"/>
+    <line x1="32" y1="160" x2="128" y2="160" stroke="#5ee7ff" stroke-width="16" opacity="0.7"/>
+    <line x1="32" y1="208" x2="96" y2="208" stroke="#5ee7ff" stroke-width="16" opacity="0.6"/>
     
     <!-- Dokument-Icon mit leichtem inneren Schatten -->
     <rect x="0" y="0" width="224" height="256" rx="12" ry="12" 

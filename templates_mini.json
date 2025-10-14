@@ -2,6 +2,10 @@
   "id": "root",
   "type": "folder",
   "title": "Home",
+  "meta": {
+    "layout": "fixed-aspect-1-0.8",
+    "typography": "Plus Jakarta Sans"
+  },
   "items": [
     {
       "id": "1",
