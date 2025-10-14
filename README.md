@@ -15,8 +15,9 @@ Der **Prompt-Templates Browser** ist eine hochperformante, offline-fähige **Pro
     * **Animationen:** Nutzt ausschließlich die CSS-Eigenschaften `transform`, `opacity` und `filter` für butterweiche, GPU-beschleunigte Animationen. `will-change` wird gezielt eingesetzt.
     * **Event-Handling:** Scroll-Events werden mittels `requestAnimationFrame` gedrosselt (throttled), um "Jank" (Ruckeln) zu vermeiden. Passive Event-Listener werden wo immer möglich verwendet.
 * **PWA-Features:** Eine `manifest.json` ermöglicht die Installation auf Desktop- und Mobilgeräten für ein natives App-Erlebnis.
-* **Design-Philosophie:** Ein modernes **"Glassmorphism"-UI** mit einem dunklen, durch Aurora-Effekte belebten Hintergrund. Transparente, schwebende Ebenen mit `backdrop-filter` und subtilen Licht- und Schatten-Effekten schaffen eine hochwertige visuelle Tiefe.
-* **Typografie & Kartenlayout:** Die gesamte Oberfläche setzt konsequent auf **Roboto** (Gewichte 300–700) als Primärschrift. Adaptive Grundgrößen auf `:root` und dynamische Re-Layouts nach dem Laden der Schriftart verhindern Überlagerungen und sorgen für eine ruhige, gut lesbare Anmutung.
+* **Design-Philosophie:** Ein modernes **"Glassmorphism"-UI** mit einem durch Aurora-Effekte belebten Hintergrund. Transparente, schwebende Ebenen mit `backdrop-filter` und subtilen Licht- und Schatten-Effekten schaffen eine hochwertige visuelle Tiefe. Die Karten kombinieren jetzt kompakte Hero-Badges, neu gestaltete Vivus-SVGs und eine schwebende Aktions-Dock in der unteren rechten Ecke. Ein Tipp auf die Karte kopiert den Prompt, Langdruck öffnet das Kontextmenü und ein globaler Hell/Dunkel-Schalter mit Anime.js-Animation passt das Glas-Farbschema nahtlos an, ohne die Titellesbarkeit zu beeinträchtigen.
+* **Theme-Preflight:** Ein Inline-Skript setzt bereits vor dem Laden des Stylesheets den passenden Modus (`light`/`dark`) samt `theme-color`- und Statusleisten-Meta-Tags, wodurch kein Flash-of-Theme-Inconsistency entsteht und Browser-Chrome-Farben sofort stimmig erscheinen.
+* **Typografie & Kartenlayout:** Die gesamte Oberfläche setzt konsequent auf **Roboto** (Gewichte 300–700) als Primärschrift. Adaptive Grundgrößen auf `:root` und dynamische Re-Layouts nach dem Laden der Schriftart verhindern Überlagerungen und sorgen für eine ruhige, gut lesbare Anmutung. Kartenüberschriften skalieren über CSS-Custom-Properties stufenlos und bleiben – dank zusätzlicher Laufzeit-Anpassungen – auch bei bis zu sechs Zeilen vollständig lesbar.
 
 ---
 
@@ -64,10 +65,11 @@ Der Zustand der Anwendung wird über zwei Objekte im `localStorage` verwaltet:
     1.  Leert den `#cards-container`.
     2.  Iteriert durch die `items` des anzuzeigenden Ordner-Knotens (max. 36).
     3.  Für jeden Eintrag wird dynamisch ein `<div>` mit der Klasse `.card` erstellt.
-    4.  **Ordner (`.folder-card`)**: Erhält ein SVG-Icon, dessen Pfade mit `Vivus.js` bei Hover animiert werden.
-    5.  **Prompts (`.prompt-card`)**: Erhält Buttons zum Erweitern und Kopieren.
-    6.  **Organisationsmodus**: Fügt zusätzlich Lösch- und Umbenennen-Buttons hinzu.
-    7.  **Entry-Animation**: Die Karten werden mit `opacity: 0` erstellt und über `requestAnimationFrame` mit der Klasse `.is-visible` versehen, was eine flüssige Fade-In- und Slide-Up-Animation auslöst.
+    4.  **Ordner (`.folder-card`)**: Inszenieren ein animiertes Folder-SVG in einer kreisförmigen Glas-Kachel, erhalten `role="link"` sowie `tabindex="0"` und lassen den adaptiv skalierten Titel ohne Zuschnitt stehen.
+    5.  **Prompts (`.prompt-card`)**: Spiegeln die Hero-Ästhetik, sind jedoch als `role="button"` ausgezeichnet. Ein Klick oder Tastendruck (Enter/Space) kopiert den Prompt sofort, während eine schwebende Fußzeile Copy- und Expand-Button bündelt.
+    6.  **Expand-/Copy-Dock**: Die Aktions-Dock sitzt konsequent unten rechts. Der Pfeil startet als Down-Arrow, rotiert dank `anime.js` (GSAP dient als Fallback) weich auf 180° und aktualisiert `aria-pressed`/`aria-label`; Kopiervorgänge markieren Button oder Karte kurzzeitig mit `.copy-success`.
+    7.  **Organisationsmodus**: Blendet Delete-/Rename-Symbole in der oberen rechten Ecke ein. Während der Modus aktiv ist, werden Kopier- und Expand-Schaltflächen deaktiviert und optisch abgedimmt, um versehentliche Aktionen zu vermeiden.
+    8.  **Entry-Animation**: Die Karten werden mit `opacity: 0` erstellt und über `requestAnimationFrame` mit der Klasse `.is-visible` versehen, was eine flüssige Fade-In- und Slide-Up-Animation auslöst.
 * **Layout (`style.css`):**
     * Ein CSS-Grid (`grid-template-columns: repeat(var(--card-columns), minmax(0, 1fr))`) erzwingt dynamisch zwischen drei und sechs Spalten.
     * `applyCardLayoutMetrics()` steuert die Spaltenzahl und den Abstand (`--card-gap`) in Echtzeit.
@@ -100,11 +102,13 @@ Der Zustand der Anwendung wird über zwei Objekte im `localStorage` verwaltet:
 
 ## 4. Interaktionen & Animationen
 
-### 4.1 Navigation
+### 4.1 Navigation & Aktionen
 
-* **Vorwärts**: Ein Klick auf eine Ordner-Karte ruft `MapsToNode(node)` auf.
-* **Rückwärts**: Der "Zurück"-Button ruft `MapsOneLevelUp()` auf.
-* **Swipe-to-Go-Back (Mobil)**: Eine Wischgeste von links nach rechts löst die "Zurück"-Navigation aus.
+* **Ordner öffnen**: Ein Klick auf eine Ordner-Karte (oder Enter/Space) ruft `navigateToNode(node)` auf.
+* **Prompt kopieren**: Der Standard-Klick auf eine Prompt-Karte kopiert den Inhalt via `copyPromptFromCard`. Shift+Enter oder der Expand-Button in der Aktions-Dock öffnen das Modal (`openPromptModal`).
+* **Langdruck-Kontextmenü**: Auf Touch-Geräten startet ein 620-ms-Langdruck auf Karten das Kontextmenü (`showContextMenu`), identisch zum sekundären Mausklick.
+* **Rückwärts**: Der "Zurück"-Button und `navigateOneLevelUp()` führen zur Elternansicht.
+* **Swipe-to-Go-Back (Mobil)**: Eine Wischgeste von links nach rechts löst die Rücknavigation aus.
 * **View Transitions API**: Alle Navigationen werden in `performViewTransition` gekapselt, um flüssige Übergangsanimationen zwischen den Ansichten zu erzeugen.
 
 ### 4.2 Drag-and-Drop (Organisationsmodus)
@@ -122,6 +126,8 @@ Der Zustand der Anwendung wird über zwei Objekte im `localStorage` verwaltet:
 * **Aurora-Hintergrund**: Drei große, unscharfe `div`-Elemente werden per CSS-Keyframe-Animation bewegt.
 * **Parallax-Effekt**: Beim Scrollen wird der Aurora-Container mit einem geringeren Faktor verschoben, was einen Tiefeneffekt erzeugt.
 * **Glassmorphism**: UI-Elemente nutzen `backdrop-filter: blur(...)` für den "Milchglas"-Effekt.
+* **Vivus-Icons**: Alle Karten-, Toolbar- und Organisations-Icons sind als neu gestaltete Linien-SVGs mit `initializeVivusIcon` hinterlegt und zeichnen sich beim Hovern oder Fokussieren lebendig ein; für `prefers-reduced-motion` bleiben sie statisch.
+* **Anime.js & GSAP-Microinteractions**: Der Expand-Pfeil jeder Prompt-Karte rotiert via `anime.js` (GSAP dient als Fallback) federleicht zwischen 0° und 180° und synchronisiert `aria-pressed`. Der Theme-Toggle morphs Sun/Moon samt Ray-Draw-Animation und aktualisiert parallel `theme-color` sowie die iOS-Statusleiste, damit sich auch die Browser-Chrome visuell anpasst.
 * **Copy-Feedback**: Beim Kopieren wird eine `.copy-success`-Klasse hinzugefügt, die eine Glow-Animation auslöst.
 
 ---
@@ -145,8 +151,9 @@ Der Zustand der Anwendung wird über zwei Objekte im `localStorage` verwaltet:
 
 ## 6. Abhängigkeiten
 
-Die Anwendung nutzt drei externe JavaScript-Bibliotheken, die per CDN geladen werden:
+Die Anwendung nutzt vier externe JavaScript-Bibliotheken, die per CDN geladen werden:
 
-1.  **Vivus.js**: Für die "Live-Drawing"-Animation der Ordner-Icons.
+1.  **Vivus.js**: Für die "Live-Drawing"-Animation sämtlicher Karten- und Aktions-Icons.
 2.  **Sortable.js**: Für die Drag-and-Drop-Funktionalität.
-3.  **GSAP 3 + Flip Plugin**: Für komplexe Animationen, insbesondere des Favoriten-Docks.
+3.  **GSAP 3 + Flip Plugin**: Für komplexe Layout-Transitionen (z.B. Favoriten-Dock) und als Fallback für Icon-Rotationen.
+4.  **anime.js**: Treibt den Theme-Toggle sowie die Pfeil-Morph/Rotate-Animationen der Prompt-Karten an und respektiert `prefers-reduced-motion`.

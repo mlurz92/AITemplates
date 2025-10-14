@@ -23,6 +23,8 @@ let favoritesScrollbarHideTimeout = null;
 let favoritesScrollTarget = null;
 let favoritesScrollAnimationFrame = null;
 let fontLoadListenersRegistered = false;
+let themeToggleBtn, themeToggleIcon;
+let themeColorMetaEl, appleStatusBarMetaEl;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -35,7 +37,7 @@ const FAVORITE_ACCENTS = [
     { accent: '#ff5555', border: 'rgba(255, 85, 85, 0.6)', soft: 'rgba(255, 85, 85, 0.16)', glow: 'rgba(255, 85, 85, 0.32)', text: '#0c0f17' }
 ];
 
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
+let svgTemplateFolder, svgTemplatePrompt, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
 let sortableInstance = null;
 let contextMenu = null;
@@ -46,6 +48,13 @@ let springLoadTimeout = null;
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 const swipeThreshold = 50;
 const swipeFeedbackThreshold = 5;
+let longPressTimer = null;
+let longPressTargetCard = null;
+let longPressStartClientX = 0;
+let longPressStartClientY = 0;
+let longPressPageX = 0;
+let longPressPageY = 0;
+let skipNextCardTap = false;
 
 const currentTransitionDurationMediumMs = 300;
 let favoritePrompts = [];
@@ -53,6 +62,14 @@ let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
 let cardLayoutRafId = null;
+let lastExpandedCardId = null;
+let currentTheme = 'dark';
+
+const themeStorageKey = 'promptThemePreference';
+const THEME_COLOR_FALLBACKS = {
+    dark: 'hsl(228, 16%, 8%)',
+    light: 'hsl(210, 40%, 96%)'
+};
 
 const CARD_LAYOUT = {
     minColumns: 3,
@@ -110,6 +127,10 @@ function initApp() {
     favoritesListEl = document.getElementById('favorites-list');
     favoritesScrollAreaEl = document.getElementById('favorites-scroll-area');
     favoritesToggleBtn = document.getElementById('favorites-expand-toggle');
+    themeToggleBtn = document.getElementById('theme-toggle-button');
+    themeToggleIcon = document.getElementById('theme-toggle-icon');
+    themeColorMetaEl = document.querySelector('meta[name="theme-color"]');
+    appleStatusBarMetaEl = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
 
     if (fullscreenBtn) {
         fullscreenEnterIcon = fullscreenBtn.querySelector('.icon-fullscreen-enter');
@@ -131,6 +152,7 @@ function initApp() {
     }
 
     svgTemplateFolder = document.getElementById('svg-template-folder');
+    svgTemplatePrompt = document.getElementById('svg-template-prompt');
     svgTemplateExpand = document.getElementById('svg-template-expand');
     svgTemplateCopy = document.getElementById('svg-template-copy');
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
@@ -145,6 +167,8 @@ function initApp() {
     checkFullscreenSupport();
     createContextMenu();
     loadFavorites();
+
+    initTheme();
 
     if (isMobile()) {
         setupMobileSpecificFeatures();
@@ -207,6 +231,151 @@ function setupFontLoadSync() {
         fontLoadListenersRegistered = true;
         fontLink.addEventListener('load', scheduleLayout, { once: true });
     }
+}
+
+function initTheme() {
+    const storedTheme = typeof localStorage !== 'undefined' ? localStorage.getItem(themeStorageKey) : null;
+    const prefersDark = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
+    const initialTheme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : (prefersDark ? 'dark' : 'light');
+
+    setTheme(initialTheme, { skipAnimation: true });
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(nextTheme);
+        });
+    }
+}
+
+function setTheme(theme, options = {}) {
+    currentTheme = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+
+    if (themeToggleBtn) {
+        themeToggleBtn.setAttribute('aria-label', currentTheme === 'dark' ? 'Zu hellem Modus wechseln' : 'Zu dunklem Modus wechseln');
+    }
+
+    if (typeof localStorage !== 'undefined') {
+        try {
+            localStorage.setItem(themeStorageKey, currentTheme);
+        } catch (error) {
+            console.warn('Theme preference could not be stored:', error);
+        }
+    }
+
+    updateThemeMetaColors(currentTheme);
+
+    if (options.skipAnimation) {
+        syncThemeIcon(currentTheme);
+    } else {
+        animateThemeIconState(currentTheme);
+    }
+}
+
+function resolveThemeColor(theme) {
+    if (typeof window === 'undefined' || !document || !document.documentElement) {
+        return THEME_COLOR_FALLBACKS[theme] || THEME_COLOR_FALLBACKS.dark;
+    }
+
+    try {
+        const computed = window.getComputedStyle(document.documentElement);
+        const colorValue = computed.getPropertyValue('--bg-0');
+        if (colorValue && colorValue.trim()) {
+            return colorValue.trim();
+        }
+    } catch (error) {
+        console.warn('Unable to resolve computed theme color:', error);
+    }
+
+    return THEME_COLOR_FALLBACKS[theme] || THEME_COLOR_FALLBACKS.dark;
+}
+
+function updateThemeMetaColors(theme) {
+    const color = resolveThemeColor(theme);
+
+    if (themeColorMetaEl) {
+        themeColorMetaEl.setAttribute('content', color);
+    }
+
+    if (appleStatusBarMetaEl) {
+        appleStatusBarMetaEl.setAttribute('content', theme === 'dark' ? 'black-translucent' : 'default');
+    }
+}
+
+function animateThemeIconState(theme) {
+    if (!themeToggleIcon) return;
+    const mediaQuery = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    const prefersReducedMotion = !!(mediaQuery && mediaQuery.matches);
+
+    if (prefersReducedMotion || typeof window === 'undefined' || typeof window.anime !== 'function') {
+        syncThemeIcon(theme);
+        return;
+    }
+
+    const rotation = theme === 'light' ? 180 : 0;
+    window.anime({
+        targets: themeToggleIcon,
+        rotate: rotation,
+        duration: 520,
+        easing: 'easeInOutQuad'
+    });
+
+    const sun = themeToggleIcon.querySelector('.theme-sun');
+    const moon = themeToggleIcon.querySelector('.theme-moon');
+    const rays = themeToggleIcon.querySelectorAll('.theme-rays line');
+
+    if (sun) {
+        window.anime({
+            targets: sun,
+            opacity: theme === 'light' ? 1 : 0,
+            scale: theme === 'light' ? 1 : 0.6,
+            duration: 520,
+            easing: 'easeOutBack'
+        });
+    }
+
+    if (moon) {
+        window.anime({
+            targets: moon,
+            opacity: theme === 'light' ? 0 : 1,
+            scale: theme === 'light' ? 0.7 : 1,
+            duration: 520,
+            easing: 'easeOutBack'
+        });
+    }
+
+    if (rays.length) {
+        window.anime({
+            targets: rays,
+            strokeDashoffset: theme === 'light' ? [window.anime.setDashoffset, 0] : 0,
+            opacity: theme === 'light' ? 0.7 : 0,
+            duration: 540,
+            delay: window.anime.stagger(30),
+            easing: 'easeOutQuad'
+        });
+    }
+}
+
+function syncThemeIcon(theme) {
+    if (!themeToggleIcon) return;
+    const rotation = theme === 'light' ? 180 : 0;
+    themeToggleIcon.style.transform = `rotate(${rotation}deg)`;
+    const sun = themeToggleIcon.querySelector('.theme-sun');
+    const moon = themeToggleIcon.querySelector('.theme-moon');
+    const rays = themeToggleIcon.querySelectorAll('.theme-rays line');
+    if (sun) {
+        sun.style.opacity = theme === 'light' ? '1' : '0';
+        sun.style.transform = theme === 'light' ? 'scale(1)' : 'scale(0.6)';
+    }
+    if (moon) {
+        moon.style.opacity = theme === 'light' ? '0' : '1';
+        moon.style.transform = theme === 'light' ? 'scale(0.7)' : 'scale(1)';
+    }
+    rays.forEach((line) => {
+        line.style.strokeDashoffset = '0';
+        line.style.opacity = theme === 'light' ? '0.7' : '0';
+    });
 }
 
 function createContextMenu() {
@@ -863,6 +1032,7 @@ function setupEventListeners() {
     });
 
     containerEl.addEventListener('click', handleCardContainerClick);
+    containerEl.addEventListener('keydown', handleCardKeydown);
     containerEl.addEventListener('contextmenu', handleContextMenu);
     if (favoritesDockEl) {
         favoritesDockEl.addEventListener('contextmenu', handleContextMenu);
@@ -1243,8 +1413,13 @@ function handleCardContainerClick(e) {
         return;
     }
 
+    if (skipNextCardTap) {
+        skipNextCardTap = false;
+        return;
+    }
+
     const button = e.target.closest('button[data-action]');
-    
+
     if (containerEl.classList.contains('edit-mode')) {
         if (button) {
             const action = button.getAttribute('data-action');
@@ -1272,9 +1447,44 @@ function handleCardContainerClick(e) {
         if (node.type === 'folder') {
             navigateToNode(node);
         } else if (node.type === 'prompt') {
-            openPromptModal(node);
+            copyPromptFromCard(node, card);
         }
     }
+}
+
+function handleCardKeydown(e) {
+    const card = e.target.closest('.card');
+    if (!card || containerEl.classList.contains('edit-mode')) return;
+
+    const key = e.key;
+    if (key !== 'Enter' && key !== ' ') return;
+
+    const id = card.getAttribute('data-id');
+    const node = findNodeById(jsonData, id);
+    if (!node) return;
+
+    e.preventDefault();
+
+    if (node.type === 'folder') {
+        navigateToNode(node);
+        return;
+    }
+
+    if (node.type === 'prompt') {
+        if (key === 'Enter' && e.shiftKey) {
+            openPromptModal(node);
+        } else {
+            copyPromptFromCard(node, card);
+        }
+    }
+}
+
+function clearLongPressState() {
+    if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+    }
+    longPressTargetCard = null;
 }
 
 function handleTouchStart(e) {
@@ -1283,6 +1493,25 @@ function handleTouchStart(e) {
     touchStartY = e.touches[0].clientY;
     touchEndX = touchStartX;
     touchEndY = touchStartY;
+
+    const primaryTouch = e.touches[0];
+    const potentialCard = e.target.closest('.card');
+    if (potentialCard && !modalEl.classList.contains('visible') && e.touches.length === 1) {
+        longPressTargetCard = potentialCard;
+        longPressStartClientX = primaryTouch.clientX;
+        longPressStartClientY = primaryTouch.clientY;
+        longPressPageX = primaryTouch.pageX !== undefined ? primaryTouch.pageX : primaryTouch.clientX + window.scrollX;
+        longPressPageY = primaryTouch.pageY !== undefined ? primaryTouch.pageY : primaryTouch.clientY + window.scrollY;
+        if (longPressTimer) clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(() => {
+            if (!longPressTargetCard) return;
+            skipNextCardTap = true;
+            showContextMenu(longPressPageX, longPressPageY, longPressTargetCard);
+            clearLongPressState();
+        }, 620);
+    } else {
+        clearLongPressState();
+    }
 }
 
 function handleTouchMove(e) {
@@ -1290,6 +1519,17 @@ function handleTouchMove(e) {
     touchEndX = e.touches[0].clientX;
     touchEndY = e.touches[0].clientY;
     let diffX = touchEndX - touchStartX;
+
+    if (longPressTargetCard && longPressTimer) {
+        const moveTouch = e.touches[0];
+        if (moveTouch) {
+            const moveDiffX = Math.abs(moveTouch.clientX - longPressStartClientX);
+            const moveDiffY = Math.abs(moveTouch.clientY - longPressStartClientY);
+            if (Math.max(moveDiffX, moveDiffY) > 10) {
+                clearLongPressState();
+            }
+        }
+    }
 
     if (Math.abs(diffX) > Math.abs(touchEndY - touchStartY) && diffX > swipeFeedbackThreshold) {
         containerEl.classList.add('swiping-right');
@@ -1303,11 +1543,18 @@ function handleTouchMove(e) {
 
 function handleTouchEnd() {
     if (!touchStartX || modalEl.classList.contains('visible') || containerEl.classList.contains('edit-mode')) return;
+    clearLongPressState();
     let diffX = touchEndX - touchStartX;
     let diffY = touchEndY - touchStartY;
 
     containerEl.classList.remove('swiping-right');
     containerEl.style.transform = '';
+
+    if (skipNextCardTap) {
+        skipNextCardTap = false;
+        touchStartX = 0; touchStartY = 0; touchEndX = 0; touchEndY = 0;
+        return;
+    }
 
     if (Math.abs(diffX) > Math.abs(diffY) && diffX > swipeThreshold) {
         if (pathStack.length > 0) {
@@ -1452,40 +1699,52 @@ function isMobile() {
     return isMobileDevice;
 }
 
-function setupVivusAnimation(parentElement, svgId) {
-    const svgElement = document.getElementById(svgId);
-    if (!svgElement || !parentElement.classList.contains('folder-card')) return;
+function initializeVivusIcon(svgElement, triggerElement, options = {}) {
+    if (!svgElement || !triggerElement) return;
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion || typeof Vivus !== 'function') {
+        svgElement.classList.add('vivus-static');
+        return;
+    }
 
-    const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 100, start: 'manual' });
-    vivusInstance.finish();
-    svgElement.style.opacity = '1';
-
-    let timeoutId = null;
-    let isTouchStarted = false;
-
-    const playAnimation = (immediate = false) => {
-        clearTimeout(timeoutId);
-        svgElement.style.opacity = immediate ? '1' : '0';
-        const startVivus = () => {
-            if (!immediate) svgElement.style.opacity = '1';
-            vivusInstance.reset().play();
-        };
-        if (immediate) startVivus();
-        else timeoutId = setTimeout(startVivus, 60);
+    const settings = {
+        type: options.type || 'delayed',
+        duration: options.duration || 100,
+        start: 'manual'
     };
 
-    const finishAnimation = () => {
-        clearTimeout(timeoutId);
+    const svgId = svgElement.getAttribute('id');
+    if (!svgId) return;
+
+    try {
+        const vivusInstance = new Vivus(svgId, settings);
         vivusInstance.finish();
-        svgElement.style.opacity = '1';
-    };
 
-    parentElement.addEventListener('mouseenter', () => { if (!isTouchStarted) playAnimation(false); });
-    parentElement.addEventListener('mouseleave', () => { if (!isTouchStarted) finishAnimation(); });
-    parentElement.addEventListener('touchstart', () => { isTouchStarted = true; playAnimation(true); }, { passive: true });
-    const touchEndHandler = () => { if (isTouchStarted) { isTouchStarted = false; finishAnimation(); } };
-    parentElement.addEventListener('touchend', touchEndHandler);
-    parentElement.addEventListener('touchcancel', touchEndHandler);
+        const play = () => {
+            vivusInstance.stop().reset().play();
+        };
+
+        const finish = () => {
+            vivusInstance.finish();
+        };
+
+        triggerElement.addEventListener('mouseenter', play);
+        triggerElement.addEventListener('focus', play, true);
+        triggerElement.addEventListener('mouseleave', finish);
+        triggerElement.addEventListener('blur', finish, true);
+        triggerElement.addEventListener('touchstart', play, { passive: true });
+        triggerElement.addEventListener('touchend', finish, { passive: true });
+        triggerElement.addEventListener('touchcancel', finish, { passive: true });
+    } catch (error) {
+        console.error('Vivus initialisation failed', error);
+    }
+}
+
+function createSrLabel(text) {
+    const sr = document.createElement('span');
+    sr.classList.add('sr-only');
+    sr.textContent = text;
+    return sr;
 }
 
 function processJson(data) {
@@ -1535,125 +1794,32 @@ function loadJsonData(filename) {
 
 function adjustCardTitleFontSize(card) {
     const title = card.querySelector('.card-title');
-    const wrapper = card.querySelector('.card-content-wrapper');
-    if (!title || !wrapper) return;
-
-    card.classList.remove('is-condensed', 'is-super-condensed');
-    card.style.removeProperty('--folder-icon-override');
-    wrapper.style.removeProperty('overflow');
-    wrapper.style.removeProperty('overflow-y');
-    wrapper.style.removeProperty('overflow-x');
-
-    const buttons = card.querySelector('.card-buttons');
-    if (buttons) {
-        buttons.classList.remove('has-dynamic-scale');
-        buttons.style.removeProperty('--button-font-scale');
-    }
-
-    title.style.removeProperty('font-size');
-    title.style.removeProperty('line-height');
-    title.style.removeProperty('max-height');
+    if (!title) return;
 
     const rect = card.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    if (!rect.width) return;
 
-    const baseLines = card.classList.contains('prompt-card') ? 4 : 3;
-    const maxSize = Math.min(22, Math.max(12.4, rect.width * 0.095));
-    const minSize = Math.max(9.4, rect.width * 0.052);
-    let fontSize = maxSize;
-    let lines = baseLines;
+    const isPrompt = card.classList.contains('prompt-card');
+    const baseScale = isPrompt ? 1.02 : 0.96;
+    const responsiveScale = rect.width / 232;
+    let workingScale = Math.max(0.8, Math.min(1.28, responsiveScale * baseScale));
+    const minScale = isPrompt ? 0.68 : 0.74;
+    title.style.setProperty('--title-scale', workingScale.toFixed(3));
 
-    const applyTypography = () => {
-        title.style.fontSize = `${fontSize}px`;
-        title.style.lineHeight = '1.24';
-        title.style.maxHeight = `${lines * fontSize * 1.24}px`;
-    };
+    const maxLines = isPrompt ? 6 : 4;
+    title.style.setProperty('--title-max-lines', maxLines);
 
-    applyTypography();
+    const titleWrap = title.parentElement;
+    if (!titleWrap) return;
 
-    const fits = () => wrapper.scrollHeight <= wrapper.clientHeight + 0.5;
-
-    const reduceUntil = (step, maxLinesAllowed, minFontCap = minSize, guardLimit = 180) => {
-        let guard = 0;
-        while (!fits() && guard < guardLimit) {
-            if (fontSize > minFontCap + 0.01) {
-                fontSize = Math.max(minFontCap, fontSize - step);
-            } else if (lines < maxLinesAllowed) {
-                lines += 1;
-            } else {
-                break;
-            }
-            applyTypography();
-            guard++;
-        }
-    };
-
-    reduceUntil(0.25, baseLines + 2);
-
-    if (fits()) {
-        return;
-    }
-
-    card.classList.add('is-condensed');
-    applyTypography();
-    reduceUntil(0.2, Math.max(baseLines + 3, 7));
-
-    if (fits()) {
-        return;
-    }
-
-    card.classList.add('is-super-condensed');
-    applyTypography();
-    reduceUntil(0.18, Math.max(baseLines + 4, 8));
-
-    if (fits()) {
-        return;
-    }
-
-    if (card.classList.contains('folder-card')) {
-        const folderIcon = card.querySelector('.folder-icon');
-        if (folderIcon) {
-            const iconRect = folderIcon.getBoundingClientRect();
-            if (iconRect.height > 0) {
-                const overflow = wrapper.scrollHeight - wrapper.clientHeight;
-                const scale = Math.max(0.6, Math.min(1, 1 - overflow / (iconRect.height * 1.1)));
-                card.style.setProperty('--folder-icon-override', scale.toFixed(3));
-            }
-        }
-    } else if (buttons) {
-        const buttonRect = buttons.getBoundingClientRect();
-        if (buttonRect.height > 0) {
-            const overflow = wrapper.scrollHeight - wrapper.clientHeight;
-            const scale = Math.max(0.7, Math.min(1, 1 - overflow / (buttonRect.height * 1.4)));
-            buttons.style.setProperty('--button-font-scale', scale.toFixed(3));
-            buttons.classList.add('has-dynamic-scale');
-        }
-    }
-
-    applyTypography();
-    reduceUntil(0.14, 9, Math.max(8.8, minSize * 0.94), 220);
-
-    if (fits()) {
-        return;
-    }
-
-    reduceUntil(0.1, 10, 8.4, 260);
-
-    if (fits()) {
-        return;
-    }
-
-    reduceUntil(0.08, 11, 8.2, 320);
-
-    if (fits()) {
-        return;
-    }
-
-    reduceUntil(0.06, 12, 8, 360);
-
-    if (!fits()) {
-        wrapper.style.overflowY = 'auto';
-        wrapper.style.overflowX = 'hidden';
+    let safety = 0;
+    while (safety < 12) {
+        const wrapHeight = titleWrap.clientHeight;
+        if (wrapHeight === 0) break;
+        if (title.scrollHeight <= wrapHeight + 2 || workingScale <= minScale) break;
+        workingScale = Math.max(minScale, workingScale - 0.06);
+        title.style.setProperty('--title-scale', workingScale.toFixed(3));
+        safety += 1;
     }
 }
 
@@ -1667,15 +1833,15 @@ function renderView(node) {
     }
 
     const childNodes = node.items || [];
-    const maxItems = 36; 
+    const maxItems = 36;
     const nodesToRender = childNodes.slice(0, maxItems);
-    const vivusSetups = [];
+    const vivusQueue = [];
     const renderedCards = [];
 
     nodesToRender.forEach(childNode => {
         const card = document.createElement('div');
         card.classList.add('card');
-        
+
         let nodeId = childNode.id;
         if (!nodeId) {
             nodeId = generateId();
@@ -1690,7 +1856,11 @@ function renderView(node) {
             deleteBtn.classList.add('card-delete-btn');
             deleteBtn.setAttribute('aria-label', 'Element löschen');
             deleteBtn.setAttribute('data-action', 'delete');
-            deleteBtn.appendChild(svgTemplateDelete.cloneNode(true));
+            const deleteIcon = svgTemplateDelete.cloneNode(true);
+            deleteIcon.setAttribute('id', `icon-delete-${nodeId}`);
+            deleteIcon.classList.add('vivus-icon');
+            deleteBtn.appendChild(deleteIcon);
+            vivusQueue.push(() => initializeVivusIcon(deleteIcon, deleteBtn, { duration: 80 }));
             card.appendChild(deleteBtn);
         }
 
@@ -1699,50 +1869,121 @@ function renderView(node) {
             editBtn.classList.add('card-edit-btn');
             editBtn.setAttribute('aria-label', 'Element umbenennen');
             editBtn.setAttribute('data-action', 'edit');
-            editBtn.appendChild(svgTemplateEdit.cloneNode(true));
+            const editIcon = svgTemplateEdit.cloneNode(true);
+            editIcon.setAttribute('id', `icon-edit-${nodeId}`);
+            editIcon.classList.add('vivus-icon');
+            editBtn.appendChild(editIcon);
+            vivusQueue.push(() => initializeVivusIcon(editIcon, editBtn, { duration: 90 }));
             card.appendChild(editBtn);
         }
 
-        const titleElem = document.createElement('h3');
-        titleElem.classList.add('card-title');
-        titleElem.textContent = childNode.title || 'Unbenannt';
-
         const contentWrapper = document.createElement('div');
         contentWrapper.classList.add('card-content-wrapper');
-        contentWrapper.appendChild(titleElem);
+
+        const header = document.createElement('div');
+        header.classList.add('card-topline');
+
+        const hero = document.createElement('div');
+        hero.classList.add('card-hero');
+        header.appendChild(hero);
+
+        const titleContainer = document.createElement('div');
+        titleContainer.classList.add('card-title-wrap');
+        const titleElem = document.createElement('h3');
+        titleElem.classList.add('card-title');
+        const titleText = childNode.title || 'Unbenannt';
+        titleElem.textContent = titleText;
+        titleElem.setAttribute('title', titleText);
+        titleContainer.appendChild(titleElem);
+        header.appendChild(titleContainer);
+
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('role', childNode.type === 'folder' ? 'link' : 'button');
+        card.setAttribute('aria-label', childNode.type === 'folder' ? `Ordner öffnen: ${titleText}` : `Prompt kopieren: ${titleText}`);
+
+        contentWrapper.appendChild(header);
 
         if (childNode.type === 'folder') {
             card.classList.add('folder-card');
+
             if (svgTemplateFolder) {
                 const folderIconSvg = svgTemplateFolder.cloneNode(true);
-                const folderIconId = `icon-folder-${nodeId}`;
-                folderIconSvg.id = folderIconId;
-                contentWrapper.appendChild(folderIconSvg);
-                vivusSetups.push({ parent: card, svgId: folderIconId });
+                folderIconSvg.setAttribute('id', `icon-folder-${nodeId}`);
+                folderIconSvg.classList.add('card-hero-svg', 'vivus-icon');
+                hero.appendChild(folderIconSvg);
+                vivusQueue.push(() => initializeVivusIcon(folderIconSvg, card, { duration: 120 }));
             }
         } else {
             card.classList.add('prompt-card');
-            const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
-            if (svgTemplateExpand) {
-                const expandBtn = document.createElement('button'); expandBtn.classList.add('btn', 'btn-ghost'); expandBtn.setAttribute('aria-label', 'Details anzeigen'); expandBtn.setAttribute('data-action', 'expand'); expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); btnContainer.appendChild(expandBtn);
+
+            if (svgTemplatePrompt) {
+                const promptIconSvg = svgTemplatePrompt.cloneNode(true);
+                promptIconSvg.setAttribute('id', `icon-prompt-${nodeId}`);
+                promptIconSvg.classList.add('card-hero-svg', 'vivus-icon');
+                hero.appendChild(promptIconSvg);
+                vivusQueue.push(() => initializeVivusIcon(promptIconSvg, card, { duration: 140 }));
             }
+
+            const footer = document.createElement('div');
+            footer.classList.add('card-footer');
+            const actionDock = document.createElement('div');
+            actionDock.classList.add('card-action-dock');
+
             if (svgTemplateCopy) {
-                const copyBtn = document.createElement('button'); copyBtn.classList.add('btn', 'btn-ghost'); copyBtn.setAttribute('aria-label', 'Prompt kopieren'); copyBtn.setAttribute('data-action', 'copy'); copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); btnContainer.appendChild(copyBtn);
+                const copyBtn = document.createElement('button');
+                copyBtn.classList.add('card-action-btn', 'card-action-copy');
+                copyBtn.type = 'button';
+                copyBtn.setAttribute('aria-label', 'Prompt kopieren');
+                copyBtn.setAttribute('data-action', 'copy');
+                const copyIcon = svgTemplateCopy.cloneNode(true);
+                copyIcon.setAttribute('id', `icon-copy-${nodeId}`);
+                copyIcon.classList.add('vivus-icon');
+                copyBtn.appendChild(copyIcon);
+                copyBtn.appendChild(createSrLabel('Prompt kopieren'));
+                vivusQueue.push(() => initializeVivusIcon(copyIcon, copyBtn, { duration: 90 }));
+                actionDock.appendChild(copyBtn);
             }
-            contentWrapper.appendChild(btnContainer);
+
+            if (svgTemplateExpand) {
+                const expandBtn = document.createElement('button');
+                expandBtn.classList.add('card-action-btn', 'card-action-expand');
+                expandBtn.type = 'button';
+                expandBtn.setAttribute('aria-label', 'Prompt öffnen');
+                expandBtn.setAttribute('data-action', 'expand');
+                expandBtn.setAttribute('aria-pressed', 'false');
+                expandBtn.dataset.cardId = nodeId;
+                const expandIcon = svgTemplateExpand.cloneNode(true);
+                expandIcon.setAttribute('id', `icon-expand-${nodeId}`);
+                expandIcon.classList.add('vivus-icon', 'card-expand-icon');
+                expandBtn.appendChild(expandIcon);
+                expandBtn.appendChild(createSrLabel('Prompt öffnen'));
+                vivusQueue.push(() => initializeVivusIcon(expandIcon, expandBtn, { duration: 80 }));
+                actionDock.appendChild(expandBtn);
+            }
+
+            if (actionDock.childElementCount > 0) {
+                footer.appendChild(actionDock);
+                contentWrapper.appendChild(footer);
+            }
         }
         card.appendChild(contentWrapper);
         containerEl.appendChild(card);
         renderedCards.push(card);
     });
 
-    vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
-    
+    vivusQueue.forEach(setup => setup());
+
     if (renderedCards.length > 0) {
         containerEl.scrollTop = currentScroll;
         requestAnimationFrame(() => {
             renderedCards.forEach(c => {
                 c.classList.add('is-visible');
+                const cardId = c.getAttribute('data-id');
+                if (cardId && cardId === lastExpandedCardId) {
+                    setCardExpansionById(cardId, true, { animate: false });
+                } else {
+                    setCardExpansionById(cardId, false, { animate: false });
+                }
                 adjustCardTitleFontSize(c);
             });
         });
@@ -1751,6 +1992,65 @@ function renderView(node) {
     }
 
     requestCardLayoutFrame();
+}
+
+function animateExpandIcon(expandIcon, expanded, animate = true) {
+    if (!expandIcon) return;
+    const arrow = expandIcon.querySelector('.expand-arrow');
+    const targetRotation = expanded ? 180 : 0;
+    const mediaQuery = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    const prefersReducedMotion = !!(mediaQuery && mediaQuery.matches);
+    const shouldAnimate = animate && !prefersReducedMotion;
+    const hasAnime = typeof window !== 'undefined' && typeof window.anime === 'function';
+
+    if (shouldAnimate && hasAnime) {
+        window.anime({
+            targets: expandIcon,
+            rotate: targetRotation,
+            duration: 420,
+            easing: 'easeOutExpo'
+        });
+        if (arrow) {
+            window.anime({
+                targets: arrow,
+                strokeDashoffset: [window.anime.setDashoffset, 0],
+                duration: 360,
+                easing: 'easeOutQuad'
+            });
+        }
+    } else if (shouldAnimate && typeof window !== 'undefined' && window.gsap && typeof window.gsap.to === 'function') {
+        window.gsap.to(expandIcon, {
+            duration: 0.36,
+            rotate: targetRotation,
+            ease: 'expo.out'
+        });
+    } else {
+        expandIcon.style.transform = `rotate(${targetRotation}deg)`;
+    }
+}
+
+function setCardExpansionById(cardId, expanded, options = {}) {
+    if (!cardId || !containerEl) return;
+    const card = containerEl.querySelector(`.card[data-id="${cardId}"]`);
+    if (!card) return;
+
+    if (expanded) {
+        card.classList.add('is-expanded');
+    } else {
+        card.classList.remove('is-expanded');
+    }
+
+    const expandButton = card.querySelector('.card-action-btn.card-action-expand');
+    const expandIcon = expandButton ? expandButton.querySelector('.card-expand-icon') : null;
+    if (expandButton) {
+        expandButton.setAttribute('aria-pressed', expanded ? 'true' : 'false');
+        expandButton.setAttribute('aria-label', expanded ? 'Prompt schließen' : 'Prompt öffnen');
+    }
+
+    if (expandIcon) {
+        const animateOption = options.animate !== undefined ? options.animate : true;
+        animateExpandIcon(expandIcon, expanded, animateOption);
+    }
 }
 
 function navigateToNode(node) {
@@ -1876,6 +2176,11 @@ function openNewPromptModal() {
 
 function openPromptModal(node, calledFromPopstate = false) {
     if (node) {
+        if (lastExpandedCardId && lastExpandedCardId !== node.id) {
+            setCardExpansionById(lastExpandedCardId, false);
+        }
+        lastExpandedCardId = node.id;
+        setCardExpansionById(node.id, true);
         modalEl.setAttribute('data-id', node.id);
         promptFullTextEl.value = node.content || '';
         updateFavoriteButton(node.id);
@@ -1994,6 +2299,10 @@ function closeModal(elementOrOptions = {}) {
     }, currentTransitionDurationMediumMs);
 
     if (element === modalEl) {
+        if (lastExpandedCardId) {
+            setCardExpansionById(lastExpandedCardId, false);
+            lastExpandedCardId = null;
+        }
         if (fromBackdrop) {
             if (isMobile() && window.history.state?.modalOpen && !calledFromPopstate) {
                 window.history.back();
@@ -2155,7 +2464,8 @@ function clearAllFavorites() {
 }
 
 function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button')); }
-function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.content || '', buttonElement); }
+function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.content || '', buttonElement, node); }
+function copyPromptFromCard(node, cardElement) { copyToClipboard(node.content || '', cardElement, node); }
 
 function copyToClipboard(text, buttonElement = null, node = null, previewText = '') {
     const sanitizedPreview = previewText || (node ? getFavoritePreviewText(node.content) : '');
