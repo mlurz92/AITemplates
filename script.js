@@ -1565,7 +1565,7 @@ function adjustCardTitleFontSize(card) {
         const wrapHeight = titleWrap.clientHeight;
         if (wrapHeight === 0) break;
         if (title.scrollHeight <= wrapHeight + 2 || workingScale <= minScale) break;
-        workingScale = Math.max(minScale, workingScale - 0.06);
+        workingScale = Math.max(minScale, workingScale - FONT_ADJUST_STEP);
         title.style.setProperty('--title-scale', workingScale.toFixed(3));
         safety += 1;
     }
