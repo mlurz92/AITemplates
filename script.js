@@ -179,7 +179,7 @@ function setupFontLoadSync() {
         const { fonts } = document;
 
         if (typeof fonts.ready?.then === 'function') {
-            fonts.ready.then(scheduleLayout).catch(() => {});
+            fonts.ready.then(scheduleLayout).catch(error => console.error('Font ready promise failed:', error));
         }
 
         if (typeof fonts.addEventListener === 'function') {
