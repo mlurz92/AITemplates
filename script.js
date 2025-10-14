@@ -195,7 +195,7 @@ function setupFontLoadSync() {
         }
 
         if (typeof fonts.load === 'function') {
-            fonts.load("1rem 'Roboto'").then(scheduleLayout).catch(() => {});
+            fonts.load("1rem 'Roboto'").then(scheduleLayout).catch(error => console.error("Failed to preload 'Roboto':", error));
         }
 
         scheduleLayout();
