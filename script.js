@@ -35,7 +35,7 @@ const FAVORITE_ACCENTS = [
     { accent: '#ff5555', border: 'rgba(255, 85, 85, 0.6)', soft: 'rgba(255, 85, 85, 0.16)', glow: 'rgba(255, 85, 85, 0.32)', text: '#0c0f17' }
 ];
 
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
+let svgTemplateFolder, svgTemplatePrompt, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
 let sortableInstance = null;
 let contextMenu = null;
@@ -131,6 +131,7 @@ function initApp() {
     }
 
     svgTemplateFolder = document.getElementById('svg-template-folder');
+    svgTemplatePrompt = document.getElementById('svg-template-prompt');
     svgTemplateExpand = document.getElementById('svg-template-expand');
     svgTemplateCopy = document.getElementById('svg-template-copy');
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
@@ -1444,6 +1445,24 @@ function generateId() {
     });
 }
 
+function generatePromptPreview(content) {
+    if (typeof content !== 'string') return 'Kein Inhalt verfügbar';
+    const normalized = content.replace(/\s+/g, ' ').trim();
+    if (!normalized) return 'Kein Inhalt verfügbar';
+    const maxLength = 160;
+    return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}…` : normalized;
+}
+
+function generatePromptStats(content) {
+    if (typeof content !== 'string') return '0 Wörter · 0 Zeichen';
+    const trimmed = content.trim();
+    if (!trimmed) return '0 Wörter · 0 Zeichen';
+    const words = trimmed.split(/\s+/).filter(Boolean).length;
+    const characters = trimmed.length;
+    const wordLabel = words === 1 ? 'Wort' : 'Wörter';
+    return `${words} ${wordLabel} · ${characters} Zeichen`;
+}
+
 function isMobile() {
     let isMobileDevice = false;
     try {
@@ -1452,40 +1471,45 @@ function isMobile() {
     return isMobileDevice;
 }
 
-function setupVivusAnimation(parentElement, svgId) {
-    const svgElement = document.getElementById(svgId);
-    if (!svgElement || !parentElement.classList.contains('folder-card')) return;
+function initializeVivusIcon(svgElement, triggerElement, options = {}) {
+    if (!svgElement || !triggerElement) return;
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion || typeof Vivus !== 'function') {
+        svgElement.classList.add('vivus-static');
+        return;
+    }
 
-    const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 100, start: 'manual' });
-    vivusInstance.finish();
-    svgElement.style.opacity = '1';
-
-    let timeoutId = null;
-    let isTouchStarted = false;
-
-    const playAnimation = (immediate = false) => {
-        clearTimeout(timeoutId);
-        svgElement.style.opacity = immediate ? '1' : '0';
-        const startVivus = () => {
-            if (!immediate) svgElement.style.opacity = '1';
-            vivusInstance.reset().play();
-        };
-        if (immediate) startVivus();
-        else timeoutId = setTimeout(startVivus, 60);
+    const settings = {
+        type: options.type || 'delayed',
+        duration: options.duration || 100,
+        start: 'manual'
     };
 
-    const finishAnimation = () => {
-        clearTimeout(timeoutId);
+    const svgId = svgElement.getAttribute('id');
+    if (!svgId) return;
+
+    try {
+        const vivusInstance = new Vivus(svgId, settings);
         vivusInstance.finish();
-        svgElement.style.opacity = '1';
-    };
 
-    parentElement.addEventListener('mouseenter', () => { if (!isTouchStarted) playAnimation(false); });
-    parentElement.addEventListener('mouseleave', () => { if (!isTouchStarted) finishAnimation(); });
-    parentElement.addEventListener('touchstart', () => { isTouchStarted = true; playAnimation(true); }, { passive: true });
-    const touchEndHandler = () => { if (isTouchStarted) { isTouchStarted = false; finishAnimation(); } };
-    parentElement.addEventListener('touchend', touchEndHandler);
-    parentElement.addEventListener('touchcancel', touchEndHandler);
+        const play = () => {
+            vivusInstance.stop().reset().play();
+        };
+
+        const finish = () => {
+            vivusInstance.finish();
+        };
+
+        triggerElement.addEventListener('mouseenter', play);
+        triggerElement.addEventListener('focus', play, true);
+        triggerElement.addEventListener('mouseleave', finish);
+        triggerElement.addEventListener('blur', finish, true);
+        triggerElement.addEventListener('touchstart', play, { passive: true });
+        triggerElement.addEventListener('touchend', finish, { passive: true });
+        triggerElement.addEventListener('touchcancel', finish, { passive: true });
+    } catch (error) {
+        console.error('Vivus initialisation failed', error);
+    }
 }
 
 function processJson(data) {
@@ -1535,126 +1559,18 @@ function loadJsonData(filename) {
 
 function adjustCardTitleFontSize(card) {
     const title = card.querySelector('.card-title');
-    const wrapper = card.querySelector('.card-content-wrapper');
-    if (!title || !wrapper) return;
-
-    card.classList.remove('is-condensed', 'is-super-condensed');
-    card.style.removeProperty('--folder-icon-override');
-    wrapper.style.removeProperty('overflow');
-    wrapper.style.removeProperty('overflow-y');
-    wrapper.style.removeProperty('overflow-x');
-
-    const buttons = card.querySelector('.card-buttons');
-    if (buttons) {
-        buttons.classList.remove('has-dynamic-scale');
-        buttons.style.removeProperty('--button-font-scale');
-    }
-
-    title.style.removeProperty('font-size');
-    title.style.removeProperty('line-height');
-    title.style.removeProperty('max-height');
+    if (!title) return;
 
     const rect = card.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    if (!rect.width) return;
 
-    const baseLines = card.classList.contains('prompt-card') ? 4 : 3;
-    const maxSize = Math.min(22, Math.max(12.4, rect.width * 0.095));
-    const minSize = Math.max(9.4, rect.width * 0.052);
-    let fontSize = maxSize;
-    let lines = baseLines;
+    const baseScale = card.classList.contains('prompt-card') ? 1.0 : 0.94;
+    const responsiveScale = rect.width / 232;
+    const clamped = Math.max(0.82, Math.min(1.24, responsiveScale * baseScale));
+    title.style.setProperty('--title-scale', clamped.toFixed(3));
 
-    const applyTypography = () => {
-        title.style.fontSize = `${fontSize}px`;
-        title.style.lineHeight = '1.24';
-        title.style.maxHeight = `${lines * fontSize * 1.24}px`;
-    };
-
-    applyTypography();
-
-    const fits = () => wrapper.scrollHeight <= wrapper.clientHeight + 0.5;
-
-    const reduceUntil = (step, maxLinesAllowed, minFontCap = minSize, guardLimit = 180) => {
-        let guard = 0;
-        while (!fits() && guard < guardLimit) {
-            if (fontSize > minFontCap + 0.01) {
-                fontSize = Math.max(minFontCap, fontSize - step);
-            } else if (lines < maxLinesAllowed) {
-                lines += 1;
-            } else {
-                break;
-            }
-            applyTypography();
-            guard++;
-        }
-    };
-
-    reduceUntil(0.25, baseLines + 2);
-
-    if (fits()) {
-        return;
-    }
-
-    card.classList.add('is-condensed');
-    applyTypography();
-    reduceUntil(0.2, Math.max(baseLines + 3, 7));
-
-    if (fits()) {
-        return;
-    }
-
-    card.classList.add('is-super-condensed');
-    applyTypography();
-    reduceUntil(0.18, Math.max(baseLines + 4, 8));
-
-    if (fits()) {
-        return;
-    }
-
-    if (card.classList.contains('folder-card')) {
-        const folderIcon = card.querySelector('.folder-icon');
-        if (folderIcon) {
-            const iconRect = folderIcon.getBoundingClientRect();
-            if (iconRect.height > 0) {
-                const overflow = wrapper.scrollHeight - wrapper.clientHeight;
-                const scale = Math.max(0.6, Math.min(1, 1 - overflow / (iconRect.height * 1.1)));
-                card.style.setProperty('--folder-icon-override', scale.toFixed(3));
-            }
-        }
-    } else if (buttons) {
-        const buttonRect = buttons.getBoundingClientRect();
-        if (buttonRect.height > 0) {
-            const overflow = wrapper.scrollHeight - wrapper.clientHeight;
-            const scale = Math.max(0.7, Math.min(1, 1 - overflow / (buttonRect.height * 1.4)));
-            buttons.style.setProperty('--button-font-scale', scale.toFixed(3));
-            buttons.classList.add('has-dynamic-scale');
-        }
-    }
-
-    applyTypography();
-    reduceUntil(0.14, 9, Math.max(8.8, minSize * 0.94), 220);
-
-    if (fits()) {
-        return;
-    }
-
-    reduceUntil(0.1, 10, 8.4, 260);
-
-    if (fits()) {
-        return;
-    }
-
-    reduceUntil(0.08, 11, 8.2, 320);
-
-    if (fits()) {
-        return;
-    }
-
-    reduceUntil(0.06, 12, 8, 360);
-
-    if (!fits()) {
-        wrapper.style.overflowY = 'auto';
-        wrapper.style.overflowX = 'hidden';
-    }
+    const maxLines = card.classList.contains('prompt-card') ? 3 : 2;
+    title.style.setProperty('--title-max-lines', maxLines);
 }
 
 function renderView(node) {
@@ -1667,15 +1583,15 @@ function renderView(node) {
     }
 
     const childNodes = node.items || [];
-    const maxItems = 36; 
+    const maxItems = 36;
     const nodesToRender = childNodes.slice(0, maxItems);
-    const vivusSetups = [];
+    const vivusQueue = [];
     const renderedCards = [];
 
     nodesToRender.forEach(childNode => {
         const card = document.createElement('div');
         card.classList.add('card');
-        
+
         let nodeId = childNode.id;
         if (!nodeId) {
             nodeId = generateId();
@@ -1690,7 +1606,11 @@ function renderView(node) {
             deleteBtn.classList.add('card-delete-btn');
             deleteBtn.setAttribute('aria-label', 'Element löschen');
             deleteBtn.setAttribute('data-action', 'delete');
-            deleteBtn.appendChild(svgTemplateDelete.cloneNode(true));
+            const deleteIcon = svgTemplateDelete.cloneNode(true);
+            deleteIcon.setAttribute('id', `icon-delete-${nodeId}`);
+            deleteIcon.classList.add('vivus-icon');
+            deleteBtn.appendChild(deleteIcon);
+            vivusQueue.push(() => initializeVivusIcon(deleteIcon, deleteBtn, { duration: 80 }));
             card.appendChild(deleteBtn);
         }
 
@@ -1699,45 +1619,114 @@ function renderView(node) {
             editBtn.classList.add('card-edit-btn');
             editBtn.setAttribute('aria-label', 'Element umbenennen');
             editBtn.setAttribute('data-action', 'edit');
-            editBtn.appendChild(svgTemplateEdit.cloneNode(true));
+            const editIcon = svgTemplateEdit.cloneNode(true);
+            editIcon.setAttribute('id', `icon-edit-${nodeId}`);
+            editIcon.classList.add('vivus-icon');
+            editBtn.appendChild(editIcon);
+            vivusQueue.push(() => initializeVivusIcon(editIcon, editBtn, { duration: 90 }));
             card.appendChild(editBtn);
         }
 
+        const contentWrapper = document.createElement('div');
+        contentWrapper.classList.add('card-content-wrapper');
+
+        const header = document.createElement('div');
+        header.classList.add('card-header');
+
+        const hero = document.createElement('div');
+        hero.classList.add('card-hero');
+
+        const titleContainer = document.createElement('div');
+        titleContainer.classList.add('card-title-wrap');
         const titleElem = document.createElement('h3');
         titleElem.classList.add('card-title');
         titleElem.textContent = childNode.title || 'Unbenannt';
+        titleContainer.appendChild(titleElem);
 
-        const contentWrapper = document.createElement('div');
-        contentWrapper.classList.add('card-content-wrapper');
-        contentWrapper.appendChild(titleElem);
+        header.appendChild(hero);
+        header.appendChild(titleContainer);
+        contentWrapper.appendChild(header);
 
         if (childNode.type === 'folder') {
             card.classList.add('folder-card');
             if (svgTemplateFolder) {
                 const folderIconSvg = svgTemplateFolder.cloneNode(true);
-                const folderIconId = `icon-folder-${nodeId}`;
-                folderIconSvg.id = folderIconId;
-                contentWrapper.appendChild(folderIconSvg);
-                vivusSetups.push({ parent: card, svgId: folderIconId });
+                folderIconSvg.setAttribute('id', `icon-folder-${nodeId}`);
+                folderIconSvg.classList.add('card-hero-svg', 'vivus-icon');
+                hero.appendChild(folderIconSvg);
+                vivusQueue.push(() => initializeVivusIcon(folderIconSvg, card, { duration: 120 }));
             }
+
+            const folderMeta = document.createElement('div');
+            folderMeta.classList.add('card-meta');
+            const items = Array.isArray(childNode.items) ? childNode.items : [];
+            const folderCount = items.filter(item => item.type === 'folder').length;
+            const promptCount = items.filter(item => item.type === 'prompt').length;
+            const metaParts = [];
+            if (folderCount > 0) metaParts.push(`${folderCount} ${folderCount === 1 ? 'Ordner' : 'Ordner'}`);
+            if (promptCount > 0) metaParts.push(`${promptCount} ${promptCount === 1 ? 'Prompt' : 'Prompts'}`);
+            folderMeta.textContent = metaParts.length > 0 ? metaParts.join(' · ') : 'Leer';
+            contentWrapper.appendChild(folderMeta);
         } else {
             card.classList.add('prompt-card');
-            const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
+
+            if (svgTemplatePrompt) {
+                const promptIconSvg = svgTemplatePrompt.cloneNode(true);
+                promptIconSvg.setAttribute('id', `icon-prompt-${nodeId}`);
+                promptIconSvg.classList.add('card-hero-svg', 'vivus-icon');
+                hero.appendChild(promptIconSvg);
+                vivusQueue.push(() => initializeVivusIcon(promptIconSvg, card, { duration: 140 }));
+            }
+
+            const preview = document.createElement('p');
+            preview.classList.add('card-preview');
+            preview.textContent = generatePromptPreview(childNode.content);
+            contentWrapper.appendChild(preview);
+
+            const stats = document.createElement('div');
+            stats.classList.add('card-meta');
+            stats.textContent = generatePromptStats(childNode.content);
+            contentWrapper.appendChild(stats);
+
+            const toolbar = document.createElement('div');
+            toolbar.classList.add('card-toolbar');
+
             if (svgTemplateExpand) {
-                const expandBtn = document.createElement('button'); expandBtn.classList.add('btn', 'btn-ghost'); expandBtn.setAttribute('aria-label', 'Details anzeigen'); expandBtn.setAttribute('data-action', 'expand'); expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); btnContainer.appendChild(expandBtn);
+                const expandBtn = document.createElement('button');
+                expandBtn.classList.add('btn-icon');
+                expandBtn.setAttribute('aria-label', 'Details anzeigen');
+                expandBtn.setAttribute('data-action', 'expand');
+                const expandIcon = svgTemplateExpand.cloneNode(true);
+                expandIcon.setAttribute('id', `icon-expand-${nodeId}`);
+                expandIcon.classList.add('vivus-icon');
+                expandBtn.appendChild(expandIcon);
+                vivusQueue.push(() => initializeVivusIcon(expandIcon, expandBtn, { duration: 80 }));
+                toolbar.appendChild(expandBtn);
             }
+
             if (svgTemplateCopy) {
-                const copyBtn = document.createElement('button'); copyBtn.classList.add('btn', 'btn-ghost'); copyBtn.setAttribute('aria-label', 'Prompt kopieren'); copyBtn.setAttribute('data-action', 'copy'); copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); btnContainer.appendChild(copyBtn);
+                const copyBtn = document.createElement('button');
+                copyBtn.classList.add('btn-icon');
+                copyBtn.setAttribute('aria-label', 'Prompt kopieren');
+                copyBtn.setAttribute('data-action', 'copy');
+                const copyIcon = svgTemplateCopy.cloneNode(true);
+                copyIcon.setAttribute('id', `icon-copy-${nodeId}`);
+                copyIcon.classList.add('vivus-icon');
+                copyBtn.appendChild(copyIcon);
+                vivusQueue.push(() => initializeVivusIcon(copyIcon, copyBtn, { duration: 90 }));
+                toolbar.appendChild(copyBtn);
             }
-            contentWrapper.appendChild(btnContainer);
+
+            card.appendChild(toolbar);
         }
+
         card.appendChild(contentWrapper);
         containerEl.appendChild(card);
         renderedCards.push(card);
     });
 
-    vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
-    
+    vivusQueue.forEach(setup => setup());
+
     if (renderedCards.length > 0) {
         containerEl.scrollTop = currentScroll;
         requestAnimationFrame(() => {
