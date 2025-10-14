@@ -35,7 +35,7 @@ const FAVORITE_ACCENTS = [
     { accent: '#ff5555', border: 'rgba(255, 85, 85, 0.6)', soft: 'rgba(255, 85, 85, 0.16)', glow: 'rgba(255, 85, 85, 0.32)', text: '#0c0f17' }
 ];
 
-let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
+let svgTemplateFolder, svgTemplatePrompt, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
 let sortableInstance = null;
 let contextMenu = null;
@@ -53,6 +53,7 @@ let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
 let cardLayoutRafId = null;
+let lastExpandedCardId = null;
 
 const CARD_LAYOUT = {
     minColumns: 3,
@@ -131,6 +132,7 @@ function initApp() {
     }
 
     svgTemplateFolder = document.getElementById('svg-template-folder');
+    svgTemplatePrompt = document.getElementById('svg-template-prompt');
     svgTemplateExpand = document.getElementById('svg-template-expand');
     svgTemplateCopy = document.getElementById('svg-template-copy');
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
@@ -1452,40 +1454,45 @@ function isMobile() {
     return isMobileDevice;
 }
 
-function setupVivusAnimation(parentElement, svgId) {
-    const svgElement = document.getElementById(svgId);
-    if (!svgElement || !parentElement.classList.contains('folder-card')) return;
+function initializeVivusIcon(svgElement, triggerElement, options = {}) {
+    if (!svgElement || !triggerElement) return;
+    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion || typeof Vivus !== 'function') {
+        svgElement.classList.add('vivus-static');
+        return;
+    }
 
-    const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 100, start: 'manual' });
-    vivusInstance.finish();
-    svgElement.style.opacity = '1';
-
-    let timeoutId = null;
-    let isTouchStarted = false;
-
-    const playAnimation = (immediate = false) => {
-        clearTimeout(timeoutId);
-        svgElement.style.opacity = immediate ? '1' : '0';
-        const startVivus = () => {
-            if (!immediate) svgElement.style.opacity = '1';
-            vivusInstance.reset().play();
-        };
-        if (immediate) startVivus();
-        else timeoutId = setTimeout(startVivus, 60);
+    const settings = {
+        type: options.type || 'delayed',
+        duration: options.duration || 100,
+        start: 'manual'
     };
 
-    const finishAnimation = () => {
-        clearTimeout(timeoutId);
+    const svgId = svgElement.getAttribute('id');
+    if (!svgId) return;
+
+    try {
+        const vivusInstance = new Vivus(svgId, settings);
         vivusInstance.finish();
-        svgElement.style.opacity = '1';
-    };
 
-    parentElement.addEventListener('mouseenter', () => { if (!isTouchStarted) playAnimation(false); });
-    parentElement.addEventListener('mouseleave', () => { if (!isTouchStarted) finishAnimation(); });
-    parentElement.addEventListener('touchstart', () => { isTouchStarted = true; playAnimation(true); }, { passive: true });
-    const touchEndHandler = () => { if (isTouchStarted) { isTouchStarted = false; finishAnimation(); } };
-    parentElement.addEventListener('touchend', touchEndHandler);
-    parentElement.addEventListener('touchcancel', touchEndHandler);
+        const play = () => {
+            vivusInstance.stop().reset().play();
+        };
+
+        const finish = () => {
+            vivusInstance.finish();
+        };
+
+        triggerElement.addEventListener('mouseenter', play);
+        triggerElement.addEventListener('focus', play, true);
+        triggerElement.addEventListener('mouseleave', finish);
+        triggerElement.addEventListener('blur', finish, true);
+        triggerElement.addEventListener('touchstart', play, { passive: true });
+        triggerElement.addEventListener('touchend', finish, { passive: true });
+        triggerElement.addEventListener('touchcancel', finish, { passive: true });
+    } catch (error) {
+        console.error('Vivus initialisation failed', error);
+    }
 }
 
 function processJson(data) {
@@ -1535,125 +1542,32 @@ function loadJsonData(filename) {
 
 function adjustCardTitleFontSize(card) {
     const title = card.querySelector('.card-title');
-    const wrapper = card.querySelector('.card-content-wrapper');
-    if (!title || !wrapper) return;
-
-    card.classList.remove('is-condensed', 'is-super-condensed');
-    card.style.removeProperty('--folder-icon-override');
-    wrapper.style.removeProperty('overflow');
-    wrapper.style.removeProperty('overflow-y');
-    wrapper.style.removeProperty('overflow-x');
-
-    const buttons = card.querySelector('.card-buttons');
-    if (buttons) {
-        buttons.classList.remove('has-dynamic-scale');
-        buttons.style.removeProperty('--button-font-scale');
-    }
-
-    title.style.removeProperty('font-size');
-    title.style.removeProperty('line-height');
-    title.style.removeProperty('max-height');
+    if (!title) return;
 
     const rect = card.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    if (!rect.width) return;
 
-    const baseLines = card.classList.contains('prompt-card') ? 4 : 3;
-    const maxSize = Math.min(22, Math.max(12.4, rect.width * 0.095));
-    const minSize = Math.max(9.4, rect.width * 0.052);
-    let fontSize = maxSize;
-    let lines = baseLines;
+    const isPrompt = card.classList.contains('prompt-card');
+    const baseScale = isPrompt ? 1.02 : 0.96;
+    const responsiveScale = rect.width / 232;
+    let workingScale = Math.max(0.8, Math.min(1.28, responsiveScale * baseScale));
+    const minScale = isPrompt ? 0.68 : 0.74;
+    title.style.setProperty('--title-scale', workingScale.toFixed(3));
 
-    const applyTypography = () => {
-        title.style.fontSize = `${fontSize}px`;
-        title.style.lineHeight = '1.24';
-        title.style.maxHeight = `${lines * fontSize * 1.24}px`;
-    };
+    const maxLines = isPrompt ? 6 : 4;
+    title.style.setProperty('--title-max-lines', maxLines);
 
-    applyTypography();
+    const titleWrap = title.parentElement;
+    if (!titleWrap) return;
 
-    const fits = () => wrapper.scrollHeight <= wrapper.clientHeight + 0.5;
-
-    const reduceUntil = (step, maxLinesAllowed, minFontCap = minSize, guardLimit = 180) => {
-        let guard = 0;
-        while (!fits() && guard < guardLimit) {
-            if (fontSize > minFontCap + 0.01) {
-                fontSize = Math.max(minFontCap, fontSize - step);
-            } else if (lines < maxLinesAllowed) {
-                lines += 1;
-            } else {
-                break;
-            }
-            applyTypography();
-            guard++;
-        }
-    };
-
-    reduceUntil(0.25, baseLines + 2);
-
-    if (fits()) {
-        return;
-    }
-
-    card.classList.add('is-condensed');
-    applyTypography();
-    reduceUntil(0.2, Math.max(baseLines + 3, 7));
-
-    if (fits()) {
-        return;
-    }
-
-    card.classList.add('is-super-condensed');
-    applyTypography();
-    reduceUntil(0.18, Math.max(baseLines + 4, 8));
-
-    if (fits()) {
-        return;
-    }
-
-    if (card.classList.contains('folder-card')) {
-        const folderIcon = card.querySelector('.folder-icon');
-        if (folderIcon) {
-            const iconRect = folderIcon.getBoundingClientRect();
-            if (iconRect.height > 0) {
-                const overflow = wrapper.scrollHeight - wrapper.clientHeight;
-                const scale = Math.max(0.6, Math.min(1, 1 - overflow / (iconRect.height * 1.1)));
-                card.style.setProperty('--folder-icon-override', scale.toFixed(3));
-            }
-        }
-    } else if (buttons) {
-        const buttonRect = buttons.getBoundingClientRect();
-        if (buttonRect.height > 0) {
-            const overflow = wrapper.scrollHeight - wrapper.clientHeight;
-            const scale = Math.max(0.7, Math.min(1, 1 - overflow / (buttonRect.height * 1.4)));
-            buttons.style.setProperty('--button-font-scale', scale.toFixed(3));
-            buttons.classList.add('has-dynamic-scale');
-        }
-    }
-
-    applyTypography();
-    reduceUntil(0.14, 9, Math.max(8.8, minSize * 0.94), 220);
-
-    if (fits()) {
-        return;
-    }
-
-    reduceUntil(0.1, 10, 8.4, 260);
-
-    if (fits()) {
-        return;
-    }
-
-    reduceUntil(0.08, 11, 8.2, 320);
-
-    if (fits()) {
-        return;
-    }
-
-    reduceUntil(0.06, 12, 8, 360);
-
-    if (!fits()) {
-        wrapper.style.overflowY = 'auto';
-        wrapper.style.overflowX = 'hidden';
+    let safety = 0;
+    while (safety < 12) {
+        const wrapHeight = titleWrap.clientHeight;
+        if (wrapHeight === 0) break;
+        if (title.scrollHeight <= wrapHeight + 2 || workingScale <= minScale) break;
+        workingScale = Math.max(minScale, workingScale - 0.06);
+        title.style.setProperty('--title-scale', workingScale.toFixed(3));
+        safety += 1;
     }
 }
 
@@ -1667,15 +1581,15 @@ function renderView(node) {
     }
 
     const childNodes = node.items || [];
-    const maxItems = 36; 
+    const maxItems = 36;
     const nodesToRender = childNodes.slice(0, maxItems);
-    const vivusSetups = [];
+    const vivusQueue = [];
     const renderedCards = [];
 
     nodesToRender.forEach(childNode => {
         const card = document.createElement('div');
         card.classList.add('card');
-        
+
         let nodeId = childNode.id;
         if (!nodeId) {
             nodeId = generateId();
@@ -1690,7 +1604,11 @@ function renderView(node) {
             deleteBtn.classList.add('card-delete-btn');
             deleteBtn.setAttribute('aria-label', 'Element löschen');
             deleteBtn.setAttribute('data-action', 'delete');
-            deleteBtn.appendChild(svgTemplateDelete.cloneNode(true));
+            const deleteIcon = svgTemplateDelete.cloneNode(true);
+            deleteIcon.setAttribute('id', `icon-delete-${nodeId}`);
+            deleteIcon.classList.add('vivus-icon');
+            deleteBtn.appendChild(deleteIcon);
+            vivusQueue.push(() => initializeVivusIcon(deleteIcon, deleteBtn, { duration: 80 }));
             card.appendChild(deleteBtn);
         }
 
@@ -1699,50 +1617,114 @@ function renderView(node) {
             editBtn.classList.add('card-edit-btn');
             editBtn.setAttribute('aria-label', 'Element umbenennen');
             editBtn.setAttribute('data-action', 'edit');
-            editBtn.appendChild(svgTemplateEdit.cloneNode(true));
+            const editIcon = svgTemplateEdit.cloneNode(true);
+            editIcon.setAttribute('id', `icon-edit-${nodeId}`);
+            editIcon.classList.add('vivus-icon');
+            editBtn.appendChild(editIcon);
+            vivusQueue.push(() => initializeVivusIcon(editIcon, editBtn, { duration: 90 }));
             card.appendChild(editBtn);
         }
 
-        const titleElem = document.createElement('h3');
-        titleElem.classList.add('card-title');
-        titleElem.textContent = childNode.title || 'Unbenannt';
-
         const contentWrapper = document.createElement('div');
         contentWrapper.classList.add('card-content-wrapper');
-        contentWrapper.appendChild(titleElem);
+
+        const header = document.createElement('div');
+        header.classList.add('card-topline');
+
+        const hero = document.createElement('div');
+        hero.classList.add('card-hero');
+        header.appendChild(hero);
+
+        const titleContainer = document.createElement('div');
+        titleContainer.classList.add('card-title-wrap');
+        const titleElem = document.createElement('h3');
+        titleElem.classList.add('card-title');
+        const titleText = childNode.title || 'Unbenannt';
+        titleElem.textContent = titleText;
+        titleElem.setAttribute('title', titleText);
+        titleContainer.appendChild(titleElem);
+        header.appendChild(titleContainer);
+
+        contentWrapper.appendChild(header);
 
         if (childNode.type === 'folder') {
             card.classList.add('folder-card');
+            header.classList.add('card-topline-folder');
+
             if (svgTemplateFolder) {
                 const folderIconSvg = svgTemplateFolder.cloneNode(true);
-                const folderIconId = `icon-folder-${nodeId}`;
-                folderIconSvg.id = folderIconId;
-                contentWrapper.appendChild(folderIconSvg);
-                vivusSetups.push({ parent: card, svgId: folderIconId });
+                folderIconSvg.setAttribute('id', `icon-folder-${nodeId}`);
+                folderIconSvg.classList.add('card-hero-svg', 'vivus-icon');
+                hero.appendChild(folderIconSvg);
+                vivusQueue.push(() => initializeVivusIcon(folderIconSvg, card, { duration: 120 }));
             }
         } else {
             card.classList.add('prompt-card');
-            const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
+
+            if (svgTemplatePrompt) {
+                const promptIconSvg = svgTemplatePrompt.cloneNode(true);
+                promptIconSvg.setAttribute('id', `icon-prompt-${nodeId}`);
+                promptIconSvg.classList.add('card-hero-svg', 'vivus-icon');
+                hero.appendChild(promptIconSvg);
+                vivusQueue.push(() => initializeVivusIcon(promptIconSvg, card, { duration: 140 }));
+            }
+
             if (svgTemplateExpand) {
-                const expandBtn = document.createElement('button'); expandBtn.classList.add('btn', 'btn-ghost'); expandBtn.setAttribute('aria-label', 'Details anzeigen'); expandBtn.setAttribute('data-action', 'expand'); expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); btnContainer.appendChild(expandBtn);
+                const expandBtn = document.createElement('button');
+                expandBtn.classList.add('card-expand-btn');
+                expandBtn.setAttribute('aria-label', 'Prompt öffnen');
+                expandBtn.setAttribute('data-action', 'expand');
+                expandBtn.dataset.cardId = nodeId;
+                const expandIcon = svgTemplateExpand.cloneNode(true);
+                expandIcon.setAttribute('id', `icon-expand-${nodeId}`);
+                expandIcon.classList.add('vivus-icon', 'card-expand-icon');
+                expandBtn.appendChild(expandIcon);
+                header.appendChild(expandBtn);
+                vivusQueue.push(() => initializeVivusIcon(expandIcon, expandBtn, { duration: 80 }));
             }
+
+            const actionsRow = document.createElement('div');
+            actionsRow.classList.add('card-actions-row');
+
             if (svgTemplateCopy) {
-                const copyBtn = document.createElement('button'); copyBtn.classList.add('btn', 'btn-ghost'); copyBtn.setAttribute('aria-label', 'Prompt kopieren'); copyBtn.setAttribute('data-action', 'copy'); copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); btnContainer.appendChild(copyBtn);
+                const copyBtn = document.createElement('button');
+                copyBtn.classList.add('card-utility-btn');
+                copyBtn.setAttribute('aria-label', 'Prompt kopieren');
+                copyBtn.setAttribute('data-action', 'copy');
+                const copyIcon = svgTemplateCopy.cloneNode(true);
+                copyIcon.setAttribute('id', `icon-copy-${nodeId}`);
+                copyIcon.classList.add('vivus-icon');
+                copyBtn.appendChild(copyIcon);
+                const copyLabel = document.createElement('span');
+                copyLabel.classList.add('card-utility-label');
+                copyLabel.textContent = 'Kopieren';
+                copyBtn.appendChild(copyLabel);
+                vivusQueue.push(() => initializeVivusIcon(copyIcon, copyBtn, { duration: 90 }));
+                actionsRow.appendChild(copyBtn);
             }
-            contentWrapper.appendChild(btnContainer);
+
+            if (actionsRow.childElementCount > 0) {
+                contentWrapper.appendChild(actionsRow);
+            }
         }
         card.appendChild(contentWrapper);
         containerEl.appendChild(card);
         renderedCards.push(card);
     });
 
-    vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
-    
+    vivusQueue.forEach(setup => setup());
+
     if (renderedCards.length > 0) {
         containerEl.scrollTop = currentScroll;
         requestAnimationFrame(() => {
             renderedCards.forEach(c => {
                 c.classList.add('is-visible');
+                const cardId = c.getAttribute('data-id');
+                if (cardId && cardId === lastExpandedCardId) {
+                    setCardExpansionById(cardId, true, { animate: false });
+                } else {
+                    setCardExpansionById(cardId, false, { animate: false });
+                }
                 adjustCardTitleFontSize(c);
             });
         });
@@ -1751,6 +1733,49 @@ function renderView(node) {
     }
 
     requestCardLayoutFrame();
+}
+
+function setCardExpansionById(cardId, expanded, options = {}) {
+    if (!cardId || !containerEl) return;
+    const card = containerEl.querySelector(`.card[data-id="${cardId}"]`);
+    if (!card) return;
+
+    if (expanded) {
+        card.classList.add('is-expanded');
+    } else {
+        card.classList.remove('is-expanded');
+    }
+
+    const expandButton = card.querySelector('.card-expand-btn');
+    const expandIcon = expandButton ? expandButton.querySelector('.card-expand-icon') : null;
+    if (expandButton) {
+        expandButton.setAttribute('aria-pressed', expanded ? 'true' : 'false');
+        expandButton.setAttribute('aria-label', expanded ? 'Prompt schließen' : 'Prompt öffnen');
+    }
+
+    if (expandIcon) {
+        const targetRotation = expanded ? 180 : 0;
+        const animateOption = options.animate !== undefined ? options.animate : true;
+        const mediaQuery = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+        const prefersReducedMotion = !!(mediaQuery && mediaQuery.matches);
+        const shouldAnimate = animateOption && !prefersReducedMotion;
+
+        const hasGsap = typeof window !== 'undefined' && window.gsap && typeof window.gsap.to === 'function';
+
+        if (hasGsap) {
+            if (shouldAnimate) {
+                window.gsap.to(expandIcon, {
+                    duration: 0.36,
+                    rotate: targetRotation,
+                    ease: 'expo.out'
+                });
+            } else {
+                window.gsap.set(expandIcon, { rotate: targetRotation });
+            }
+        } else {
+            expandIcon.style.transform = `rotate(${targetRotation}deg)`;
+        }
+    }
 }
 
 function navigateToNode(node) {
@@ -1876,6 +1901,11 @@ function openNewPromptModal() {
 
 function openPromptModal(node, calledFromPopstate = false) {
     if (node) {
+        if (lastExpandedCardId && lastExpandedCardId !== node.id) {
+            setCardExpansionById(lastExpandedCardId, false);
+        }
+        lastExpandedCardId = node.id;
+        setCardExpansionById(node.id, true);
         modalEl.setAttribute('data-id', node.id);
         promptFullTextEl.value = node.content || '';
         updateFavoriteButton(node.id);
@@ -1994,6 +2024,10 @@ function closeModal(elementOrOptions = {}) {
     }, currentTransitionDurationMediumMs);
 
     if (element === modalEl) {
+        if (lastExpandedCardId) {
+            setCardExpansionById(lastExpandedCardId, false);
+            lastExpandedCardId = null;
+        }
         if (fromBackdrop) {
             if (isMobile() && window.history.state?.modalOpen && !calledFromPopstate) {
                 window.history.back();

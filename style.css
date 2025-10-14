@@ -301,6 +301,7 @@ body::before {
 .cards-container.swiping-right { transition-property: none; }
 
 
+
 .card {
   background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
   backdrop-filter: blur(var(--blur)) saturate(200%);
@@ -309,19 +310,18 @@ body::before {
   background-clip: padding-box;
   border-radius: var(--radius-lg);
   box-shadow: var(--vignette-shadow), var(--shadow-1);
-  padding: clamp(0.6rem, 1.6vw, 1.1rem);
-  --folder-icon-scale: 1;
-  --folder-icon-override: 1;
+  padding: clamp(0.75rem, 1.9vw, 1.3rem);
   transition: transform var(--duration-2) var(--ease-smooth), box-shadow var(--duration-2) var(--ease-smooth), border-color var(--duration-2) var(--ease-smooth);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  gap: clamp(0.55rem, 1.2vw, 0.9rem);
   position: relative;
   overflow: hidden;
   cursor: pointer;
   width: 100%;
   min-width: 0;
-  aspect-ratio: 1 / 0.8;
+  aspect-ratio: 1 / 0.82;
   height: auto;
   opacity: 0;
   transform: translateY(20px) scale(0.98) translateZ(0);
@@ -337,16 +337,6 @@ body::before {
   box-shadow: var(--vignette-shadow), 0 16px 40px rgba(0,0,0,.5);
   border-color: var(--glass-stroke-hover);
   z-index: 10;
-}
-
-.card.is-condensed {
-  padding: clamp(0.54rem, 1.4vw, 0.96rem);
-  --folder-icon-scale: 0.9;
-}
-
-.card.is-super-condensed {
-  padding: clamp(0.48rem, 1.3vw, 0.86rem);
-  --folder-icon-scale: 0.78;
 }
 
 .cards-container.edit-mode .card { cursor: grab; animation: jiggle 0.4s infinite; }
@@ -366,8 +356,8 @@ body::before {
 
 .card-delete-btn, .card-edit-btn {
     position: absolute;
-    top: -8px;
-    background: var(--bg-1);
+    top: clamp(-10px, -0.5vw, -8px);
+    background: rgba(12, 15, 23, 0.82);
     border: 1px solid var(--glass-stroke);
     border-radius: 50%;
     width: clamp(28px, 3vw, 32px);
@@ -377,12 +367,12 @@ body::before {
     justify-content: center;
     cursor: pointer;
     opacity: 0;
-    transform: scale(0.5);
+    transform: scale(0.6);
     transition: opacity 0.2s ease, transform 0.2s var(--timing-function-bounce), background var(--duration-1) var(--ease-smooth);
     z-index: 15;
 }
-.card-delete-btn { right: -8px; }
-.card-edit-btn { right: 24px; }
+.card-delete-btn { right: clamp(-10px, -0.4vw, -6px); }
+.card-edit-btn { right: clamp(26px, 3.4vw, 34px); }
 .cards-container.edit-mode .card-delete-btn, .cards-container.edit-mode .card-edit-btn { opacity: 1; transform: scale(1); }
 .card-delete-btn:hover { transform: scale(1.15); background: var(--delete-hover-bg); }
 .card-delete-btn .icon-delete { stroke: var(--fg-2); transition: stroke 0.2s ease; }
@@ -395,76 +385,188 @@ body::before {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  overflow: hidden;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: stretch;
   min-height: 0;
   height: 100%;
-  gap: clamp(0.45rem, 1.2vw, 0.85rem);
+  gap: clamp(0.65rem, 1.4vw, 1rem);
 }
-.card.is-condensed .card-content-wrapper { gap: clamp(0.35rem, 1vw, 0.65rem); }
-.card.is-super-condensed .card-content-wrapper { gap: clamp(0.28rem, 0.9vw, 0.5rem); }
 
-.card-title {
-  font-weight: var(--fw-regular);
-  text-align: center;
-  white-space: normal;
-  overflow: hidden;
-  margin-bottom: 0.6em;
-  line-height: 1.24;
-  color: var(--fg-1);
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  -webkit-hyphens: auto;
-  hyphens: auto;
-  text-wrap: pretty;
-  font-size: clamp(0.85rem, 1.6vw, 1.1rem);
-  letter-spacing: 0.012em;
-  flex: 0 1 auto;
+.card-topline {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: clamp(0.55rem, 1.5vw, 1rem);
   min-height: 0;
 }
-.card.is-condensed .card-title { letter-spacing: 0.01em; }
-.card.is-super-condensed .card-title { letter-spacing: 0.008em; }
 
-.folder-card .card-content-wrapper { align-items: stretch; }
-.folder-card .card-title { margin-bottom: 0; }
-.folder-icon {
-  width: clamp(40%, 8vw, 64%);
+.card-topline-folder {
+  grid-template-columns: auto 1fr;
+}
+
+.card-hero {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(48px, 6vw, 62px);
+  aspect-ratio: 1;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, rgba(139, 92, 246, 0.3), rgba(0, 230, 255, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.card-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 28% 20%, rgba(255,255,255,0.45), transparent 60%);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.card-hero-svg {
+  width: 70%;
   height: auto;
-  display: block;
   stroke: var(--fg-1);
-  transition: stroke var(--duration-2) var(--ease-smooth), transform var(--duration-2) var(--ease-smooth);
-  align-self: center;
-  margin-top: auto;
-  max-height: calc(100% - 3.4rem);
-  transform-origin: 50% 90%;
-  transform: scale(calc(var(--folder-icon-scale) * var(--folder-icon-override)));
+  transition: stroke var(--duration-2) var(--ease-smooth);
 }
-.folder-card:hover .folder-icon { stroke: var(--acc-2); }
 
-.prompt-card .card-content-wrapper { align-items: stretch; }
-.prompt-card .card-title { margin-bottom: 0.75em; }
-.card-buttons {
-  --button-font-scale: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
-  gap: calc(0.28rem + (0.18rem * var(--button-font-scale)));
+.card:hover .card-hero-svg {
+  stroke: var(--acc-2);
+}
+
+.card-title-wrap {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.card-title {
+  font-weight: var(--fw-medium);
+  text-align: left;
+  color: var(--fg-1);
+  letter-spacing: 0.01em;
+  margin: 0;
+  line-height: 1.24;
+  font-size: calc(clamp(0.94rem, 1.6vw, 1.22rem) * var(--title-scale, 1));
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--title-max-lines, 4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+  text-wrap: balance;
+}
+
+.card-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(0.5rem, 1.4vw, 0.85rem);
   margin-top: auto;
-  padding-top: clamp(0.45em, 1vw, 0.6em);
-  flex-shrink: 0;
-  width: 100%;
+  padding-top: clamp(0.2rem, 1vw, 0.6rem);
 }
-.card.is-condensed .card-buttons { --button-font-scale: 0.9; }
-.card.is-super-condensed .card-buttons { --button-font-scale: 0.78; }
-.card-buttons.has-dynamic-scale { transition: gap var(--duration-2) var(--ease-smooth), padding var(--duration-2) var(--ease-smooth); }
-.card-buttons .btn {
-  padding: calc(6px + (4px * var(--button-font-scale))) calc(8px + (6px * var(--button-font-scale)));
-  font-size: calc(var(--fs-3) * var(--button-font-scale));
-  line-height: 1.05;
+
+.card-utility-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  background: rgba(12, 15, 23, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--fg-1);
+  padding: clamp(0.28rem, 0.8vw, 0.38rem) clamp(0.6rem, 1.5vw, 0.95rem);
+  font-size: clamp(0.72rem, 1vw, 0.86rem);
+  letter-spacing: 0.03em;
+  transition: background var(--duration-1) var(--ease-smooth), transform var(--duration-1) var(--ease-smooth), box-shadow var(--duration-1) var(--ease-smooth);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
 }
-.card-buttons .btn svg.icon {
-  width: calc(18px + (6px * var(--button-font-scale)));
-  height: calc(18px + (6px * var(--button-font-scale)));
+
+.card-utility-btn svg {
+  width: clamp(18px, 2.6vw, 20px);
+  height: auto;
+  stroke: currentColor;
+}
+
+.card-utility-label {
+  font-weight: var(--fw-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-2);
+}
+
+.card-utility-btn:hover,
+.card-utility-btn:focus-visible {
+  transform: translateY(-1px);
+  background: rgba(0, 230, 255, 0.22);
+  color: var(--fg-1);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38);
+  outline: none;
+}
+
+.card-utility-btn:hover .card-utility-label,
+.card-utility-btn:focus-visible .card-utility-label {
+  color: var(--fg-1);
+}
+
+.card-expand-btn {
+  width: clamp(38px, 4.2vw, 46px);
+  height: clamp(38px, 4.2vw, 46px);
+  border-radius: 16px;
+  background: rgba(12, 15, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--duration-1) var(--ease-smooth), transform var(--duration-1) var(--ease-smooth), box-shadow var(--duration-1) var(--ease-smooth);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  cursor: pointer;
+  user-select: none;
+  color: var(--fg-1);
+}
+
+.card-expand-icon {
+  width: 68%;
+  height: auto;
+  stroke: currentColor;
+  transform-origin: 50% 50%;
+}
+
+.card-expand-btn:hover,
+.card-expand-btn:focus-visible {
+  transform: translateY(-1px);
+  background: rgba(139, 92, 246, 0.26);
+  color: var(--fg-1);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.34);
+  outline: none;
+}
+
+.card.is-expanded .card-expand-btn {
+  background: rgba(0, 230, 255, 0.24);
+  border-color: rgba(0, 230, 255, 0.45);
+  color: var(--fg-1);
+}
+
+.card.is-expanded .card-expand-icon {
+  stroke: var(--acc-2);
+}
+
+.cards-container.edit-mode .card-expand-btn,
+.cards-container.edit-mode .card-actions-row {
+  pointer-events: none;
+  opacity: 0.3;
+  transition: opacity var(--duration-1) var(--ease-smooth);
 }
 
 .btn {
@@ -595,6 +697,7 @@ body::before {
 #modal-favorite-button .icon-star-filled.hidden, #modal-favorite-button .icon-star-outline.hidden { display: none; }
 
 svg.icon { display: block; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke: currentColor; }
+.vivus-icon { display: block; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
 .icon-copy.copy-success { animation: copy-success-anim 600ms var(--ease-smooth); }
 @keyframes copy-success-anim {
   0% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
