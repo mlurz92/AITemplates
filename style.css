@@ -10,9 +10,9 @@
   --fg-1: hsl(220, 20%, 95%);
   --fg-2: hsl(220, 15%, 75%);
   --fg-3: hsl(220, 12%, 60%);
-  --card-min-width: clamp(208px, 22vw, 236px);
-  --card-max-width: clamp(228px, 24vw, 252px);
-  --card-min-height: clamp(196px, 28vw, 236px);
+  --card-ideal-width: 232px;
+  --card-columns: 3;
+  --card-gap: clamp(0.75rem, 2vw, 1.6rem);
   --glass-bg: rgba(28, 32, 46, 0.6);
   --glass-stroke: rgba(255, 255, 255, 0.1);
   --glass-stroke-hover: rgba(0, 230, 255, 0.7);
@@ -36,7 +36,10 @@
   --glass-shadow-overlay: radial-gradient(150% 120% at 70% 90%, rgba(0,0,0,0.4), rgba(0,0,0,0) 80%);
   --glass-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /><feColorMatrix type='saturate' values='0' /><feComponentTransfer><feFuncA type='table' tableValues='0 0 .06 0' /></feComponentTransfer></filter><rect width='200' height='200' filter='url(%23f)' /></svg>");
   --glass-border-gradient: linear-gradient(130deg, var(--acc-2) 0%, var(--acc-1) 100%);
-  --font-ui: ui-sans-serif, system-ui, "Inter", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-ui: "Plus Jakarta Sans", "Inter", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
   --fs-1: clamp(28px, 4vw, 40px);
   --fs-2: clamp(18px, 2.2vw, 22px);
   --fs-3: 14.5px;
@@ -61,12 +64,14 @@ html, body {
   height: 100%;
   color: var(--fg-1);
   font-family: var(--font-ui);
+  font-weight: var(--fw-regular);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   line-height: 1.6;
   scrollbar-color: var(--glass-stroke) transparent;
   scrollbar-width: thin;
+  font-feature-settings: "liga" 1, "kern" 1;
 }
 
 body::before {
@@ -220,7 +225,7 @@ body::before {
 .breadcrumb > span.current-level-active {
     opacity: 1;
     color: var(--acc-2);
-    font-weight: 600;
+    font-weight: var(--fw-medium);
     padding: 0.25em 0.5em;
     white-space: nowrap;
 }
@@ -276,8 +281,8 @@ body::before {
 
 .cards-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
-  gap: clamp(0.8rem, 2.2vw, 1.6rem);
+  grid-template-columns: repeat(var(--card-columns, 3), minmax(0, 1fr));
+  gap: var(--card-gap, clamp(0.8rem, 2.2vw, 1.6rem));
   padding: clamp(0.8rem, 2.5vw, 1.8rem);
   padding-top: calc(6rem + var(--safe-area-inset-top));
   padding-bottom: calc(6.5rem + var(--safe-area-inset-bottom));
@@ -287,32 +292,11 @@ body::before {
   transition: padding-bottom var(--duration-3) var(--ease-smooth);
   max-width: min(1440px, 100%);
   margin: 0 auto;
-  justify-items: center;
+  justify-items: stretch;
   align-content: start;
 }
 .cards-container.swiping-right { transition-property: none; }
 
-
-@media (max-width: 1320px) {
-  :root {
-    --card-min-width: clamp(200px, 28vw, 232px);
-    --card-max-width: clamp(220px, 30vw, 244px);
-  }
-}
-
-@media (max-width: 1120px) {
-  :root {
-    --card-min-width: clamp(192px, 32vw, 228px);
-    --card-max-width: clamp(212px, 34vw, 236px);
-  }
-}
-
-@media (max-width: 900px) {
-  :root {
-    --card-min-width: clamp(184px, 40vw, 220px);
-    --card-max-width: clamp(204px, 44vw, 228px);
-  }
-}
 
 .card {
   background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
@@ -322,7 +306,7 @@ body::before {
   background-clip: padding-box;
   border-radius: var(--radius-lg);
   box-shadow: var(--vignette-shadow), var(--shadow-1);
-  padding: clamp(0.75rem, 1.8vw, 1.15rem);
+  padding: clamp(0.6rem, 1.6vw, 1.1rem);
   transition: transform var(--duration-2) var(--ease-smooth), box-shadow var(--duration-2) var(--ease-smooth), border-color var(--duration-2) var(--ease-smooth);
   display: flex;
   flex-direction: column;
@@ -330,9 +314,9 @@ body::before {
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  width: min(100%, var(--card-max-width));
-  min-width: min(100%, var(--card-min-width));
-  min-height: var(--card-min-height);
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1 / 0.8;
   height: auto;
   opacity: 0;
   transform: translateY(20px) scale(0.98) translateZ(0);
@@ -399,11 +383,11 @@ body::before {
   overflow: hidden;
   justify-content: space-between;
   min-height: 0;
-  height: auto;
+  height: 100%;
   gap: clamp(0.4rem, 1.2vw, 0.8rem);
 }
 .card h3 {
-  font-weight: 600;
+  font-weight: var(--fw-medium);
   text-align: center;
   white-space: normal;
   overflow: hidden;
@@ -425,7 +409,15 @@ body::before {
 
 .prompt-card .card-content-wrapper { justify-content: space-between; }
 .prompt-card h3 { margin-bottom: 0.8em; }
-.card-buttons { display: flex; justify-content: space-evenly; margin-top: auto; padding-top: 0.6em; flex-shrink: 0; width: 100%; }
+.card-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  gap: clamp(0.35rem, 1.2vw, 0.6rem);
+  margin-top: auto;
+  padding-top: 0.6em;
+  flex-shrink: 0;
+  width: 100%;
+}
 
 .btn {
   background: rgba(255,255,255,0.08);
@@ -435,7 +427,8 @@ body::before {
   gap: 10px;
   padding: 10px 14px;
   border-radius: 999px;
-  font-weight: 600; font-size: 14.5px;
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-3);
   transition: transform var(--duration-1) var(--ease-smooth), background-color var(--duration-1) var(--ease-smooth), box-shadow var(--duration-1) var(--ease-smooth);
   cursor: pointer;
   user-select: none;
@@ -529,7 +522,7 @@ body::before {
 .input::placeholder, .textarea::placeholder { color: var(--fg-3); }
 .input:focus, .textarea:focus { outline: none; border-color: var(--glass-stroke-hover); box-shadow: 0 0 0 3px rgba(0,230,255,.28); }
 
-.prompt-title-input { font-size: 1.25rem; font-weight: 600; padding: 0.7rem 0.8rem; margin-bottom: 1.5rem; }
+.prompt-title-input { font-size: 1.25rem; font-weight: var(--fw-medium); padding: 0.7rem 0.8rem; margin-bottom: 1.5rem; }
 .prompt-fulltext {
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -637,7 +630,7 @@ body.favorites-dock-visible #notification-area {
 .context-menu-divider { height: 1px; background-color: var(--glass-stroke); margin: 0.4rem 0; }
 .context-menu-divider.hidden { display: none; }
 
-.rename-input { background: transparent; border: none; border-bottom: 2px solid var(--acc-2); color: var(--fg-1); font-size: 1em; font-weight: 600; text-align: center; padding: 0.2rem 0; width: 100%; outline: none; }
+.rename-input { background: transparent; border: none; border-bottom: 2px solid var(--acc-2); color: var(--fg-1); font-size: 1em; font-weight: var(--fw-medium); text-align: center; padding: 0.2rem 0; width: 100%; outline: none; }
 
 .folder-tree { max-height: 50vh; overflow-y: auto; padding: 0.5rem; border: 1px solid var(--glass-stroke); border-radius: 12px; margin-bottom: 1.5rem; background: var(--bg-1); }
 .folder-tree-item { padding: 0.5rem 0.8rem; border-radius: 8px; cursor: pointer; transition: background-color var(--duration-1) var(--ease-smooth); display: flex; align-items: center; gap: 0.5rem; }
@@ -977,7 +970,7 @@ body.favorites-dock-visible .favorites-dock {
     border-radius: 11px;
     display: grid;
     place-items: center;
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
     font-size: clamp(0.84rem, 1.6vw, 0.98rem);
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -997,7 +990,7 @@ body.favorites-dock-visible .favorites-dock {
 }
 
 .favorite-chip-title {
-    font-weight: 700;
+    font-weight: var(--fw-medium);
     font-size: calc(clamp(0.82rem, 1.45vw, 1.02rem) * var(--favorite-title-scale));
     line-height: 1.22;
     word-break: normal;
