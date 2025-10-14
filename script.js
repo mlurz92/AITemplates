@@ -20,6 +20,7 @@ let favoritesGestureStartY = null;
 let favoritesGestureLastY = null;
 let favoritesGestureAxis = null;
 let favoritesScrollbarHideTimeout = null;
+let fontLoadListenersRegistered = false;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -137,6 +138,7 @@ function initApp() {
 
     updateDockPositioning();
     requestCardLayoutFrame();
+    setupFontLoadSync();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -147,6 +149,27 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
+}
+
+function setupFontLoadSync() {
+    if (fontLoadListenersRegistered || typeof document === 'undefined') return;
+
+    const requestLayout = () => requestCardLayoutFrame();
+
+    if (document.fonts && typeof document.fonts.ready?.then === 'function') {
+        fontLoadListenersRegistered = true;
+        document.fonts.ready.then(requestLayout);
+        if (typeof document.fonts.addEventListener === 'function') {
+            document.fonts.addEventListener('loadingdone', requestLayout);
+        }
+        return;
+    }
+
+    const fontLink = document.querySelector('link[href*="fonts.googleapis.com"]');
+    if (fontLink) {
+        fontLoadListenersRegistered = true;
+        fontLink.addEventListener('load', requestLayout, { once: true });
+    }
 }
 
 function createContextMenu() {
