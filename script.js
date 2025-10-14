@@ -20,9 +20,6 @@ let favoritesGestureStartY = null;
 let favoritesGestureLastY = null;
 let favoritesGestureAxis = null;
 let favoritesScrollbarHideTimeout = null;
-let favoritesScrollTarget = null;
-let favoritesScrollAnimationFrame = null;
-let fontLoadListenersRegistered = false;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -35,7 +32,7 @@ const FAVORITE_ACCENTS = [
     { accent: '#ff5555', border: 'rgba(255, 85, 85, 0.6)', soft: 'rgba(255, 85, 85, 0.16)', glow: 'rgba(255, 85, 85, 0.32)', text: '#0c0f17' }
 ];
 
-let svgTemplateFolder, svgTemplatePrompt, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
+let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
 let sortableInstance = null;
 let contextMenu = null;
@@ -52,16 +49,6 @@ let favoritePrompts = [];
 let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
-let cardLayoutRafId = null;
-
-const CARD_LAYOUT = {
-    minColumns: 3,
-    maxColumns: 6,
-    referenceWidth: 232,
-    minGap: 12,
-    maxGap: 28,
-    gapFactor: 0.08
-};
 
 const FAVORITE_CHIP_MIN_WIDTH = 140;
 const FAVORITE_CHIP_MAX_WIDTH = 236;
@@ -131,7 +118,6 @@ function initApp() {
     }
 
     svgTemplateFolder = document.getElementById('svg-template-folder');
-    svgTemplatePrompt = document.getElementById('svg-template-prompt');
     svgTemplateExpand = document.getElementById('svg-template-expand');
     svgTemplateCopy = document.getElementById('svg-template-copy');
     svgTemplateCheckmark = document.getElementById('svg-template-checkmark');
@@ -140,8 +126,6 @@ function initApp() {
     svgTemplateMove = document.getElementById('svg-template-move');
 
     updateDockPositioning();
-    requestCardLayoutFrame();
-    setupFontLoadSync();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -152,62 +136,6 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
-}
-
-function setupFontLoadSync() {
-    if (fontLoadListenersRegistered || typeof document === 'undefined') return;
-
-    const scheduleLayout = () => requestCardLayoutFrame();
-
-    const observeFontFaces = (event) => {
-        if (!event || !Array.isArray(event.fontfaces)) {
-            scheduleLayout();
-            return;
-        }
-
-        const usesRoboto = event.fontfaces.some((face) => {
-            if (!face || !face.family) return false;
-            return face.family.toLowerCase().includes('roboto');
-        });
-
-        if (usesRoboto) {
-            scheduleLayout();
-        }
-    };
-
-    if (document.fonts) {
-        fontLoadListenersRegistered = true;
-        const { fonts } = document;
-
-        if (typeof fonts.ready?.then === 'function') {
-            fonts.ready.then(scheduleLayout).catch(error => console.error('Font ready promise failed:', error));
-        }
-
-        if (typeof fonts.addEventListener === 'function') {
-            fonts.addEventListener('loadingdone', observeFontFaces);
-        } else if ('onloadingdone' in fonts) {
-            const originalHandler = fonts.onloadingdone;
-            fonts.onloadingdone = (event) => {
-                if (typeof originalHandler === 'function') {
-                    originalHandler.call(fonts, event);
-                }
-                observeFontFaces(event);
-            };
-        }
-
-        if (typeof fonts.load === 'function') {
-            fonts.load("1rem 'Roboto'").then(scheduleLayout).catch(error => console.error("Failed to preload 'Roboto':", error));
-        }
-
-        scheduleLayout();
-        return;
-    }
-
-    const fontLink = document.querySelector('link[href*="fonts.googleapis.com"]');
-    if (fontLink) {
-        fontLoadListenersRegistered = true;
-        fontLink.addEventListener('load', scheduleLayout, { once: true });
-    }
 }
 
 function createContextMenu() {
@@ -359,7 +287,6 @@ function setFavoritesExpanded(shouldExpand) {
     if (!favoritesDockEl) return;
 
     const expanded = Boolean(shouldExpand);
-    stopFavoritesSmoothScroll();
     const chips = favoritesListEl ? Array.from(favoritesListEl.querySelectorAll('.favorite-chip')) : [];
     const scrollFrame = favoritesScrollAreaEl;
     const canAnimate = typeof window !== 'undefined' && window.gsap;
@@ -473,101 +400,28 @@ function handleFavoritesWheel(event) {
     if (favoritesDockEl.classList.contains('expanded')) return;
     if (!favoritesDockEl.classList.contains('overflowing')) return;
 
-    const rawDelta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
-    if (rawDelta === 0) return;
+    const delta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+    if (delta === 0) return;
 
+    favoritesScrollAreaEl.scrollLeft += delta;
+    revealFavoritesScrollbar();
+    updateFavoritesOverflowMarkers();
     event.preventDefault();
-
-    let delta = rawDelta;
-    if (event.deltaMode === 1) {
-        delta *= 16;
-    } else if (event.deltaMode === 2) {
-        delta *= favoritesScrollAreaEl.clientWidth || 1;
-    }
-
-    const { scrollLeft, scrollWidth, clientWidth } = favoritesScrollAreaEl;
-    const maxScrollLeft = Math.max(0, scrollWidth - clientWidth);
-    const currentTarget = Number.isFinite(favoritesScrollTarget) ? favoritesScrollTarget : scrollLeft;
-    const proposedTarget = currentTarget + delta * 0.9;
-
-    favoritesScrollTarget = Math.min(maxScrollLeft, Math.max(0, proposedTarget));
-    startFavoritesSmoothScroll();
 }
 
 function handleFavoritesScroll() {
     if (!favoritesScrollAreaEl) return;
     revealFavoritesScrollbar();
     updateFavoritesOverflowMarkers();
-    if (!favoritesDockEl || favoritesDockEl.classList.contains('expanded')) {
-        return;
-    }
-    favoritesScrollTarget = favoritesScrollAreaEl.scrollLeft;
-}
-
-function startFavoritesSmoothScroll() {
-    if (!favoritesScrollAreaEl) {
-        stopFavoritesSmoothScroll();
-        return;
-    }
-
-    if (!Number.isFinite(favoritesScrollTarget)) {
-        favoritesScrollTarget = favoritesScrollAreaEl.scrollLeft;
-    }
-
-    const animate = () => {
-        if (!favoritesScrollAreaEl) {
-            favoritesScrollAnimationFrame = null;
-            return;
-        }
-
-        const current = favoritesScrollAreaEl.scrollLeft;
-        const target = Number.isFinite(favoritesScrollTarget) ? favoritesScrollTarget : current;
-        const distance = target - current;
-
-        if (Math.abs(distance) <= 0.5) {
-            favoritesScrollAreaEl.scrollLeft = target;
-            favoritesScrollAnimationFrame = null;
-            revealFavoritesScrollbar();
-            updateFavoritesOverflowMarkers();
-            return;
-        }
-
-        const step = distance * 0.22;
-        favoritesScrollAreaEl.scrollLeft = current + step;
-        revealFavoritesScrollbar();
-        favoritesScrollAnimationFrame = requestAnimationFrame(animate);
-        updateFavoritesOverflowMarkers();
-    };
-
-    revealFavoritesScrollbar();
-    updateFavoritesOverflowMarkers();
-
-    if (!favoritesScrollAnimationFrame) {
-        favoritesScrollAnimationFrame = requestAnimationFrame(animate);
-    }
-}
-
-function stopFavoritesSmoothScroll() {
-    if (favoritesScrollAnimationFrame) {
-        cancelAnimationFrame(favoritesScrollAnimationFrame);
-        favoritesScrollAnimationFrame = null;
-    }
-    favoritesScrollTarget = null;
 }
 
 function handleFavoritesTouchStart(event) {
     if (!favoritesDockEl || !event.touches || event.touches.length !== 1) return;
-    stopFavoritesSmoothScroll();
     const touch = event.touches[0];
     favoritesGestureStartX = touch.clientX;
     favoritesGestureStartY = touch.clientY;
     favoritesGestureLastY = touch.clientY;
     favoritesGestureAxis = null;
-    revealFavoritesScrollbar();
-}
-
-function handleFavoritesPointerDown() {
-    stopFavoritesSmoothScroll();
     revealFavoritesScrollbar();
 }
 
@@ -681,10 +535,6 @@ function refreshFavoritesLayout() {
     const expanded = favoritesDockEl.classList.contains('expanded');
     const hasOverflow = !expanded && (scroller.scrollWidth - scroller.clientWidth > 1);
     const showToggle = hasOverflow || expanded;
-
-    if (!hasOverflow) {
-        stopFavoritesSmoothScroll();
-    }
 
     favoritesDockEl.classList.toggle('overflowing', hasOverflow);
     favoritesDockEl.classList.toggle('can-expand', showToggle);
@@ -878,7 +728,7 @@ function setupEventListeners() {
     if (favoritesScrollAreaEl) {
         favoritesScrollAreaEl.addEventListener('wheel', handleFavoritesWheel, { passive: false });
         favoritesScrollAreaEl.addEventListener('scroll', handleFavoritesScroll, { passive: true });
-        favoritesScrollAreaEl.addEventListener('pointerdown', handleFavoritesPointerDown, { passive: true });
+        favoritesScrollAreaEl.addEventListener('pointerdown', revealFavoritesScrollbar, { passive: true });
         favoritesScrollAreaEl.addEventListener('mouseenter', revealFavoritesScrollbar);
     }
 
@@ -1178,7 +1028,7 @@ function handleDeleteClick(id, cardElement) {
 function startRenamingCard(card) {
     if (!card) return;
     
-    const titleElement = card.querySelector('.card-title');
+    const titleElement = card.querySelector('h3');
     if (!titleElement) return;
     
     const originalText = titleElement.textContent;
@@ -1222,7 +1072,7 @@ function startRenamingCard(card) {
 
 function exitRenameMode(card) {
     const input = card.querySelector('.rename-input');
-    const titleElement = card.querySelector('.card-title');
+    const titleElement = card.querySelector('h3');
     
     if (input && titleElement) {
         input.remove();
@@ -1445,24 +1295,6 @@ function generateId() {
     });
 }
 
-function generatePromptPreview(content) {
-    if (typeof content !== 'string') return 'Kein Inhalt verfügbar';
-    const normalized = content.replace(/\s+/g, ' ').trim();
-    if (!normalized) return 'Kein Inhalt verfügbar';
-    const maxLength = 160;
-    return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}…` : normalized;
-}
-
-function generatePromptStats(content) {
-    if (typeof content !== 'string') return '0 Wörter · 0 Zeichen';
-    const trimmed = content.trim();
-    if (!trimmed) return '0 Wörter · 0 Zeichen';
-    const words = trimmed.split(/\s+/).filter(Boolean).length;
-    const characters = trimmed.length;
-    const wordLabel = words === 1 ? 'Wort' : 'Wörter';
-    return `${words} ${wordLabel} · ${characters} Zeichen`;
-}
-
 function isMobile() {
     let isMobileDevice = false;
     try {
@@ -1471,45 +1303,40 @@ function isMobile() {
     return isMobileDevice;
 }
 
-function initializeVivusIcon(svgElement, triggerElement, options = {}) {
-    if (!svgElement || !triggerElement) return;
-    const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion || typeof Vivus !== 'function') {
-        svgElement.classList.add('vivus-static');
-        return;
-    }
+function setupVivusAnimation(parentElement, svgId) {
+    const svgElement = document.getElementById(svgId);
+    if (!svgElement || !parentElement.classList.contains('folder-card')) return;
 
-    const settings = {
-        type: options.type || 'delayed',
-        duration: options.duration || 100,
-        start: 'manual'
+    const vivusInstance = new Vivus(svgId, { type: 'delayed', duration: 100, start: 'manual' });
+    vivusInstance.finish();
+    svgElement.style.opacity = '1';
+
+    let timeoutId = null;
+    let isTouchStarted = false;
+
+    const playAnimation = (immediate = false) => {
+        clearTimeout(timeoutId);
+        svgElement.style.opacity = immediate ? '1' : '0';
+        const startVivus = () => {
+            if (!immediate) svgElement.style.opacity = '1';
+            vivusInstance.reset().play();
+        };
+        if (immediate) startVivus();
+        else timeoutId = setTimeout(startVivus, 60);
     };
 
-    const svgId = svgElement.getAttribute('id');
-    if (!svgId) return;
-
-    try {
-        const vivusInstance = new Vivus(svgId, settings);
+    const finishAnimation = () => {
+        clearTimeout(timeoutId);
         vivusInstance.finish();
+        svgElement.style.opacity = '1';
+    };
 
-        const play = () => {
-            vivusInstance.stop().reset().play();
-        };
-
-        const finish = () => {
-            vivusInstance.finish();
-        };
-
-        triggerElement.addEventListener('mouseenter', play);
-        triggerElement.addEventListener('focus', play, true);
-        triggerElement.addEventListener('mouseleave', finish);
-        triggerElement.addEventListener('blur', finish, true);
-        triggerElement.addEventListener('touchstart', play, { passive: true });
-        triggerElement.addEventListener('touchend', finish, { passive: true });
-        triggerElement.addEventListener('touchcancel', finish, { passive: true });
-    } catch (error) {
-        console.error('Vivus initialisation failed', error);
-    }
+    parentElement.addEventListener('mouseenter', () => { if (!isTouchStarted) playAnimation(false); });
+    parentElement.addEventListener('mouseleave', () => { if (!isTouchStarted) finishAnimation(); });
+    parentElement.addEventListener('touchstart', () => { isTouchStarted = true; playAnimation(true); }, { passive: true });
+    const touchEndHandler = () => { if (isTouchStarted) { isTouchStarted = false; finishAnimation(); } };
+    parentElement.addEventListener('touchend', touchEndHandler);
+    parentElement.addEventListener('touchcancel', touchEndHandler);
 }
 
 function processJson(data) {
@@ -1558,19 +1385,37 @@ function loadJsonData(filename) {
 }
 
 function adjustCardTitleFontSize(card) {
-    const title = card.querySelector('.card-title');
+    const title = card.querySelector('h3');
     if (!title) return;
 
     const rect = card.getBoundingClientRect();
-    if (!rect.width) return;
+    if (!rect.width || !rect.height) return;
 
-    const baseScale = card.classList.contains('prompt-card') ? 1.0 : 0.94;
-    const responsiveScale = rect.width / 232;
-    const clamped = Math.max(0.82, Math.min(1.24, responsiveScale * baseScale));
-    title.style.setProperty('--title-scale', clamped.toFixed(3));
+    const maxLines = card.classList.contains('prompt-card') ? 4 : 3;
+    const dynamicMax = Math.min(20, Math.max(13, rect.width * 0.09));
+    const dynamicMin = Math.max(11, dynamicMax * 0.68);
+    let currentSize = dynamicMax;
 
-    const maxLines = card.classList.contains('prompt-card') ? 3 : 2;
-    title.style.setProperty('--title-max-lines', maxLines);
+    title.style.fontSize = `${currentSize}px`;
+    title.style.lineHeight = '1.25';
+
+    const computed = window.getComputedStyle(title);
+    const lineHeight = parseFloat(computed.lineHeight) || currentSize * 1.25;
+    let maxHeight = lineHeight * maxLines;
+    title.style.maxHeight = `${maxHeight}px`;
+
+    while (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
+        currentSize -= 0.25;
+        title.style.fontSize = `${currentSize}px`;
+        title.style.lineHeight = '1.25';
+    }
+
+    let lines = maxLines;
+    while (title.scrollHeight > maxHeight + 0.5 && lines < 6) {
+        lines += 1;
+        maxHeight = lineHeight * lines;
+        title.style.maxHeight = `${maxHeight}px`;
+    }
 }
 
 function renderView(node) {
@@ -1583,15 +1428,15 @@ function renderView(node) {
     }
 
     const childNodes = node.items || [];
-    const maxItems = 36;
+    const maxItems = 36; 
     const nodesToRender = childNodes.slice(0, maxItems);
-    const vivusQueue = [];
+    const vivusSetups = [];
     const renderedCards = [];
 
     nodesToRender.forEach(childNode => {
         const card = document.createElement('div');
         card.classList.add('card');
-
+        
         let nodeId = childNode.id;
         if (!nodeId) {
             nodeId = generateId();
@@ -1606,11 +1451,7 @@ function renderView(node) {
             deleteBtn.classList.add('card-delete-btn');
             deleteBtn.setAttribute('aria-label', 'Element löschen');
             deleteBtn.setAttribute('data-action', 'delete');
-            const deleteIcon = svgTemplateDelete.cloneNode(true);
-            deleteIcon.setAttribute('id', `icon-delete-${nodeId}`);
-            deleteIcon.classList.add('vivus-icon');
-            deleteBtn.appendChild(deleteIcon);
-            vivusQueue.push(() => initializeVivusIcon(deleteIcon, deleteBtn, { duration: 80 }));
+            deleteBtn.appendChild(svgTemplateDelete.cloneNode(true));
             card.appendChild(deleteBtn);
         }
 
@@ -1619,114 +1460,44 @@ function renderView(node) {
             editBtn.classList.add('card-edit-btn');
             editBtn.setAttribute('aria-label', 'Element umbenennen');
             editBtn.setAttribute('data-action', 'edit');
-            const editIcon = svgTemplateEdit.cloneNode(true);
-            editIcon.setAttribute('id', `icon-edit-${nodeId}`);
-            editIcon.classList.add('vivus-icon');
-            editBtn.appendChild(editIcon);
-            vivusQueue.push(() => initializeVivusIcon(editIcon, editBtn, { duration: 90 }));
+            editBtn.appendChild(svgTemplateEdit.cloneNode(true));
             card.appendChild(editBtn);
         }
 
+        const titleElem = document.createElement('h3');
+        titleElem.textContent = childNode.title || 'Unbenannt';
+
         const contentWrapper = document.createElement('div');
         contentWrapper.classList.add('card-content-wrapper');
-
-        const header = document.createElement('div');
-        header.classList.add('card-header');
-
-        const hero = document.createElement('div');
-        hero.classList.add('card-hero');
-
-        const titleContainer = document.createElement('div');
-        titleContainer.classList.add('card-title-wrap');
-        const titleElem = document.createElement('h3');
-        titleElem.classList.add('card-title');
-        titleElem.textContent = childNode.title || 'Unbenannt';
-        titleContainer.appendChild(titleElem);
-
-        header.appendChild(hero);
-        header.appendChild(titleContainer);
-        contentWrapper.appendChild(header);
+        contentWrapper.appendChild(titleElem);
 
         if (childNode.type === 'folder') {
             card.classList.add('folder-card');
             if (svgTemplateFolder) {
                 const folderIconSvg = svgTemplateFolder.cloneNode(true);
-                folderIconSvg.setAttribute('id', `icon-folder-${nodeId}`);
-                folderIconSvg.classList.add('card-hero-svg', 'vivus-icon');
-                hero.appendChild(folderIconSvg);
-                vivusQueue.push(() => initializeVivusIcon(folderIconSvg, card, { duration: 120 }));
+                const folderIconId = `icon-folder-${nodeId}`;
+                folderIconSvg.id = folderIconId;
+                contentWrapper.appendChild(folderIconSvg);
+                vivusSetups.push({ parent: card, svgId: folderIconId });
             }
-
-            const folderMeta = document.createElement('div');
-            folderMeta.classList.add('card-meta');
-            const items = Array.isArray(childNode.items) ? childNode.items : [];
-            const folderCount = items.filter(item => item.type === 'folder').length;
-            const promptCount = items.filter(item => item.type === 'prompt').length;
-            const metaParts = [];
-            if (folderCount > 0) metaParts.push(`${folderCount} ${folderCount === 1 ? 'Ordner' : 'Ordner'}`);
-            if (promptCount > 0) metaParts.push(`${promptCount} ${promptCount === 1 ? 'Prompt' : 'Prompts'}`);
-            folderMeta.textContent = metaParts.length > 0 ? metaParts.join(' · ') : 'Leer';
-            contentWrapper.appendChild(folderMeta);
         } else {
             card.classList.add('prompt-card');
-
-            if (svgTemplatePrompt) {
-                const promptIconSvg = svgTemplatePrompt.cloneNode(true);
-                promptIconSvg.setAttribute('id', `icon-prompt-${nodeId}`);
-                promptIconSvg.classList.add('card-hero-svg', 'vivus-icon');
-                hero.appendChild(promptIconSvg);
-                vivusQueue.push(() => initializeVivusIcon(promptIconSvg, card, { duration: 140 }));
-            }
-
-            const preview = document.createElement('p');
-            preview.classList.add('card-preview');
-            preview.textContent = generatePromptPreview(childNode.content);
-            contentWrapper.appendChild(preview);
-
-            const stats = document.createElement('div');
-            stats.classList.add('card-meta');
-            stats.textContent = generatePromptStats(childNode.content);
-            contentWrapper.appendChild(stats);
-
-            const toolbar = document.createElement('div');
-            toolbar.classList.add('card-toolbar');
-
+            const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
             if (svgTemplateExpand) {
-                const expandBtn = document.createElement('button');
-                expandBtn.classList.add('btn-icon');
-                expandBtn.setAttribute('aria-label', 'Details anzeigen');
-                expandBtn.setAttribute('data-action', 'expand');
-                const expandIcon = svgTemplateExpand.cloneNode(true);
-                expandIcon.setAttribute('id', `icon-expand-${nodeId}`);
-                expandIcon.classList.add('vivus-icon');
-                expandBtn.appendChild(expandIcon);
-                vivusQueue.push(() => initializeVivusIcon(expandIcon, expandBtn, { duration: 80 }));
-                toolbar.appendChild(expandBtn);
+                const expandBtn = document.createElement('button'); expandBtn.classList.add('btn', 'btn-ghost'); expandBtn.setAttribute('aria-label', 'Details anzeigen'); expandBtn.setAttribute('data-action', 'expand'); expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); btnContainer.appendChild(expandBtn);
             }
-
             if (svgTemplateCopy) {
-                const copyBtn = document.createElement('button');
-                copyBtn.classList.add('btn-icon');
-                copyBtn.setAttribute('aria-label', 'Prompt kopieren');
-                copyBtn.setAttribute('data-action', 'copy');
-                const copyIcon = svgTemplateCopy.cloneNode(true);
-                copyIcon.setAttribute('id', `icon-copy-${nodeId}`);
-                copyIcon.classList.add('vivus-icon');
-                copyBtn.appendChild(copyIcon);
-                vivusQueue.push(() => initializeVivusIcon(copyIcon, copyBtn, { duration: 90 }));
-                toolbar.appendChild(copyBtn);
+                const copyBtn = document.createElement('button'); copyBtn.classList.add('btn', 'btn-ghost'); copyBtn.setAttribute('aria-label', 'Prompt kopieren'); copyBtn.setAttribute('data-action', 'copy'); copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); btnContainer.appendChild(copyBtn);
             }
-
-            card.appendChild(toolbar);
+            contentWrapper.appendChild(btnContainer);
         }
-
         card.appendChild(contentWrapper);
         containerEl.appendChild(card);
         renderedCards.push(card);
     });
 
-    vivusQueue.forEach(setup => setup());
-
+    vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
+    
     if (renderedCards.length > 0) {
         containerEl.scrollTop = currentScroll;
         requestAnimationFrame(() => {
@@ -1738,8 +1509,6 @@ function renderView(node) {
     } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
     }
-
-    requestCardLayoutFrame();
 }
 
 function navigateToNode(node) {
@@ -2326,37 +2095,6 @@ function updateFavoriteButton(promptId) {
     modalFavoriteBtn.setAttribute('aria-label', isFavorite ? 'Von Favoriten entfernen' : 'Zu Favoriten hinzufügen');
 }
 
-function requestCardLayoutFrame() {
-    if (cardLayoutRafId) {
-        cancelAnimationFrame(cardLayoutRafId);
-    }
-    cardLayoutRafId = requestAnimationFrame(() => {
-        cardLayoutRafId = null;
-        applyCardLayoutMetrics();
-    });
-}
-
-function applyCardLayoutMetrics() {
-    if (!containerEl) return;
-
-    const containerWidth = containerEl.clientWidth;
-    if (!containerWidth) return;
-
-    let columns = Math.round(containerWidth / CARD_LAYOUT.referenceWidth);
-    if (!columns) columns = CARD_LAYOUT.minColumns;
-    columns = Math.min(Math.max(columns, CARD_LAYOUT.minColumns), CARD_LAYOUT.maxColumns);
-
-    const widthPerColumn = containerWidth / columns;
-    const dynamicGap = widthPerColumn * CARD_LAYOUT.gapFactor;
-    const gap = Math.min(CARD_LAYOUT.maxGap, Math.max(CARD_LAYOUT.minGap, dynamicGap));
-
-    containerEl.style.setProperty('--card-columns', columns);
-    containerEl.style.setProperty('--card-gap', `${gap}px`);
-
-    const cards = containerEl.querySelectorAll('.card');
-    cards.forEach((card) => adjustCardTitleFontSize(card));
-}
-
 function handleWindowResize() {
     if (resizeRafId) {
         cancelAnimationFrame(resizeRafId);
@@ -2364,7 +2102,7 @@ function handleWindowResize() {
     resizeRafId = requestAnimationFrame(() => {
         updateDockPositioning();
         requestFavoritesLayoutFrame();
-        requestCardLayoutFrame();
+        document.querySelectorAll('.card').forEach((card) => adjustCardTitleFontSize(card));
         resizeRafId = null;
     });
 }
