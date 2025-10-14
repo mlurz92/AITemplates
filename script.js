@@ -1459,7 +1459,7 @@ function handleCardKeydown(e) {
     const key = e.key;
     if (key !== 'Enter' && key !== ' ') return;
 
-    const interactiveSelector = 'button, [role="button"], a, input, textarea, select, summary, [contenteditable="true"]';
+    const interactiveSelector = 'button, [role="button"], a[href], [role="link"], input, textarea, select, summary, [contenteditable="true"]';
     const interactiveTarget = e.target.closest(interactiveSelector);
     if (interactiveTarget && interactiveTarget !== card) return;
 
