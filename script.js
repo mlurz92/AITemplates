@@ -50,6 +50,7 @@ let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
 let cardLayoutRafId = null;
+let fontLoadRefreshScheduled = false;
 
 const CARD_LAYOUT = {
     minColumns: 3,
@@ -137,6 +138,7 @@ function initApp() {
 
     updateDockPositioning();
     requestCardLayoutFrame();
+    setupFontLoadLayoutRefresh();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -147,6 +149,31 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
+}
+
+function setupFontLoadLayoutRefresh() {
+    if (typeof document === 'undefined') return;
+
+    const scheduleRefresh = () => {
+        if (fontLoadRefreshScheduled) {
+            return;
+        }
+        fontLoadRefreshScheduled = true;
+        requestAnimationFrame(() => {
+            fontLoadRefreshScheduled = false;
+            requestCardLayoutFrame();
+            requestFavoritesLayoutFrame();
+        });
+    };
+
+    if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+        document.fonts.ready.then(scheduleRefresh).catch(() => {});
+    } else {
+        const fontLinks = document.querySelectorAll('link[rel~="stylesheet"][href*="fonts.googleapis.com"]');
+        fontLinks.forEach((link) => {
+            link.addEventListener('load', scheduleRefresh, { once: true });
+        });
+    }
 }
 
 function createContextMenu() {
