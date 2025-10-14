@@ -49,6 +49,16 @@ let favoritePrompts = [];
 let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
+let cardLayoutRafId = null;
+
+const CARD_LAYOUT = {
+    minColumns: 3,
+    maxColumns: 6,
+    referenceWidth: 232,
+    minGap: 12,
+    maxGap: 28,
+    gapFactor: 0.08
+};
 
 const FAVORITE_CHIP_MIN_WIDTH = 140;
 const FAVORITE_CHIP_MAX_WIDTH = 236;
@@ -126,6 +136,7 @@ function initApp() {
     svgTemplateMove = document.getElementById('svg-template-move');
 
     updateDockPositioning();
+    requestCardLayoutFrame();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -1028,7 +1039,7 @@ function handleDeleteClick(id, cardElement) {
 function startRenamingCard(card) {
     if (!card) return;
     
-    const titleElement = card.querySelector('h3');
+    const titleElement = card.querySelector('.card-title');
     if (!titleElement) return;
     
     const originalText = titleElement.textContent;
@@ -1072,7 +1083,7 @@ function startRenamingCard(card) {
 
 function exitRenameMode(card) {
     const input = card.querySelector('.rename-input');
-    const titleElement = card.querySelector('h3');
+    const titleElement = card.querySelector('.card-title');
     
     if (input && titleElement) {
         input.remove();
@@ -1385,36 +1396,126 @@ function loadJsonData(filename) {
 }
 
 function adjustCardTitleFontSize(card) {
-    const title = card.querySelector('h3');
-    if (!title) return;
+    const title = card.querySelector('.card-title');
+    const wrapper = card.querySelector('.card-content-wrapper');
+    if (!title || !wrapper) return;
+
+    card.classList.remove('is-condensed', 'is-super-condensed');
+    card.style.removeProperty('--folder-icon-override');
+    wrapper.style.removeProperty('overflow');
+    wrapper.style.removeProperty('overflow-y');
+    wrapper.style.removeProperty('overflow-x');
+
+    const buttons = card.querySelector('.card-buttons');
+    if (buttons) {
+        buttons.classList.remove('has-dynamic-scale');
+        buttons.style.removeProperty('--button-font-scale');
+    }
+
+    title.style.removeProperty('font-size');
+    title.style.removeProperty('line-height');
+    title.style.removeProperty('max-height');
 
     const rect = card.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
 
-    const maxLines = card.classList.contains('prompt-card') ? 4 : 3;
-    const dynamicMax = Math.min(20, Math.max(13, rect.width * 0.09));
-    const dynamicMin = Math.max(11, dynamicMax * 0.68);
-    let currentSize = dynamicMax;
+    const baseLines = card.classList.contains('prompt-card') ? 4 : 3;
+    const maxSize = Math.min(22, Math.max(12.4, rect.width * 0.095));
+    const minSize = Math.max(9.4, rect.width * 0.052);
+    let fontSize = maxSize;
+    let lines = baseLines;
 
-    title.style.fontSize = `${currentSize}px`;
-    title.style.lineHeight = '1.25';
+    const applyTypography = () => {
+        title.style.fontSize = `${fontSize}px`;
+        title.style.lineHeight = '1.24';
+        title.style.maxHeight = `${lines * fontSize * 1.24}px`;
+    };
 
-    const computed = window.getComputedStyle(title);
-    const lineHeight = parseFloat(computed.lineHeight) || currentSize * 1.25;
-    let maxHeight = lineHeight * maxLines;
-    title.style.maxHeight = `${maxHeight}px`;
+    applyTypography();
 
-    while (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
-        currentSize -= 0.25;
-        title.style.fontSize = `${currentSize}px`;
-        title.style.lineHeight = '1.25';
+    const fits = () => wrapper.scrollHeight <= wrapper.clientHeight + 0.5;
+
+    const reduceUntil = (step, maxLinesAllowed, minFontCap = minSize, guardLimit = 180) => {
+        let guard = 0;
+        while (!fits() && guard < guardLimit) {
+            if (fontSize > minFontCap + 0.01) {
+                fontSize = Math.max(minFontCap, fontSize - step);
+            } else if (lines < maxLinesAllowed) {
+                lines += 1;
+            } else {
+                break;
+            }
+            applyTypography();
+            guard++;
+        }
+    };
+
+    reduceUntil(0.25, baseLines + 2);
+
+    if (fits()) {
+        return;
     }
 
-    let lines = maxLines;
-    while (title.scrollHeight > maxHeight + 0.5 && lines < 6) {
-        lines += 1;
-        maxHeight = lineHeight * lines;
-        title.style.maxHeight = `${maxHeight}px`;
+    card.classList.add('is-condensed');
+    applyTypography();
+    reduceUntil(0.2, Math.max(baseLines + 3, 7));
+
+    if (fits()) {
+        return;
+    }
+
+    card.classList.add('is-super-condensed');
+    applyTypography();
+    reduceUntil(0.18, Math.max(baseLines + 4, 8));
+
+    if (fits()) {
+        return;
+    }
+
+    if (card.classList.contains('folder-card')) {
+        const folderIcon = card.querySelector('.folder-icon');
+        if (folderIcon) {
+            const iconRect = folderIcon.getBoundingClientRect();
+            if (iconRect.height > 0) {
+                const overflow = wrapper.scrollHeight - wrapper.clientHeight;
+                const scale = Math.max(0.6, Math.min(1, 1 - overflow / (iconRect.height * 1.1)));
+                card.style.setProperty('--folder-icon-override', scale.toFixed(3));
+            }
+        }
+    } else if (buttons) {
+        const buttonRect = buttons.getBoundingClientRect();
+        if (buttonRect.height > 0) {
+            const overflow = wrapper.scrollHeight - wrapper.clientHeight;
+            const scale = Math.max(0.7, Math.min(1, 1 - overflow / (buttonRect.height * 1.4)));
+            buttons.style.setProperty('--button-font-scale', scale.toFixed(3));
+            buttons.classList.add('has-dynamic-scale');
+        }
+    }
+
+    applyTypography();
+    reduceUntil(0.14, 9, Math.max(8.8, minSize * 0.94), 220);
+
+    if (fits()) {
+        return;
+    }
+
+    reduceUntil(0.1, 10, 8.4, 260);
+
+    if (fits()) {
+        return;
+    }
+
+    reduceUntil(0.08, 11, 8.2, 320);
+
+    if (fits()) {
+        return;
+    }
+
+    reduceUntil(0.06, 12, 8, 360);
+
+    if (!fits()) {
+        wrapper.style.overflowY = 'auto';
+        wrapper.style.overflowX = 'hidden';
     }
 }
 
@@ -1465,6 +1566,7 @@ function renderView(node) {
         }
 
         const titleElem = document.createElement('h3');
+        titleElem.classList.add('card-title');
         titleElem.textContent = childNode.title || 'Unbenannt';
 
         const contentWrapper = document.createElement('div');
@@ -1509,6 +1611,8 @@ function renderView(node) {
     } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
         containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
     }
+
+    requestCardLayoutFrame();
 }
 
 function navigateToNode(node) {
@@ -2095,6 +2199,37 @@ function updateFavoriteButton(promptId) {
     modalFavoriteBtn.setAttribute('aria-label', isFavorite ? 'Von Favoriten entfernen' : 'Zu Favoriten hinzufügen');
 }
 
+function requestCardLayoutFrame() {
+    if (cardLayoutRafId) {
+        cancelAnimationFrame(cardLayoutRafId);
+    }
+    cardLayoutRafId = requestAnimationFrame(() => {
+        cardLayoutRafId = null;
+        applyCardLayoutMetrics();
+    });
+}
+
+function applyCardLayoutMetrics() {
+    if (!containerEl) return;
+
+    const containerWidth = containerEl.clientWidth;
+    if (!containerWidth) return;
+
+    let columns = Math.round(containerWidth / CARD_LAYOUT.referenceWidth);
+    if (!columns) columns = CARD_LAYOUT.minColumns;
+    columns = Math.min(Math.max(columns, CARD_LAYOUT.minColumns), CARD_LAYOUT.maxColumns);
+
+    const widthPerColumn = containerWidth / columns;
+    const dynamicGap = widthPerColumn * CARD_LAYOUT.gapFactor;
+    const gap = Math.min(CARD_LAYOUT.maxGap, Math.max(CARD_LAYOUT.minGap, dynamicGap));
+
+    containerEl.style.setProperty('--card-columns', columns);
+    containerEl.style.setProperty('--card-gap', `${gap}px`);
+
+    const cards = containerEl.querySelectorAll('.card');
+    cards.forEach((card) => adjustCardTitleFontSize(card));
+}
+
 function handleWindowResize() {
     if (resizeRafId) {
         cancelAnimationFrame(resizeRafId);
@@ -2102,7 +2237,7 @@ function handleWindowResize() {
     resizeRafId = requestAnimationFrame(() => {
         updateDockPositioning();
         requestFavoritesLayoutFrame();
-        document.querySelectorAll('.card').forEach((card) => adjustCardTitleFontSize(card));
+        requestCardLayoutFrame();
         resizeRafId = null;
     });
 }
