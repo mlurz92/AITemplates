@@ -1561,7 +1561,7 @@ function adjustCardTitleFontSize(card) {
     if (!titleWrap) return;
 
     let safety = 0;
-    while (safety < 12) {
+    while (safety < FONT_ADJUST_MAX_ITERATIONS) {
         const wrapHeight = titleWrap.clientHeight;
         if (wrapHeight === 0) break;
         if (title.scrollHeight <= wrapHeight + 2 || workingScale <= minScale) break;
