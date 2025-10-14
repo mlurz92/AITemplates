@@ -2125,7 +2125,6 @@ function applyCardLayoutMetrics() {
     if (!containerWidth) return;
 
     let columns = Math.round(containerWidth / CARD_LAYOUT.referenceWidth);
-    if (!columns) columns = CARD_LAYOUT.minColumns;
     columns = Math.min(Math.max(columns, CARD_LAYOUT.minColumns), CARD_LAYOUT.maxColumns);
 
     const widthPerColumn = containerWidth / columns;
