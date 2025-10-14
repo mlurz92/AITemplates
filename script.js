@@ -20,6 +20,9 @@ let favoritesGestureStartY = null;
 let favoritesGestureLastY = null;
 let favoritesGestureAxis = null;
 let favoritesScrollbarHideTimeout = null;
+let favoritesScrollTarget = null;
+let favoritesScrollAnimationFrame = null;
+let fontLoadListenersRegistered = false;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -137,6 +140,7 @@ function initApp() {
 
     updateDockPositioning();
     requestCardLayoutFrame();
+    setupFontLoadSync();
     setupEventListeners();
     checkFullscreenSupport();
     createContextMenu();
@@ -147,6 +151,62 @@ function initApp() {
     }
 
     loadJsonData(currentJsonFile);
+}
+
+function setupFontLoadSync() {
+    if (fontLoadListenersRegistered || typeof document === 'undefined') return;
+
+    const scheduleLayout = () => requestCardLayoutFrame();
+
+    const observeFontFaces = (event) => {
+        if (!event || !Array.isArray(event.fontfaces)) {
+            scheduleLayout();
+            return;
+        }
+
+        const usesRoboto = event.fontfaces.some((face) => {
+            if (!face || !face.family) return false;
+            return face.family.toLowerCase().includes('roboto');
+        });
+
+        if (usesRoboto) {
+            scheduleLayout();
+        }
+    };
+
+    if (document.fonts) {
+        fontLoadListenersRegistered = true;
+        const { fonts } = document;
+
+        if (typeof fonts.ready?.then === 'function') {
+            fonts.ready.then(scheduleLayout).catch(error => console.error('Font ready promise failed:', error));
+        }
+
+        if (typeof fonts.addEventListener === 'function') {
+            fonts.addEventListener('loadingdone', observeFontFaces);
+        } else if ('onloadingdone' in fonts) {
+            const originalHandler = fonts.onloadingdone;
+            fonts.onloadingdone = (event) => {
+                if (typeof originalHandler === 'function') {
+                    originalHandler.call(fonts, event);
+                }
+                observeFontFaces(event);
+            };
+        }
+
+        if (typeof fonts.load === 'function') {
+            fonts.load("1rem 'Roboto'").then(scheduleLayout).catch(error => console.error("Failed to preload 'Roboto':", error));
+        }
+
+        scheduleLayout();
+        return;
+    }
+
+    const fontLink = document.querySelector('link[href*="fonts.googleapis.com"]');
+    if (fontLink) {
+        fontLoadListenersRegistered = true;
+        fontLink.addEventListener('load', scheduleLayout, { once: true });
+    }
 }
 
 function createContextMenu() {
@@ -298,6 +358,7 @@ function setFavoritesExpanded(shouldExpand) {
     if (!favoritesDockEl) return;
 
     const expanded = Boolean(shouldExpand);
+    stopFavoritesSmoothScroll();
     const chips = favoritesListEl ? Array.from(favoritesListEl.querySelectorAll('.favorite-chip')) : [];
     const scrollFrame = favoritesScrollAreaEl;
     const canAnimate = typeof window !== 'undefined' && window.gsap;
@@ -411,28 +472,101 @@ function handleFavoritesWheel(event) {
     if (favoritesDockEl.classList.contains('expanded')) return;
     if (!favoritesDockEl.classList.contains('overflowing')) return;
 
-    const delta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
-    if (delta === 0) return;
+    const rawDelta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+    if (rawDelta === 0) return;
 
-    favoritesScrollAreaEl.scrollLeft += delta;
-    revealFavoritesScrollbar();
-    updateFavoritesOverflowMarkers();
     event.preventDefault();
+
+    let delta = rawDelta;
+    if (event.deltaMode === 1) {
+        delta *= 16;
+    } else if (event.deltaMode === 2) {
+        delta *= favoritesScrollAreaEl.clientWidth || 1;
+    }
+
+    const { scrollLeft, scrollWidth, clientWidth } = favoritesScrollAreaEl;
+    const maxScrollLeft = Math.max(0, scrollWidth - clientWidth);
+    const currentTarget = Number.isFinite(favoritesScrollTarget) ? favoritesScrollTarget : scrollLeft;
+    const proposedTarget = currentTarget + delta * 0.9;
+
+    favoritesScrollTarget = Math.min(maxScrollLeft, Math.max(0, proposedTarget));
+    startFavoritesSmoothScroll();
 }
 
 function handleFavoritesScroll() {
     if (!favoritesScrollAreaEl) return;
     revealFavoritesScrollbar();
     updateFavoritesOverflowMarkers();
+    if (!favoritesDockEl || favoritesDockEl.classList.contains('expanded')) {
+        return;
+    }
+    favoritesScrollTarget = favoritesScrollAreaEl.scrollLeft;
+}
+
+function startFavoritesSmoothScroll() {
+    if (!favoritesScrollAreaEl) {
+        stopFavoritesSmoothScroll();
+        return;
+    }
+
+    if (!Number.isFinite(favoritesScrollTarget)) {
+        favoritesScrollTarget = favoritesScrollAreaEl.scrollLeft;
+    }
+
+    const animate = () => {
+        if (!favoritesScrollAreaEl) {
+            favoritesScrollAnimationFrame = null;
+            return;
+        }
+
+        const current = favoritesScrollAreaEl.scrollLeft;
+        const target = Number.isFinite(favoritesScrollTarget) ? favoritesScrollTarget : current;
+        const distance = target - current;
+
+        if (Math.abs(distance) <= 0.5) {
+            favoritesScrollAreaEl.scrollLeft = target;
+            favoritesScrollAnimationFrame = null;
+            revealFavoritesScrollbar();
+            updateFavoritesOverflowMarkers();
+            return;
+        }
+
+        const step = distance * 0.22;
+        favoritesScrollAreaEl.scrollLeft = current + step;
+        revealFavoritesScrollbar();
+        favoritesScrollAnimationFrame = requestAnimationFrame(animate);
+        updateFavoritesOverflowMarkers();
+    };
+
+    revealFavoritesScrollbar();
+    updateFavoritesOverflowMarkers();
+
+    if (!favoritesScrollAnimationFrame) {
+        favoritesScrollAnimationFrame = requestAnimationFrame(animate);
+    }
+}
+
+function stopFavoritesSmoothScroll() {
+    if (favoritesScrollAnimationFrame) {
+        cancelAnimationFrame(favoritesScrollAnimationFrame);
+        favoritesScrollAnimationFrame = null;
+    }
+    favoritesScrollTarget = null;
 }
 
 function handleFavoritesTouchStart(event) {
     if (!favoritesDockEl || !event.touches || event.touches.length !== 1) return;
+    stopFavoritesSmoothScroll();
     const touch = event.touches[0];
     favoritesGestureStartX = touch.clientX;
     favoritesGestureStartY = touch.clientY;
     favoritesGestureLastY = touch.clientY;
     favoritesGestureAxis = null;
+    revealFavoritesScrollbar();
+}
+
+function handleFavoritesPointerDown() {
+    stopFavoritesSmoothScroll();
     revealFavoritesScrollbar();
 }
 
@@ -546,6 +680,10 @@ function refreshFavoritesLayout() {
     const expanded = favoritesDockEl.classList.contains('expanded');
     const hasOverflow = !expanded && (scroller.scrollWidth - scroller.clientWidth > 1);
     const showToggle = hasOverflow || expanded;
+
+    if (!hasOverflow) {
+        stopFavoritesSmoothScroll();
+    }
 
     favoritesDockEl.classList.toggle('overflowing', hasOverflow);
     favoritesDockEl.classList.toggle('can-expand', showToggle);
@@ -739,7 +877,7 @@ function setupEventListeners() {
     if (favoritesScrollAreaEl) {
         favoritesScrollAreaEl.addEventListener('wheel', handleFavoritesWheel, { passive: false });
         favoritesScrollAreaEl.addEventListener('scroll', handleFavoritesScroll, { passive: true });
-        favoritesScrollAreaEl.addEventListener('pointerdown', revealFavoritesScrollbar, { passive: true });
+        favoritesScrollAreaEl.addEventListener('pointerdown', handleFavoritesPointerDown, { passive: true });
         favoritesScrollAreaEl.addEventListener('mouseenter', revealFavoritesScrollbar);
     }
 
@@ -1039,7 +1177,7 @@ function handleDeleteClick(id, cardElement) {
 function startRenamingCard(card) {
     if (!card) return;
     
-    const titleElement = card.querySelector('h3');
+    const titleElement = card.querySelector('.card-title');
     if (!titleElement) return;
     
     const originalText = titleElement.textContent;
@@ -1083,7 +1221,7 @@ function startRenamingCard(card) {
 
 function exitRenameMode(card) {
     const input = card.querySelector('.rename-input');
-    const titleElement = card.querySelector('h3');
+    const titleElement = card.querySelector('.card-title');
     
     if (input && titleElement) {
         input.remove();
@@ -1396,36 +1534,126 @@ function loadJsonData(filename) {
 }
 
 function adjustCardTitleFontSize(card) {
-    const title = card.querySelector('h3');
-    if (!title) return;
+    const title = card.querySelector('.card-title');
+    const wrapper = card.querySelector('.card-content-wrapper');
+    if (!title || !wrapper) return;
+
+    card.classList.remove('is-condensed', 'is-super-condensed');
+    card.style.removeProperty('--folder-icon-override');
+    wrapper.style.removeProperty('overflow');
+    wrapper.style.removeProperty('overflow-y');
+    wrapper.style.removeProperty('overflow-x');
+
+    const buttons = card.querySelector('.card-buttons');
+    if (buttons) {
+        buttons.classList.remove('has-dynamic-scale');
+        buttons.style.removeProperty('--button-font-scale');
+    }
+
+    title.style.removeProperty('font-size');
+    title.style.removeProperty('line-height');
+    title.style.removeProperty('max-height');
 
     const rect = card.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
 
-    const maxLines = card.classList.contains('prompt-card') ? 4 : 3;
-    const dynamicMax = Math.min(20, Math.max(13, rect.width * 0.09));
-    const dynamicMin = Math.max(11, dynamicMax * 0.68);
-    let currentSize = dynamicMax;
+    const baseLines = card.classList.contains('prompt-card') ? 4 : 3;
+    const maxSize = Math.min(22, Math.max(12.4, rect.width * 0.095));
+    const minSize = Math.max(9.4, rect.width * 0.052);
+    let fontSize = maxSize;
+    let lines = baseLines;
 
-    title.style.fontSize = `${currentSize}px`;
-    title.style.lineHeight = '1.25';
+    const applyTypography = () => {
+        title.style.fontSize = `${fontSize}px`;
+        title.style.lineHeight = '1.24';
+        title.style.maxHeight = `${lines * fontSize * 1.24}px`;
+    };
 
-    const computed = window.getComputedStyle(title);
-    const lineHeight = parseFloat(computed.lineHeight) || currentSize * 1.25;
-    let maxHeight = lineHeight * maxLines;
-    title.style.maxHeight = `${maxHeight}px`;
+    applyTypography();
 
-    while (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
-        currentSize -= 0.25;
-        title.style.fontSize = `${currentSize}px`;
-        title.style.lineHeight = '1.25';
+    const fits = () => wrapper.scrollHeight <= wrapper.clientHeight + 0.5;
+
+    const reduceUntil = (step, maxLinesAllowed, minFontCap = minSize, guardLimit = 180) => {
+        let guard = 0;
+        while (!fits() && guard < guardLimit) {
+            if (fontSize > minFontCap + 0.01) {
+                fontSize = Math.max(minFontCap, fontSize - step);
+            } else if (lines < maxLinesAllowed) {
+                lines += 1;
+            } else {
+                break;
+            }
+            applyTypography();
+            guard++;
+        }
+    };
+
+    reduceUntil(0.25, baseLines + 2);
+
+    if (fits()) {
+        return;
     }
 
-    let lines = maxLines;
-    while (title.scrollHeight > maxHeight + 0.5 && lines < 6) {
-        lines += 1;
-        maxHeight = lineHeight * lines;
-        title.style.maxHeight = `${maxHeight}px`;
+    card.classList.add('is-condensed');
+    applyTypography();
+    reduceUntil(0.2, Math.max(baseLines + 3, 7));
+
+    if (fits()) {
+        return;
+    }
+
+    card.classList.add('is-super-condensed');
+    applyTypography();
+    reduceUntil(0.18, Math.max(baseLines + 4, 8));
+
+    if (fits()) {
+        return;
+    }
+
+    if (card.classList.contains('folder-card')) {
+        const folderIcon = card.querySelector('.folder-icon');
+        if (folderIcon) {
+            const iconRect = folderIcon.getBoundingClientRect();
+            if (iconRect.height > 0) {
+                const overflow = wrapper.scrollHeight - wrapper.clientHeight;
+                const scale = Math.max(0.6, Math.min(1, 1 - overflow / (iconRect.height * 1.1)));
+                card.style.setProperty('--folder-icon-override', scale.toFixed(3));
+            }
+        }
+    } else if (buttons) {
+        const buttonRect = buttons.getBoundingClientRect();
+        if (buttonRect.height > 0) {
+            const overflow = wrapper.scrollHeight - wrapper.clientHeight;
+            const scale = Math.max(0.7, Math.min(1, 1 - overflow / (buttonRect.height * 1.4)));
+            buttons.style.setProperty('--button-font-scale', scale.toFixed(3));
+            buttons.classList.add('has-dynamic-scale');
+        }
+    }
+
+    applyTypography();
+    reduceUntil(0.14, 9, Math.max(8.8, minSize * 0.94), 220);
+
+    if (fits()) {
+        return;
+    }
+
+    reduceUntil(0.1, 10, 8.4, 260);
+
+    if (fits()) {
+        return;
+    }
+
+    reduceUntil(0.08, 11, 8.2, 320);
+
+    if (fits()) {
+        return;
+    }
+
+    reduceUntil(0.06, 12, 8, 360);
+
+    if (!fits()) {
+        wrapper.style.overflowY = 'auto';
+        wrapper.style.overflowX = 'hidden';
     }
 }
 
@@ -1476,6 +1704,7 @@ function renderView(node) {
         }
 
         const titleElem = document.createElement('h3');
+        titleElem.classList.add('card-title');
         titleElem.textContent = childNode.title || 'Unbenannt';
 
         const contentWrapper = document.createElement('div');
@@ -2125,6 +2354,7 @@ function applyCardLayoutMetrics() {
     if (!containerWidth) return;
 
     let columns = Math.round(containerWidth / CARD_LAYOUT.referenceWidth);
+    if (!columns) columns = CARD_LAYOUT.minColumns;
     columns = Math.min(Math.max(columns, CARD_LAYOUT.minColumns), CARD_LAYOUT.maxColumns);
 
     const widthPerColumn = containerWidth / columns;
