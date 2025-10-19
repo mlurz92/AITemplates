@@ -15,11 +15,13 @@ let favoritesChipResizeObserver = null;
 let favoritesLayoutRaf = null;
 let favoritesHeightSyncRaf = null;
 let favoritesFootprintRaf = null;
+let favoritesFootprintLast = null;
 let favoritesGestureStartX = null;
 let favoritesGestureStartY = null;
 let favoritesGestureLastY = null;
 let favoritesGestureAxis = null;
 let favoritesScrollbarHideTimeout = null;
+let favoritesChipHeightLast = null;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -50,6 +52,26 @@ let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
 
+const CARD_BASE_WIDTH = 240;
+const CARD_MAX_WIDTH = 320;
+const CARD_MIN_WIDTH = 96;
+const CARD_MIN_SCALE = 0.4;
+const CARD_MAX_SCALE = 1.12;
+const hasResizeObserver = typeof ResizeObserver !== 'undefined';
+
+let cardResizeObserver = null;
+let rootResizeObserver = null;
+let gridLayoutRafId = null;
+let cardMetricRafId = null;
+
+const currentRenderedCards = new Set();
+const cardMetricsCache = new WeakMap();
+const cardMetricQueue = new Map();
+const cardLayoutCache = new WeakMap();
+const layoutState = { columns: 0, cardWidth: 0 };
+
+const favoriteChipLayoutCache = new WeakMap();
+
 const FAVORITE_CHIP_MIN_WIDTH = 140;
 const FAVORITE_CHIP_MAX_WIDTH = 236;
 const FAVORITE_CHIP_MIN_WIDTH_NARROW = 112;
@@ -60,6 +82,19 @@ const FAVORITE_PREVIEW_MIN_SCALE = 0.7;
 
 if (typeof window !== 'undefined' && window.gsap && typeof window.gsap.registerPlugin === 'function' && window.Flip) {
     window.gsap.registerPlugin(window.Flip);
+}
+
+function setStylePropertyIfChanged(target, property, value) {
+    if (!target) return;
+    const current = target.style.getPropertyValue(property);
+    if (current === value) return;
+    target.style.setProperty(property, value);
+}
+
+function setInlineStyleIfChanged(target, property, value) {
+    if (!target) return;
+    if (target.style[property] === value) return;
+    target.style[property] = value;
 }
 
 function initApp() {
@@ -125,6 +160,7 @@ function initApp() {
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
 
+    setupResponsiveLayout();
     updateDockPositioning();
     setupEventListeners();
     checkFullscreenSupport();
@@ -189,6 +225,291 @@ function createContextMenu() {
         
         hideContextMenu();
     });
+}
+
+function setupResponsiveLayout() {
+    if (!containerEl) return;
+
+    if (hasResizeObserver && !cardResizeObserver) {
+        cardResizeObserver = new ResizeObserver((entries) => {
+            entries.forEach((entry) => {
+                scheduleCardMetric(entry.target, entry.contentRect);
+            });
+        });
+    }
+
+    if (hasResizeObserver && !rootResizeObserver && typeof document !== 'undefined') {
+        rootResizeObserver = new ResizeObserver(() => scheduleGridLayout());
+        if (document.body) {
+            rootResizeObserver.observe(document.body);
+        }
+    }
+
+    scheduleGridLayout();
+}
+
+function scheduleGridLayout() {
+    if (gridLayoutRafId) {
+        cancelAnimationFrame(gridLayoutRafId);
+    }
+    gridLayoutRafId = requestAnimationFrame(() => {
+        updateGridLayout();
+        gridLayoutRafId = null;
+    });
+}
+
+function updateGridLayout() {
+    if (!containerEl) return;
+
+    const computed = window.getComputedStyle(containerEl);
+    const gap = parseFloat(computed.gap || computed.columnGap || '0') || 0;
+    const parentWidth = containerEl.clientWidth || (containerEl.parentElement ? containerEl.parentElement.clientWidth : 0);
+    const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement ? document.documentElement.clientWidth : 0);
+    const availableWidth = parentWidth > 0 ? parentWidth : viewportWidth;
+    if (!availableWidth) {
+        return;
+    }
+
+    let columns = Math.floor((availableWidth + gap) / (CARD_BASE_WIDTH + gap));
+    if (!columns || columns < 3) {
+        columns = 3;
+    }
+    columns = Math.min(6, columns);
+
+    const totalGap = gap * (columns - 1);
+    const rawWidth = (availableWidth - totalGap) / columns;
+    const cardWidth = Math.max(CARD_MIN_WIDTH, Math.min(CARD_MAX_WIDTH, rawWidth));
+
+    const widthChanged = Math.abs(cardWidth - (layoutState.cardWidth || 0)) > 0.51;
+    const columnChanged = columns !== layoutState.columns;
+
+    if (!widthChanged && !columnChanged) {
+        return;
+    }
+
+    layoutState.columns = columns;
+    layoutState.cardWidth = cardWidth;
+
+    containerEl.style.setProperty('--column-count', String(columns));
+    containerEl.style.setProperty('--card-width', `${cardWidth}px`);
+
+    scheduleAllCardMetrics();
+}
+
+function scheduleAllCardMetrics() {
+    currentRenderedCards.forEach((card) => scheduleCardMetric(card));
+}
+
+function scheduleCardMetric(card, rect) {
+    if (!card) return;
+
+    const width = rect && typeof rect.width === 'number' ? rect.width : card.clientWidth;
+    const height = rect && typeof rect.height === 'number' ? rect.height : computeContentHeight(card);
+
+    const cached = cardLayoutCache.get(card);
+    if (cached && Math.abs((cached.width || 0) - width) < 0.51 && Math.abs((cached.contentHeight || 0) - height) < 0.51) {
+        return;
+    }
+
+    let measurement = cardMetricQueue.get(card);
+    if (!measurement) {
+        measurement = { width: null, height: null };
+        cardMetricQueue.set(card, measurement);
+    }
+
+    measurement.width = width;
+    measurement.height = height;
+
+    if (!cardMetricRafId) {
+        cardMetricRafId = requestAnimationFrame(() => {
+            flushCardMetricQueue();
+            cardMetricRafId = null;
+        });
+    }
+}
+
+function flushCardMetricQueue() {
+    cardMetricQueue.forEach((measurement, card) => {
+        updateCardLayoutMetrics(card, measurement.width, measurement.height);
+    });
+    cardMetricQueue.clear();
+}
+
+function updateCardLayoutMetrics(card, width, contentHeight) {
+    if (!card || !card.isConnected) return;
+
+    const metrics = getCardMetrics(card);
+    if (!metrics) return;
+
+    const measuredWidth = width && width > 0 ? width : card.clientWidth;
+    const measuredContentHeight = contentHeight && contentHeight > 0 ? contentHeight : computeContentHeight(card);
+    if (!measuredWidth || !measuredContentHeight) return;
+
+    const scale = Math.min(CARD_MAX_SCALE, Math.max(CARD_MIN_SCALE, measuredWidth / CARD_BASE_WIDTH));
+    const padding = 18 * scale;
+    setStylePropertyIfChanged(card, '--card-padding', `${padding}px`);
+
+    const contentGap = Math.max(6, 14 * scale);
+    setStylePropertyIfChanged(card, '--card-content-gap', `${contentGap}px`);
+
+    const buttonGap = Math.max(6, 12 * scale);
+    setStylePropertyIfChanged(card, '--card-button-gap', `${buttonGap}px`);
+
+    const buttonFontSize = Math.max(11, 14.5 * scale);
+    setStylePropertyIfChanged(card, '--card-button-font-size', `${buttonFontSize}px`);
+
+    const buttonPaddingY = Math.max(6, 10 * scale);
+    const buttonPaddingX = Math.max(8, 14 * scale);
+    setStylePropertyIfChanged(card, '--card-button-padding-y', `${buttonPaddingY}px`);
+    setStylePropertyIfChanged(card, '--card-button-padding-x', `${buttonPaddingX}px`);
+
+    const iconSize = Math.max(16, 24 * scale);
+    setStylePropertyIfChanged(card, '--card-icon-size', `${iconSize}px`);
+
+    const actionSize = Math.max(22, Math.min(36, measuredWidth * 0.12));
+    setStylePropertyIfChanged(card, '--card-action-size', `${actionSize}px`);
+
+    const actionOffset = Math.max(6, Math.min(14, measuredWidth * 0.06));
+    setStylePropertyIfChanged(card, '--card-action-offset', `${actionOffset}px`);
+
+    const titleFactor = card.classList.contains('folder-card') ? 0.085 : 0.078;
+    const titleSize = Math.max(12, Math.min(28, measuredWidth * titleFactor));
+    setStylePropertyIfChanged(card, '--card-title-size', `${titleSize}px`);
+
+    if (metrics.folderIcon) {
+        const folderWidth = Math.max(48, Math.min(measuredWidth * 0.55, CARD_MAX_WIDTH));
+        const folderHeight = Math.max(38, folderWidth * 0.78);
+        setStylePropertyIfChanged(card, '--card-folder-icon-width', `${folderWidth}px`);
+        setStylePropertyIfChanged(card, '--card-folder-icon-height', `${folderHeight}px`);
+    } else {
+        card.style.removeProperty('--card-folder-icon-width');
+        card.style.removeProperty('--card-folder-icon-height');
+    }
+
+    adjustCardTitleFontSize(card, measuredWidth, measuredContentHeight, scale, metrics);
+
+    cardLayoutCache.set(card, {
+        width: measuredWidth,
+        contentHeight: measuredContentHeight,
+        scale,
+        padding,
+        buttonFontSize,
+        buttonPaddingX,
+        buttonPaddingY,
+        iconSize,
+        actionSize,
+        actionOffset,
+        titleSize
+    });
+}
+
+function computeContentHeight(card) {
+    const style = window.getComputedStyle(card);
+    const paddingTop = parseFloat(style.paddingTop) || 0;
+    const paddingBottom = parseFloat(style.paddingBottom) || 0;
+    return card.clientHeight - paddingTop - paddingBottom;
+}
+
+function getCardMetrics(card) {
+    if (!card) return null;
+
+    let metrics = cardMetricsCache.get(card);
+    if (metrics) return metrics;
+
+    const title = card.querySelector('h3');
+    if (!title) return null;
+
+    const wrapper = title.parentElement;
+    const buttonContainer = wrapper ? wrapper.querySelector('.card-buttons') : null;
+    const folderIcon = wrapper ? wrapper.querySelector('.folder-icon') : null;
+
+    metrics = { title, wrapper, buttonContainer, folderIcon };
+    cardMetricsCache.set(card, metrics);
+    return metrics;
+}
+
+function computeTitleAvailableHeight(card, metrics, contentHeight) {
+    if (!metrics || !metrics.wrapper) return contentHeight;
+
+    const wrapper = metrics.wrapper;
+    const style = window.getComputedStyle(wrapper);
+    const gap = parseFloat(style.rowGap || style.gap || '0') || 0;
+    const children = Array.from(wrapper.children);
+    const gapContribution = gap * Math.max(0, children.length - 1);
+
+    let siblingsHeight = 0;
+    for (const child of children) {
+        if (child === metrics.title) continue;
+        const rect = child.getBoundingClientRect();
+        siblingsHeight += rect.height;
+    }
+
+    const available = contentHeight - siblingsHeight - gapContribution;
+    return Math.max(32, available);
+}
+
+function adjustCardTitleFontSize(card, width = null, contentHeight = null, scale = 1, metrics = null) {
+    metrics = metrics || getCardMetrics(card);
+    if (!metrics || !metrics.title) return;
+
+    const title = metrics.title;
+    const measuredWidth = width && width > 0 ? width : card.clientWidth;
+    const measuredContentHeight = contentHeight && contentHeight > 0 ? contentHeight : computeContentHeight(card);
+    if (!measuredWidth || !measuredContentHeight) return;
+
+    const availableHeight = computeTitleAvailableHeight(card, metrics, measuredContentHeight);
+    const baseFont = parseFloat(card.style.getPropertyValue('--card-title-size')) || Math.max(14, measuredWidth * 0.075);
+    const maxFont = Math.min(baseFont, Math.max(12, measuredWidth * 0.09));
+    const minFont = Math.max(10, maxFont * 0.55);
+
+    setInlineStyleIfChanged(title, 'lineHeight', '1.2');
+    fitTextToHeight(title, availableHeight, { min: minFont, max: maxFont });
+    setStylePropertyIfChanged(card, '--card-title-max-height', `${availableHeight}px`);
+    setInlineStyleIfChanged(title, 'maxHeight', `${availableHeight}px`);
+}
+
+function fitTextToHeight(element, targetHeight, { min, max }) {
+    if (!element || !Number.isFinite(targetHeight) || targetHeight <= 0) {
+        return null;
+    }
+
+    let low = Math.max(8, min || 8);
+    let high = Math.max(low, max || low);
+    let best = low;
+    const tolerance = 0.1;
+
+    setInlineStyleIfChanged(element, 'maxHeight', 'none');
+
+    while (high - low > tolerance) {
+        const mid = (low + high) / 2;
+        element.style.fontSize = `${mid}px`;
+        const height = element.scrollHeight;
+        if (height <= targetHeight) {
+            best = mid;
+            low = mid + tolerance;
+        } else {
+            high = mid - tolerance;
+        }
+    }
+
+    element.style.fontSize = `${best}px`;
+    return best;
+}
+
+function clearCardsContainer() {
+    if (!containerEl) return;
+
+    const existingCards = containerEl.querySelectorAll('.card');
+    existingCards.forEach((card) => {
+        if (hasResizeObserver && cardResizeObserver) {
+            cardResizeObserver.unobserve(card);
+        }
+        cardMetricsCache.delete(card);
+        cardLayoutCache.delete(card);
+    });
+
+    currentRenderedCards.clear();
+    containerEl.innerHTML = '';
 }
 
 function showContextMenu(x, y, targetElement) {
@@ -507,9 +828,14 @@ function queueUpdateFavoritesFootprint() {
         }
         const measured = favoritesDockEl.getBoundingClientRect().height;
         if (Number.isFinite(measured) && measured > 0) {
-            document.body.style.setProperty('--favorites-footprint', `${Math.ceil(measured)}px`);
+            const rounded = Math.ceil(measured);
+            if (favoritesFootprintLast !== rounded) {
+                favoritesFootprintLast = rounded;
+                document.body.style.setProperty('--favorites-footprint', `${rounded}px`);
+            }
         } else {
             document.body.style.removeProperty('--favorites-footprint');
+            favoritesFootprintLast = null;
         }
     });
 }
@@ -577,9 +903,10 @@ function refreshFavoritesLayout() {
 function updateFavoriteChipLayout(chip) {
     if (!chip || !chip.isConnected) return 0;
 
-    const width = chip.getBoundingClientRect().width;
+    const rect = chip.getBoundingClientRect();
+    const width = rect.width;
     if (width <= 0) {
-        return Math.ceil(chip.getBoundingClientRect().height);
+        return Math.ceil(rect.height || 0);
     }
     let layout = 'title';
 
@@ -589,11 +916,19 @@ function updateFavoriteChipLayout(chip) {
         layout = 'compact';
     }
 
+    const cache = favoriteChipLayoutCache.get(chip);
+    if (cache && Math.abs((cache.width || 0) - width) < 0.51 && cache.layout === layout) {
+        return cache.height || Math.ceil(rect.height || 0);
+    }
+
     chip.dataset.layout = layout;
     applyFavoriteChipContent(chip, layout, width);
     fitFavoriteChipText(chip, layout);
 
-    return Math.ceil(chip.getBoundingClientRect().height);
+    const updatedRect = chip.getBoundingClientRect();
+    const height = Math.ceil(updatedRect.height || 0);
+    favoriteChipLayoutCache.set(chip, { width, layout, height });
+    return height;
 }
 
 function getFavoriteChipObserver() {
@@ -754,6 +1089,7 @@ function setupEventListeners() {
     });
 
     window.addEventListener('resize', handleWindowResize);
+    window.addEventListener('orientationchange', scheduleGridLayout);
 }
 
 function updateParallax() {
@@ -1077,7 +1413,7 @@ function exitRenameMode(card) {
     if (input && titleElement) {
         input.remove();
         titleElement.style.display = 'block';
-        adjustCardTitleFontSize(card);
+        scheduleCardMetric(card);
     }
 }
 
@@ -1384,59 +1720,26 @@ function loadJsonData(filename) {
         });
 }
 
-function adjustCardTitleFontSize(card) {
-    const title = card.querySelector('h3');
-    if (!title) return;
-
-    const rect = card.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-
-    const maxLines = card.classList.contains('prompt-card') ? 4 : 3;
-    const dynamicMax = Math.min(20, Math.max(13, rect.width * 0.09));
-    const dynamicMin = Math.max(11, dynamicMax * 0.68);
-    let currentSize = dynamicMax;
-
-    title.style.fontSize = `${currentSize}px`;
-    title.style.lineHeight = '1.25';
-
-    const computed = window.getComputedStyle(title);
-    const lineHeight = parseFloat(computed.lineHeight) || currentSize * 1.25;
-    let maxHeight = lineHeight * maxLines;
-    title.style.maxHeight = `${maxHeight}px`;
-
-    while (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
-        currentSize -= 0.25;
-        title.style.fontSize = `${currentSize}px`;
-        title.style.lineHeight = '1.25';
-    }
-
-    let lines = maxLines;
-    while (title.scrollHeight > maxHeight + 0.5 && lines < 6) {
-        lines += 1;
-        maxHeight = lineHeight * lines;
-        title.style.maxHeight = `${maxHeight}px`;
-    }
-}
-
 function renderView(node) {
     exitOrganizeMode();
     const currentScroll = containerEl.scrollTop;
-    containerEl.innerHTML = '';
+    clearCardsContainer();
     if (!node) {
         containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
         return;
     }
 
     const childNodes = node.items || [];
-    const maxItems = 36; 
+    const maxItems = 36;
     const nodesToRender = childNodes.slice(0, maxItems);
     const vivusSetups = [];
     const renderedCards = [];
+    const fragment = document.createDocumentFragment();
 
     nodesToRender.forEach(childNode => {
         const card = document.createElement('div');
         card.classList.add('card');
-        
+
         let nodeId = childNode.id;
         if (!nodeId) {
             nodeId = generateId();
@@ -1492,18 +1795,31 @@ function renderView(node) {
             contentWrapper.appendChild(btnContainer);
         }
         card.appendChild(contentWrapper);
-        containerEl.appendChild(card);
+        fragment.appendChild(card);
         renderedCards.push(card);
     });
 
+    containerEl.appendChild(fragment);
+
     vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
-    
+
     if (renderedCards.length > 0) {
         containerEl.scrollTop = currentScroll;
+        renderedCards.forEach(card => {
+            currentRenderedCards.add(card);
+            if (hasResizeObserver && cardResizeObserver) {
+                cardResizeObserver.observe(card);
+            }
+        });
+    }
+
+    scheduleGridLayout();
+
+    if (renderedCards.length > 0) {
         requestAnimationFrame(() => {
             renderedCards.forEach(c => {
                 c.classList.add('is-visible');
-                adjustCardTitleFontSize(c);
+                scheduleCardMetric(c);
             });
         });
     } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
@@ -2102,7 +2418,10 @@ function handleWindowResize() {
     resizeRafId = requestAnimationFrame(() => {
         updateDockPositioning();
         requestFavoritesLayoutFrame();
-        document.querySelectorAll('.card').forEach((card) => adjustCardTitleFontSize(card));
+        scheduleGridLayout();
+        if (!hasResizeObserver) {
+            scheduleAllCardMetrics();
+        }
         resizeRafId = null;
     });
 }
@@ -2273,22 +2592,12 @@ function fitFavoriteTextBlock(chip, element, { lines, minScale, scaleVar }) {
         return;
     }
 
-    let scale = targetHeight / scrollHeight;
-    let appliedHeight = targetHeight;
-
-    if (scale < minScale) {
-        scale = minScale;
-        appliedHeight = scrollHeight * scale;
-    }
-
+    const rawScale = targetHeight / scrollHeight;
+    const scale = Math.max(minScale, Math.min(1, rawScale));
     chip.style.setProperty(scaleVar, scale.toFixed(3));
 
-    // Force reflow to ensure scrollHeight updates with new scale
-    void element.offsetHeight;
-
-    const postScaleHeight = element.scrollHeight;
-    appliedHeight = Math.max(appliedHeight, postScaleHeight);
-    element.style.maxHeight = `${appliedHeight}px`;
+    const finalHeight = Math.max(targetHeight, Math.ceil(scrollHeight * scale));
+    element.style.maxHeight = `${finalHeight}px`;
 }
 
 function syncFavoriteChipHeight(measuredHeight) {
@@ -2304,9 +2613,14 @@ function syncFavoriteChipHeight(measuredHeight) {
     favoritesHeightSyncRaf = requestAnimationFrame(() => {
         favoritesHeightSyncRaf = null;
         if (finalHeight) {
-            favoritesDockEl.style.setProperty('--favorite-chip-height', `${Math.ceil(finalHeight)}px`);
+            const rounded = Math.ceil(finalHeight);
+            if (favoritesChipHeightLast !== rounded) {
+                favoritesChipHeightLast = rounded;
+                favoritesDockEl.style.setProperty('--favorite-chip-height', `${rounded}px`);
+            }
         } else {
             favoritesDockEl.style.removeProperty('--favorite-chip-height');
+            favoritesChipHeightLast = null;
         }
         queueUpdateFavoritesFootprint();
     });
@@ -2342,7 +2656,11 @@ function renderFavoritesDock() {
         favoritesChipResizeObserver.disconnect();
     }
 
+    const existingChips = favoritesListEl.querySelectorAll('.favorite-chip');
+    existingChips.forEach(chip => favoriteChipLayoutCache.delete(chip));
     favoritesListEl.innerHTML = '';
+    favoritesChipHeightLast = null;
+    favoritesFootprintLast = null;
 
     const favoritesWithNodes = favoritePrompts
         .map((promptId) => {
@@ -2367,6 +2685,8 @@ function renderFavoritesDock() {
             favoritesScrollAreaEl.classList.remove('show-scrollbar');
         }
         document.body.style.removeProperty('--favorites-footprint');
+        favoritesChipHeightLast = null;
+        favoritesFootprintLast = null;
         setFavoritesExpanded(false);
         if (favoritesToggleBtn) {
             favoritesToggleBtn.hidden = true;
