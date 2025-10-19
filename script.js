@@ -50,6 +50,22 @@ let lastScrollY = 0;
 let ticking = false;
 let resizeRafId = null;
 
+const CARD_BASE_WIDTH = 240;
+const CARD_MAX_WIDTH = 320;
+const CARD_MIN_WIDTH = 96;
+const CARD_MIN_SCALE = 0.4;
+const CARD_MAX_SCALE = 1.12;
+const hasResizeObserver = typeof ResizeObserver !== 'undefined';
+
+let cardResizeObserver = null;
+let rootResizeObserver = null;
+let gridLayoutRafId = null;
+let cardMetricRafId = null;
+
+const currentRenderedCards = new Set();
+const cardMetricsCache = new WeakMap();
+const cardMetricQueue = new Map();
+
 const FAVORITE_CHIP_MIN_WIDTH = 140;
 const FAVORITE_CHIP_MAX_WIDTH = 236;
 const FAVORITE_CHIP_MIN_WIDTH_NARROW = 112;
@@ -125,6 +141,7 @@ function initApp() {
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
 
+    setupResponsiveLayout();
     updateDockPositioning();
     setupEventListeners();
     checkFullscreenSupport();
@@ -189,6 +206,254 @@ function createContextMenu() {
         
         hideContextMenu();
     });
+}
+
+function setupResponsiveLayout() {
+    if (!containerEl) return;
+
+    if (hasResizeObserver && !cardResizeObserver) {
+        cardResizeObserver = new ResizeObserver((entries) => {
+            entries.forEach((entry) => {
+                scheduleCardMetric(entry.target, entry.contentRect);
+            });
+        });
+    }
+
+    if (hasResizeObserver && !rootResizeObserver && typeof document !== 'undefined') {
+        rootResizeObserver = new ResizeObserver(() => scheduleGridLayout());
+        if (document.body) {
+            rootResizeObserver.observe(document.body);
+        }
+    }
+
+    scheduleGridLayout();
+}
+
+function scheduleGridLayout() {
+    if (gridLayoutRafId) {
+        cancelAnimationFrame(gridLayoutRafId);
+    }
+    gridLayoutRafId = requestAnimationFrame(() => {
+        updateGridLayout();
+        gridLayoutRafId = null;
+    });
+}
+
+function updateGridLayout() {
+    if (!containerEl) return;
+
+    const computed = window.getComputedStyle(containerEl);
+    const gap = parseFloat(computed.gap || computed.columnGap || '0') || 0;
+    const parentWidth = containerEl.clientWidth || (containerEl.parentElement ? containerEl.parentElement.clientWidth : 0);
+    const viewportWidth = Math.max(window.innerWidth || 0, document.documentElement ? document.documentElement.clientWidth : 0);
+    const availableWidth = parentWidth > 0 ? parentWidth : viewportWidth;
+    if (!availableWidth) {
+        return;
+    }
+
+    let columns = Math.floor((availableWidth + gap) / (CARD_BASE_WIDTH + gap));
+    if (!columns || columns < 3) {
+        columns = 3;
+    }
+    columns = Math.min(6, columns);
+
+    containerEl.style.setProperty('--column-count', String(columns));
+
+    const totalGap = gap * (columns - 1);
+    const rawWidth = (availableWidth - totalGap) / columns;
+    const cardWidth = Math.max(CARD_MIN_WIDTH, Math.min(CARD_MAX_WIDTH, rawWidth));
+    containerEl.style.setProperty('--card-width', `${cardWidth}px`);
+
+    scheduleAllCardMetrics();
+}
+
+function scheduleAllCardMetrics() {
+    currentRenderedCards.forEach((card) => scheduleCardMetric(card));
+}
+
+function scheduleCardMetric(card, rect) {
+    if (!card) return;
+
+    let measurement = cardMetricQueue.get(card);
+    if (!measurement) {
+        measurement = { width: null, height: null };
+        cardMetricQueue.set(card, measurement);
+    }
+
+    measurement.width = card.clientWidth;
+
+    if (rect && typeof rect.height === 'number') {
+        measurement.height = rect.height;
+    } else {
+        measurement.height = computeContentHeight(card);
+    }
+
+    if (!cardMetricRafId) {
+        cardMetricRafId = requestAnimationFrame(() => {
+            flushCardMetricQueue();
+            cardMetricRafId = null;
+        });
+    }
+}
+
+function flushCardMetricQueue() {
+    cardMetricQueue.forEach((measurement, card) => {
+        updateCardLayoutMetrics(card, measurement.width, measurement.height);
+    });
+    cardMetricQueue.clear();
+}
+
+function updateCardLayoutMetrics(card, width, contentHeight) {
+    if (!card || !card.isConnected) return;
+
+    const metrics = getCardMetrics(card);
+    if (!metrics) return;
+
+    const measuredWidth = width && width > 0 ? width : card.clientWidth;
+    const measuredContentHeight = contentHeight && contentHeight > 0 ? contentHeight : computeContentHeight(card);
+    if (!measuredWidth || !measuredContentHeight) return;
+
+    const scale = Math.min(CARD_MAX_SCALE, Math.max(CARD_MIN_SCALE, measuredWidth / CARD_BASE_WIDTH));
+
+    const padding = 18 * scale;
+    card.style.setProperty('--card-padding', `${padding}px`);
+
+    const contentGap = Math.max(6, 14 * scale);
+    card.style.setProperty('--card-content-gap', `${contentGap}px`);
+
+    const buttonGap = Math.max(6, 12 * scale);
+    card.style.setProperty('--card-button-gap', `${buttonGap}px`);
+
+    const buttonFontSize = Math.max(11, 14.5 * scale);
+    card.style.setProperty('--card-button-font-size', `${buttonFontSize}px`);
+
+    const buttonPaddingY = Math.max(6, 10 * scale);
+    const buttonPaddingX = Math.max(8, 14 * scale);
+    card.style.setProperty('--card-button-padding-y', `${buttonPaddingY}px`);
+    card.style.setProperty('--card-button-padding-x', `${buttonPaddingX}px`);
+
+    const iconSize = Math.max(16, 24 * scale);
+    card.style.setProperty('--card-icon-size', `${iconSize}px`);
+
+    const actionSize = Math.max(22, Math.min(36, measuredWidth * 0.12));
+    card.style.setProperty('--card-action-size', `${actionSize}px`);
+
+    const actionOffset = Math.max(6, Math.min(14, measuredWidth * 0.06));
+    card.style.setProperty('--card-action-offset', `${actionOffset}px`);
+
+    const titleFactor = card.classList.contains('folder-card') ? 0.085 : 0.078;
+    const titleSize = Math.max(12, Math.min(28, measuredWidth * titleFactor));
+    card.style.setProperty('--card-title-size', `${titleSize}px`);
+
+    if (metrics.folderIcon) {
+        const folderWidth = Math.max(48, Math.min(measuredWidth * 0.55, CARD_MAX_WIDTH));
+        const folderHeight = Math.max(38, folderWidth * 0.78);
+        card.style.setProperty('--card-folder-icon-width', `${folderWidth}px`);
+        card.style.setProperty('--card-folder-icon-height', `${folderHeight}px`);
+    } else {
+        card.style.removeProperty('--card-folder-icon-width');
+        card.style.removeProperty('--card-folder-icon-height');
+    }
+
+    adjustCardTitleFontSize(card, measuredWidth, measuredContentHeight, scale, metrics);
+}
+
+function computeContentHeight(card) {
+    const style = window.getComputedStyle(card);
+    const paddingTop = parseFloat(style.paddingTop) || 0;
+    const paddingBottom = parseFloat(style.paddingBottom) || 0;
+    return card.clientHeight - paddingTop - paddingBottom;
+}
+
+function getCardMetrics(card) {
+    if (!card) return null;
+
+    let metrics = cardMetricsCache.get(card);
+    if (metrics) return metrics;
+
+    const title = card.querySelector('h3');
+    if (!title) return null;
+
+    const wrapper = title.parentElement;
+    const buttonContainer = wrapper ? wrapper.querySelector('.card-buttons') : null;
+    const folderIcon = wrapper ? wrapper.querySelector('.folder-icon') : null;
+
+    metrics = { title, wrapper, buttonContainer, folderIcon };
+    cardMetricsCache.set(card, metrics);
+    return metrics;
+}
+
+function computeTitleAvailableHeight(card, metrics, contentHeight) {
+    if (!metrics || !metrics.wrapper) return contentHeight;
+
+    const wrapper = metrics.wrapper;
+    const style = window.getComputedStyle(wrapper);
+    const gap = parseFloat(style.rowGap || style.gap || '0') || 0;
+    const children = Array.from(wrapper.children);
+    const gapContribution = gap * Math.max(0, children.length - 1);
+
+    let siblingsHeight = 0;
+    for (const child of children) {
+        if (child === metrics.title) continue;
+        const rect = child.getBoundingClientRect();
+        siblingsHeight += rect.height;
+    }
+
+    const available = contentHeight - siblingsHeight - gapContribution;
+    return Math.max(32, available);
+}
+
+function adjustCardTitleFontSize(card, width = null, contentHeight = null, scale = 1, metrics = null) {
+    metrics = metrics || getCardMetrics(card);
+    if (!metrics || !metrics.title) return;
+
+    const title = metrics.title;
+    const measuredWidth = width && width > 0 ? width : card.clientWidth;
+    const measuredContentHeight = contentHeight && contentHeight > 0 ? contentHeight : computeContentHeight(card);
+    if (!measuredWidth || !measuredContentHeight) return;
+
+    const availableHeight = computeTitleAvailableHeight(card, metrics, measuredContentHeight);
+    const baseFont = parseFloat(card.style.getPropertyValue('--card-title-size')) || Math.max(14, measuredWidth * 0.075);
+    let fontSize = Math.min(baseFont, Math.max(12, measuredWidth * 0.09));
+    const minFontSize = Math.max(10, fontSize * 0.55);
+
+    title.style.fontSize = `${fontSize}px`;
+    title.style.lineHeight = '1.2';
+    title.style.maxHeight = 'none';
+
+    let iterations = 0;
+    while (title.scrollHeight > availableHeight && fontSize > minFontSize && iterations < 80) {
+        fontSize -= 0.3;
+        title.style.fontSize = `${fontSize}px`;
+        iterations += 1;
+    }
+
+    if (title.scrollHeight > availableHeight) {
+        title.style.lineHeight = '1.12';
+        while (title.scrollHeight > availableHeight && fontSize > Math.max(9.5, minFontSize * 0.9) && iterations < 140) {
+            fontSize -= 0.2;
+            title.style.fontSize = `${fontSize}px`;
+            iterations += 1;
+        }
+    }
+
+    title.style.maxHeight = `${availableHeight}px`;
+    card.style.setProperty('--card-title-max-height', `${availableHeight}px`);
+}
+
+function clearCardsContainer() {
+    if (!containerEl) return;
+
+    const existingCards = containerEl.querySelectorAll('.card');
+    existingCards.forEach((card) => {
+        if (hasResizeObserver && cardResizeObserver) {
+            cardResizeObserver.unobserve(card);
+        }
+        cardMetricsCache.delete(card);
+    });
+
+    currentRenderedCards.clear();
+    containerEl.innerHTML = '';
 }
 
 function showContextMenu(x, y, targetElement) {
@@ -754,6 +1019,7 @@ function setupEventListeners() {
     });
 
     window.addEventListener('resize', handleWindowResize);
+    window.addEventListener('orientationchange', scheduleGridLayout);
 }
 
 function updateParallax() {
@@ -1077,7 +1343,7 @@ function exitRenameMode(card) {
     if (input && titleElement) {
         input.remove();
         titleElement.style.display = 'block';
-        adjustCardTitleFontSize(card);
+        scheduleCardMetric(card);
     }
 }
 
@@ -1384,59 +1650,26 @@ function loadJsonData(filename) {
         });
 }
 
-function adjustCardTitleFontSize(card) {
-    const title = card.querySelector('h3');
-    if (!title) return;
-
-    const rect = card.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-
-    const maxLines = card.classList.contains('prompt-card') ? 4 : 3;
-    const dynamicMax = Math.min(20, Math.max(13, rect.width * 0.09));
-    const dynamicMin = Math.max(11, dynamicMax * 0.68);
-    let currentSize = dynamicMax;
-
-    title.style.fontSize = `${currentSize}px`;
-    title.style.lineHeight = '1.25';
-
-    const computed = window.getComputedStyle(title);
-    const lineHeight = parseFloat(computed.lineHeight) || currentSize * 1.25;
-    let maxHeight = lineHeight * maxLines;
-    title.style.maxHeight = `${maxHeight}px`;
-
-    while (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
-        currentSize -= 0.25;
-        title.style.fontSize = `${currentSize}px`;
-        title.style.lineHeight = '1.25';
-    }
-
-    let lines = maxLines;
-    while (title.scrollHeight > maxHeight + 0.5 && lines < 6) {
-        lines += 1;
-        maxHeight = lineHeight * lines;
-        title.style.maxHeight = `${maxHeight}px`;
-    }
-}
-
 function renderView(node) {
     exitOrganizeMode();
     const currentScroll = containerEl.scrollTop;
-    containerEl.innerHTML = '';
+    clearCardsContainer();
     if (!node) {
         containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
         return;
     }
 
     const childNodes = node.items || [];
-    const maxItems = 36; 
+    const maxItems = 36;
     const nodesToRender = childNodes.slice(0, maxItems);
     const vivusSetups = [];
     const renderedCards = [];
+    const fragment = document.createDocumentFragment();
 
     nodesToRender.forEach(childNode => {
         const card = document.createElement('div');
         card.classList.add('card');
-        
+
         let nodeId = childNode.id;
         if (!nodeId) {
             nodeId = generateId();
@@ -1492,18 +1725,31 @@ function renderView(node) {
             contentWrapper.appendChild(btnContainer);
         }
         card.appendChild(contentWrapper);
-        containerEl.appendChild(card);
+        fragment.appendChild(card);
         renderedCards.push(card);
     });
 
+    containerEl.appendChild(fragment);
+
     vivusSetups.forEach(setup => { if (document.body.contains(setup.parent)) setupVivusAnimation(setup.parent, setup.svgId); });
-    
+
     if (renderedCards.length > 0) {
         containerEl.scrollTop = currentScroll;
+        renderedCards.forEach(card => {
+            currentRenderedCards.add(card);
+            if (hasResizeObserver && cardResizeObserver) {
+                cardResizeObserver.observe(card);
+            }
+        });
+    }
+
+    scheduleGridLayout();
+
+    if (renderedCards.length > 0) {
         requestAnimationFrame(() => {
             renderedCards.forEach(c => {
                 c.classList.add('is-visible');
-                adjustCardTitleFontSize(c);
+                scheduleCardMetric(c);
             });
         });
     } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
@@ -2102,7 +2348,10 @@ function handleWindowResize() {
     resizeRafId = requestAnimationFrame(() => {
         updateDockPositioning();
         requestFavoritesLayoutFrame();
-        document.querySelectorAll('.card').forEach((card) => adjustCardTitleFontSize(card));
+        scheduleGridLayout();
+        if (!hasResizeObserver) {
+            scheduleAllCardMetrics();
+        }
         resizeRafId = null;
     });
 }

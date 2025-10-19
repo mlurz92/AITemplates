@@ -10,9 +10,10 @@
   --fg-1: hsl(220, 20%, 95%);
   --fg-2: hsl(220, 15%, 75%);
   --fg-3: hsl(220, 12%, 60%);
-  --card-min-width: clamp(208px, 22vw, 236px);
-  --card-max-width: clamp(228px, 24vw, 252px);
-  --card-min-height: clamp(196px, 28vw, 236px);
+  --card-base-width: 240px;
+  --card-min-width: 96px;
+  --card-max-width: 320px;
+  --card-aspect-ratio: 1.25;
   --glass-bg: rgba(28, 32, 46, 0.6);
   --glass-stroke: rgba(255, 255, 255, 0.1);
   --glass-stroke-hover: rgba(0, 230, 255, 0.7);
@@ -275,9 +276,12 @@ body::before {
 #app-logo-button:hover #app-logo-svg { transform: scale(1.05) rotate(-3deg); }
 
 .cards-container {
+  --column-count: 3;
+  --card-width: var(--card-base-width);
+  --card-gap: clamp(0.8rem, 2.2vw, 1.6rem);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
-  gap: clamp(0.8rem, 2.2vw, 1.6rem);
+  grid-template-columns: repeat(var(--column-count), minmax(0, 1fr));
+  gap: var(--card-gap);
   padding: clamp(0.8rem, 2.5vw, 1.8rem);
   padding-top: calc(6rem + var(--safe-area-inset-top));
   padding-bottom: calc(6.5rem + var(--safe-area-inset-bottom));
@@ -285,34 +289,13 @@ body::before {
   min-height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
   will-change: transform;
   transition: padding-bottom var(--duration-3) var(--ease-smooth);
-  max-width: min(1440px, 100%);
+  max-width: min(1500px, 100%);
   margin: 0 auto;
   justify-items: center;
   align-content: start;
 }
 .cards-container.swiping-right { transition-property: none; }
 
-
-@media (max-width: 1320px) {
-  :root {
-    --card-min-width: clamp(200px, 28vw, 232px);
-    --card-max-width: clamp(220px, 30vw, 244px);
-  }
-}
-
-@media (max-width: 1120px) {
-  :root {
-    --card-min-width: clamp(192px, 32vw, 228px);
-    --card-max-width: clamp(212px, 34vw, 236px);
-  }
-}
-
-@media (max-width: 900px) {
-  :root {
-    --card-min-width: clamp(184px, 40vw, 220px);
-    --card-max-width: clamp(204px, 44vw, 228px);
-  }
-}
 
 .card {
   background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
@@ -322,7 +305,7 @@ body::before {
   background-clip: padding-box;
   border-radius: var(--radius-lg);
   box-shadow: var(--vignette-shadow), var(--shadow-1);
-  padding: clamp(0.75rem, 1.8vw, 1.15rem);
+  padding: var(--card-padding, clamp(0.75rem, 1.8vw, 1.15rem));
   transition: transform var(--duration-2) var(--ease-smooth), box-shadow var(--duration-2) var(--ease-smooth), border-color var(--duration-2) var(--ease-smooth);
   display: flex;
   flex-direction: column;
@@ -330,9 +313,10 @@ body::before {
   position: relative;
   overflow: hidden;
   cursor: pointer;
-  width: min(100%, var(--card-max-width));
-  min-width: min(100%, var(--card-min-width));
-  min-height: var(--card-min-height);
+  width: min(100%, var(--card-width, var(--card-base-width)));
+  max-width: var(--card-width, var(--card-base-width));
+  min-width: 0;
+  aspect-ratio: var(--card-aspect-ratio);
   height: auto;
   opacity: 0;
   transform: translateY(20px) scale(0.98) translateZ(0);
@@ -367,12 +351,12 @@ body::before {
 
 .card-delete-btn, .card-edit-btn {
     position: absolute;
-    top: -8px;
+    top: calc(var(--card-action-offset, 8px) * -1);
     background: var(--bg-1);
     border: 1px solid var(--glass-stroke);
     border-radius: 50%;
-    width: clamp(28px, 3vw, 32px);
-    height: clamp(28px, 3vw, 32px);
+    width: var(--card-action-size, clamp(28px, 3vw, 32px));
+    height: var(--card-action-size, clamp(28px, 3vw, 32px));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -382,8 +366,8 @@ body::before {
     transition: opacity 0.2s ease, transform 0.2s var(--timing-function-bounce), background var(--duration-1) var(--ease-smooth);
     z-index: 15;
 }
-.card-delete-btn { right: -8px; }
-.card-edit-btn { right: 24px; }
+.card-delete-btn { right: calc(var(--card-action-offset, 8px) * -1); }
+.card-edit-btn { right: calc(var(--card-action-offset, 8px) + var(--card-action-size, 32px) * 0.75); }
 .cards-container.edit-mode .card-delete-btn, .cards-container.edit-mode .card-edit-btn { opacity: 1; transform: scale(1); }
 .card-delete-btn:hover { transform: scale(1.15); background: var(--delete-hover-bg); }
 .card-delete-btn .icon-delete { stroke: var(--fg-2); transition: stroke 0.2s ease; }
@@ -400,14 +384,14 @@ body::before {
   justify-content: space-between;
   min-height: 0;
   height: auto;
-  gap: clamp(0.4rem, 1.2vw, 0.8rem);
+  gap: var(--card-content-gap, clamp(0.4rem, 1.2vw, 0.8rem));
 }
 .card h3 {
   font-weight: 600;
   text-align: center;
   white-space: normal;
   overflow: hidden;
-  margin-bottom: 0.5em;
+  margin: 0;
   line-height: 1.25;
   color: var(--fg-1);
   overflow-wrap: normal;
@@ -415,17 +399,33 @@ body::before {
   -webkit-hyphens: auto;
   hyphens: auto;
   text-wrap: pretty;
-  font-size: clamp(0.95rem, 1.8vw, 1.2rem);
+  font-size: var(--card-title-size, clamp(0.95rem, 1.8vw, 1.2rem));
+  max-height: var(--card-title-max-height, none);
+}
+.folder-card .folder-icon {
+  width: var(--card-folder-icon-width, 82px);
+  height: var(--card-folder-icon-height, 64px);
+  margin: 0 auto;
+  display: block;
 }
 
 .folder-card .card-content-wrapper { justify-content: space-between; align-items: center; }
 .folder-card h3 { margin-bottom: 0; }
-.folder-icon { width: clamp(40%, 8vw, 65%); height: auto; display: block; stroke: var(--fg-1); transition: stroke var(--duration-2) var(--ease-smooth); }
+.folder-icon { width: var(--card-folder-icon-width, clamp(40%, 8vw, 65%)); height: var(--card-folder-icon-height, auto); display: block; stroke: var(--fg-1); transition: stroke var(--duration-2) var(--ease-smooth); }
 .folder-card:hover .folder-icon { stroke: var(--acc-2); }
 
 .prompt-card .card-content-wrapper { justify-content: space-between; }
-.prompt-card h3 { margin-bottom: 0.8em; }
-.card-buttons { display: flex; justify-content: space-evenly; margin-top: auto; padding-top: 0.6em; flex-shrink: 0; width: 100%; }
+.prompt-card h3 { margin-bottom: 0; }
+.card-buttons {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: var(--card-button-gap, 0.6rem);
+  flex-shrink: 0;
+  width: 100%;
+  gap: var(--card-button-gap, 0.6rem);
+}
 
 .btn {
   background: rgba(255,255,255,0.08);
@@ -441,6 +441,10 @@ body::before {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
+.card .btn {
+  padding: var(--card-button-padding-y, 10px) var(--card-button-padding-x, 14px);
+  font-size: var(--card-button-font-size, 14.5px);
+}
 .btn:hover { transform: translateY(-1px); background-color: rgba(255,255,255,0.15); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
 .btn:active { transform: translateY(0); filter: brightness(.95); }
 .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(0,230,255,.28), 0 0 0 6px rgba(139,92,246,.18); }
@@ -453,7 +457,9 @@ body::before {
 .btn-danger { background: var(--delete-hover-bg); border-color: var(--delete-color); }
 
 .btn svg.icon { stroke: currentColor; width: 22px; height: 22px; }
-.btn-ghost svg.icon { width: 24px; height: 24px; }
+.card .btn svg.icon { width: var(--card-icon-size, 22px); height: var(--card-icon-size, 22px); }
+.card .btn-ghost { padding: var(--card-button-padding-y, 8px); }
+.card .btn-ghost svg.icon { width: var(--card-icon-size, 24px); height: var(--card-icon-size, 24px); }
 
 .fixed-back {
   position: fixed;
