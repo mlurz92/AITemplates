@@ -73,10 +73,9 @@ body::before {
   content: "";
   position: fixed; inset: 0;
   background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='table' tableValues='0 0 .06 0'/></feComponentTransfer></filter><rect width='100%' height='100%' filter='url(#n)' /></svg>") repeat;
-  opacity: .3;
+  opacity: .18;
   pointer-events: none;
   mix-blend-mode: soft-light;
-  animation: grain 7s steps(10) infinite;
 }
 
 .sr-only {
@@ -100,60 +99,52 @@ body::before {
   pointer-events: none;
   z-index: -1;
   will-change: transform;
+  overflow: hidden;
 }
 
 .aurora-shape {
   position: absolute;
   border-radius: 50%;
-  mix-blend-mode: plus-lighter;
-  opacity: 0.15;
-  filter: blur(100px);
-  will-change: transform;
+  opacity: 0.26;
+  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.42) 0%, rgba(139, 92, 246, 0) 70%);
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.8s var(--ease-smooth), opacity 0.8s var(--ease-smooth);
 }
 
 .shape1 {
-  width: 60vmax;
-  height: 60vmax;
-  background-color: var(--acc-1);
-  top: -20vmax;
-  left: -20vmax;
-  animation: aurora-anim-1 30s infinite alternate ease-in-out;
+  width: 52vmax;
+  height: 52vmax;
+  top: -18vmax;
+  left: -18vmax;
+  background: radial-gradient(circle at 32% 30%, rgba(139, 92, 246, 0.42) 0%, rgba(139, 92, 246, 0) 74%);
 }
 
 .shape2 {
-  width: 50vmax;
-  height: 50vmax;
-  background-color: var(--acc-2);
-  top: 10vmax;
-  right: -15vmax;
-  animation: aurora-anim-2 40s infinite alternate ease-in-out;
+  width: 46vmax;
+  height: 46vmax;
+  top: 12vmax;
+  right: -14vmax;
+  background: radial-gradient(circle at 64% 38%, rgba(0, 230, 255, 0.38) 0%, rgba(0, 230, 255, 0) 72%);
 }
 
 .shape3 {
-  width: 40vmax;
-  height: 40vmax;
-  background-color: #ffb86c;
-  bottom: -10vmax;
-  left: 20vmax;
-  animation: aurora-anim-3 50s infinite alternate ease-in-out;
+  width: 44vmax;
+  height: 44vmax;
+  bottom: -8vmax;
+  left: 18vmax;
+  background: radial-gradient(circle at 40% 60%, rgba(255, 184, 108, 0.34) 0%, rgba(255, 184, 108, 0) 70%);
 }
 
-@keyframes aurora-anim-1 {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(20vw, 15vh) scale(1.2); }
-  100% { transform: translate(-10vw, -10vh) scale(0.9); }
+.aurora-container.motion-reduced .aurora-shape {
+  opacity: 0;
+  transition: none;
 }
 
-@keyframes aurora-anim-2 {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-25vw, 10vh) scale(0.8); }
-  100% { transform: translate(10vw, -20vh) scale(1.1); }
-}
-
-@keyframes aurora-anim-3 {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(15vw, -20vh) scale(1.3); }
-  100% { transform: translate(-20vw, 5vh) scale(1); }
+@media (prefers-reduced-motion: reduce) {
+  .aurora-shape {
+    transition: none;
+    opacity: 0;
+  }
 }
 
 .top-bar {
