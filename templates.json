@@ -327,13 +327,26 @@
               "id": "9487e161-2eed-431c-ac09-caa7e2a91bf2",
               "type": "prompt",
               "title": "Neues Bild aus Referenzfotos",
-              "content": "Die bereitgestellten Referenzfotos zeigen alle die gleiche Person. Analysiere alle typischen Merkmale dieser Person, wobei du einen besonderen Fokus auf die Merkmale des Gesichtes legst, wie Gesichtskonturen und Form, Augen, Nase, Ohren und die Abstände und alles was das charakteristische Erscheinungsbild dieser Person ausmacht bis ins lächerlich kleinste Detail. Nutze diese Informationen um ein neues Foto dieser Person zu erzeugen, welches alle diese charakteristischen Merkmale aufweist, so dass sie eindeutig und unverkennbar dargestellt wird. \n\nDas von dir neu generierte Foto soll folgende Eigenschaften haben:\n"
+              "content": "Die bereitgestellten Referenzfotos zeigen alle die gleiche Person. Analysiere alle typischen Merkmale dieser Person, wobei du einen besonderen Fokus auf die Merkmale des Gesichtes legst, wie Gesichtskonturen und Form, Augen, Nase, Ohren und die Abstände und alles was das charakteristische Erscheinungsbild dieser Person ausmacht bis ins lächerlich kleinste Detail. Nutze diese Informationen um ein neues Foto dieser Person zu erzeugen, welches alle diese charakteristischen Merkmale aufweist, so dass sie eindeutig und unverkennbar dargestellt wird. Erstelle das neue Foto mit einem neuen Blickwinkel auf die Person und einem neuen Gesichtsausdruck der Person, wo bei du dich bei der Darstellung entsprechend der Charakter-Konsistenz, streng an die aus den Referenzbildern erhaltenen charakteristischen Merkmale der Person hältst und die Darstellung auf dem neu generierten Foto perfekt zu den vorgegebenen Anweisungen und wünschen passen muss. \n\nDenke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Beeindrucke mich mit einer perfekten Antwort.\n\nDas von dir neu generierte Foto soll folgende Eigenschaften/Szene/Inhalt haben:\n\n[ GewünschteSzeneEigenschaften ]\n\nErstelle das neue Foto"
             },
             {
               "id": "b3adeb36-d2ff-4db6-b189-4717b8dcf9df",
               "type": "prompt",
               "title": "Wiederholung Referenzbilder",
               "content": "Führe einen neuen Versuch durch und halte dich dabei strenger an die Bereitgestellten Referenzbilder bzw. das Referenzbild. Analysiere dazu nochmal genau die Referenz, achte bis ins lächerlich kleinste Detail auf alle charakteristischen Merkmale der Person um diese im neuen Bild auch exakt wiederzugeben. Analysiere auch nochmal den zugehörigen Prompt. Denke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Beeindrucke mich mit einer perfekten Antwort. Erstelle das neue Bild!"
+            }
+          ]
+        },
+        {
+          "id": "eb24aab2-ab5d-49b0-a10d-b816ed1bfd93",
+          "type": "folder",
+          "title": "Videos",
+          "items": [
+            {
+              "id": "30d3456e-a475-4a8b-957c-989f157eddb4",
+              "type": "prompt",
+              "title": "Video-Prompt erstellen",
+              "content": "Ich brauche den Perfekten Prompt für eine aktuelle Version eine fortschrittlichen Image-to-Video KI wie Veo oder Sora.\nDas Ziel ist, dass die auf dem Bild gezeigten Personen folgendes machen: \n\n[ GewünschteAktion ] \n\nWichtig ist dabei eine absolute Charakter-Konsistenz, also dass die Personen dabei nicht verschwinden dürfen, nicht durch andere ersetzt werden dürfen und keine Personen neu dazu kommen sollen. Die Personen sollen sich immer an den Personen auf dem Originalfoto orientieren ohne zu morphen oder ähnliches. \n\nDer Prompt soll gebrauchsfertig in einem Codeblock stehen, so dass ich ihn nur noch zusammen mit dem Foto der aktuellen Version der Bild-zu-Video KI zusammen mit dem Original-Foto geben muss. Nutze verschiedene spezialisierte Quellen wie User-Foren und weitere, um optimale Tricks für das Video-Prompting für die aktuellen Versionen der KI Video Generatoren und meine gewünschten Anforderungen an das Video zu erhalten. Achte dabei streng darauf, dass alle meine Anforderungen und Wünsche berücksichtigt werden.\n\nRecherchiere im Internet ausführlich und umfassend genau bis ins lächerlich kleinste Detail. Nutze dafür verschiedene unterschiedliche Quellen und recherchiere auch in spezialisierten User-Foren. Nutze mehrere unterschiedliche passende Tools. Überprüfe alle deine Ergebnisse und revidiere gegebenenfalls. Achte darauf, dass deine Antwort gut strukturiert, ausgewogen und übersichtlich formatiert ist. Alle Aspekte deiner Recherche müssen vollständig abbildet sein ohne etwas zu kürzen oder wegzulassen, auch wenn deine Antwort sehr lang wird. Plane deine Recherche gut und arbeite die Ergebnisse strukturiert und mit System auf, um eine optimale Antwort zu liefern, die alle meine Anforderungen vollständig erfüllt. Nutze verschiedene passende Tools. Beeindrucke mich mit einer perfekten Antwort."
             }
           ]
         }
