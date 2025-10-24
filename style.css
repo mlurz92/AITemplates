@@ -323,7 +323,6 @@ body::before {
   cursor: pointer;
   width: min(100%, var(--card-max-width));
   min-width: min(100%, var(--card-min-width));
-  /* min-height: var(--card-min-height); <- Entfernt */
   aspect-ratio: 1 / 0.7; /* Hinzugefügt */
   height: auto;
   opacity: 0;
@@ -511,6 +510,8 @@ body::before {
   opacity: 0;
   transition: transform var(--duration-3) var(--ease-smooth), opacity var(--duration-3) var(--ease-smooth);
   padding: 1.8rem 2.2rem 2.2rem;
+  aspect-ratio: unset; /* Override aspect ratio from .card */
+  height: auto; /* Allow height to adjust to content */
 }
 .modal.visible .modal-content { transform: scale(1) translateZ(0); opacity: 1; }
 .modal .modal-content.small-modal { max-width: 450px; padding: 1.5rem; }
@@ -545,6 +546,7 @@ body::before {
   outline: none;
   padding: 0;
   box-shadow: none;
+  min-height: 100px; /* Ensure a minimum height */
 }
 .prompt-fulltext.is-editing { background: var(--bg-1); border: 1px solid var(--glass-stroke); border-radius: 16px; padding: 0.8rem; margin: -0.8rem -0.8rem calc(1.8rem - 1.6rem) -0.8rem; resize: vertical; }
 .prompt-fulltext.is-editing:focus { box-shadow: 0 0 0 3px rgba(0,230,255,.28); }
