@@ -305,6 +305,12 @@ body::before {
   }
 }
 
+@media (max-width: 720px) {
+  .cards-container {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .card {
   background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
   backdrop-filter: blur(var(--blur)) saturate(200%);
@@ -401,8 +407,8 @@ body::before {
   margin-bottom: 0.5em;
   line-height: 1.25;
   color: var(--fg-1);
-  overflow-wrap: normal;
-  word-break: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   -webkit-hyphens: auto;
   hyphens: auto;
   text-wrap: pretty;
