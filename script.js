@@ -1465,28 +1465,29 @@ function adjustCardTitleFontSize(card) {
 
     const maxLines = card.classList.contains('prompt-card') ? 4 : 3;
     const dynamicMax = Math.min(20, Math.max(13, rect.width * 0.09));
-    const dynamicMin = Math.max(11, dynamicMax * 0.68);
+    const dynamicMin = Math.max(9, dynamicMax * 0.48);
     let currentSize = dynamicMax;
+    let lineHeightMultiplier = 1.22;
+    const minLineHeight = 1.08;
 
-    title.style.fontSize = `${currentSize}px`;
-    title.style.lineHeight = '1.25';
+    const applyMetrics = () => {
+        const maxHeight = currentSize * lineHeightMultiplier * maxLines;
+        title.style.fontSize = `${currentSize}px`;
+        title.style.lineHeight = `${lineHeightMultiplier}`;
+        title.style.maxHeight = `${maxHeight}px`;
+        return maxHeight;
+    };
 
-    const computed = window.getComputedStyle(title);
-    const lineHeight = parseFloat(computed.lineHeight) || currentSize * 1.25;
-    let maxHeight = lineHeight * maxLines;
-    title.style.maxHeight = `${maxHeight}px`;
+    let maxHeight = applyMetrics();
 
     while (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
-        currentSize -= 0.25;
-        title.style.fontSize = `${currentSize}px`;
-        title.style.lineHeight = '1.25';
+        currentSize = Math.max(dynamicMin, currentSize - 0.3);
+        maxHeight = applyMetrics();
     }
 
-    let lines = maxLines;
-    while (title.scrollHeight > maxHeight + 0.5 && lines < 6) {
-        lines += 1;
-        maxHeight = lineHeight * lines;
-        title.style.maxHeight = `${maxHeight}px`;
+    while (title.scrollHeight > maxHeight + 0.5 && lineHeightMultiplier > minLineHeight) {
+        lineHeightMultiplier = Math.max(minLineHeight, lineHeightMultiplier - 0.02);
+        maxHeight = applyMetrics();
     }
 }
 
