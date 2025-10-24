@@ -12,7 +12,6 @@
   --fg-3: hsl(220, 12%, 60%);
   --card-min-width: clamp(208px, 22vw, 236px);
   --card-max-width: clamp(228px, 24vw, 252px);
-  /* --card-min-height: clamp(196px, 28vw, 236px); <- Entfernt */
   --glass-bg: rgba(28, 32, 46, 0.6);
   --glass-stroke: rgba(255, 255, 255, 0.1);
   --glass-stroke-hover: rgba(0, 230, 255, 0.7);
@@ -67,6 +66,10 @@ html, body {
   line-height: 1.6;
   scrollbar-color: var(--glass-stroke) transparent;
   scrollbar-width: thin;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 body::before {
@@ -329,7 +332,7 @@ body::before {
   cursor: pointer;
   width: min(100%, var(--card-max-width));
   min-width: min(100%, var(--card-min-width));
-  aspect-ratio: 1 / 0.7; /* Hinzugefügt */
+  aspect-ratio: 1 / 0.7;
   height: auto;
   opacity: 0;
   transform: translateY(20px) scale(0.98) translateZ(0);
@@ -395,15 +398,15 @@ body::before {
   flex-grow: 1;
   overflow: hidden;
   justify-content: space-between;
-  min-height: 0; /* Wichtig für Flexbox in festem Seitenverhältnis */
-  height: 100%; /* Sicherstellen, dass der Wrapper die volle Höhe nutzt */
+  min-height: 0;
+  height: 100%;
   gap: clamp(0.4rem, 1.2vw, 0.8rem);
 }
 .card h3 {
   font-weight: 600;
   text-align: center;
   white-space: normal;
-  overflow: hidden; /* Wird durch JS für Textanpassung gesteuert */
+  overflow: hidden;
   margin-bottom: 0.5em;
   line-height: 1.25;
   color: var(--fg-1);
@@ -413,25 +416,25 @@ body::before {
   hyphens: auto;
   text-wrap: pretty;
   font-size: clamp(0.95rem, 1.8vw, 1.2rem);
-  max-height: none; /* JS steuert dies dynamisch */
+  max-height: none;
 }
 
 .folder-card .card-content-wrapper { justify-content: space-between; align-items: center; }
-.folder-card h3 { margin-bottom: 0; flex-shrink: 0; /* Verhindert Schrumpfen */}
+.folder-card h3 { margin-bottom: 0; flex-shrink: 0;}
 .folder-icon {
   width: clamp(40%, 8vw, 65%);
   height: auto;
-  max-height: 50%; /* Verhindert, dass das Icon zu groß wird */
+  max-height: 50%;
   display: block;
   stroke: var(--fg-1);
   transition: stroke var(--duration-2) var(--ease-smooth);
-  margin-top: auto; /* Schiebt das Icon nach unten, wenn Platz ist */
-  margin-bottom: auto; /* Zentriert vertikal mit Titel */
+  margin-top: auto;
+  margin-bottom: auto;
 }
 .folder-card:hover .folder-icon { stroke: var(--acc-2); }
 
 .prompt-card .card-content-wrapper { justify-content: space-between; }
-.prompt-card h3 { margin-bottom: 0.8em; flex-shrink: 0; /* Verhindert Schrumpfen */ }
+.prompt-card h3 { margin-bottom: 0.8em; flex-shrink: 0; }
 .card-buttons { display: flex; justify-content: space-evenly; margin-top: auto; padding-top: 0.6em; flex-shrink: 0; width: 100%; }
 
 .btn {
@@ -516,8 +519,8 @@ body::before {
   opacity: 0;
   transition: transform var(--duration-3) var(--ease-smooth), opacity var(--duration-3) var(--ease-smooth);
   padding: 1.8rem 2.2rem 2.2rem;
-  aspect-ratio: unset; /* Override aspect ratio from .card */
-  height: auto; /* Allow height to adjust to content */
+  aspect-ratio: unset;
+  height: auto;
 }
 .modal.visible .modal-content { transform: scale(1) translateZ(0); opacity: 1; }
 .modal .modal-content.small-modal { max-width: 450px; padding: 1.5rem; }
@@ -552,7 +555,7 @@ body::before {
   outline: none;
   padding: 0;
   box-shadow: none;
-  min-height: 100px; /* Ensure a minimum height */
+  min-height: 100px;
 }
 .prompt-fulltext.is-editing { background: var(--bg-1); border: 1px solid var(--glass-stroke); border-radius: 16px; padding: 0.8rem; margin: -0.8rem -0.8rem calc(1.8rem - 1.6rem) -0.8rem; resize: vertical; }
 .prompt-fulltext.is-editing:focus { box-shadow: 0 0 0 3px rgba(0,230,255,.28); }

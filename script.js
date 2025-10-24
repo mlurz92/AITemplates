@@ -1458,102 +1458,35 @@ function loadJsonData(filename) {
 
 function adjustCardTitleFontSize(card) {
     const title = card.querySelector('h3');
-    const wrapper = card.querySelector('.card-content-wrapper');
-    if (!title || !wrapper) return;
-
-    title.style.removeProperty('font-size');
-    title.style.removeProperty('line-height');
-    title.style.removeProperty('max-height');
-    title.style.removeProperty('margin-bottom');
+    if (!title) return;
 
     const rect = card.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
 
-    const computedTitleStyle = window.getComputedStyle(title);
-    const baseFontSize = parseFloat(computedTitleStyle.fontSize) || 16;
-    const baseLineHeightPx = parseFloat(computedTitleStyle.lineHeight) || baseFontSize * 1.2;
-    const baseMarginBottom = parseFloat(computedTitleStyle.marginBottom) || 0;
-
-    const wrapperStyle = window.getComputedStyle(wrapper);
-    const rowGap = parseFloat(wrapperStyle.rowGap || wrapperStyle.gap || '0') || 0;
-    const wrapperChildren = Array.from(wrapper.children);
-    const totalGaps = rowGap * Math.max(0, wrapperChildren.length - 1);
-    const otherChildrenHeight = wrapperChildren.reduce((sum, child) => {
-        if (child === title) return sum;
-        const childRect = child.getBoundingClientRect();
-        return sum + childRect.height;
-    }, 0);
-
     const maxLines = card.classList.contains('prompt-card') ? 4 : 3;
-    const dynamicMax = Math.min(21, Math.max(baseFontSize, rect.width * 0.09));
-    let currentSize = Math.min(dynamicMax, baseFontSize);
-    const dynamicMin = Math.max(10, currentSize * 0.52);
+    const dynamicMax = Math.min(20, Math.max(13, rect.width * 0.09));
+    const dynamicMin = Math.max(11, dynamicMax * 0.68);
+    let currentSize = dynamicMax;
 
-    let lineHeightMultiplier = Math.max(1.18, baseLineHeightPx / baseFontSize);
-    const minLineHeight = 1.07;
+    title.style.fontSize = `${currentSize}px`;
+    title.style.lineHeight = '1.25';
 
-    let marginBottomPx = baseMarginBottom;
-    const minMarginBottom = baseMarginBottom > 0 ? Math.min(baseMarginBottom, 6) : 0;
+    const computed = window.getComputedStyle(title);
+    const lineHeight = parseFloat(computed.lineHeight) || currentSize * 1.25;
+    let maxHeight = lineHeight * maxLines;
+    title.style.maxHeight = `${maxHeight}px`;
 
-    const cardButtons = card.querySelector('.card-buttons');
-
-    const hasWrapperOverflow = () => wrapper.scrollHeight > wrapper.clientHeight + 0.5;
-    const buttonsClipped = () => {
-        if (!cardButtons) return false;
-        const buttonsRect = cardButtons.getBoundingClientRect();
-        return buttonsRect.bottom > rect.bottom - 1;
-    };
-
-    const availableForTitle = () => {
-        if (wrapper.clientHeight <= 0) return Infinity;
-        const allowance = wrapper.clientHeight - otherChildrenHeight - totalGaps;
-        return allowance > 0 ? allowance : Infinity;
-    };
-
-    const applyMetrics = () => {
-        const maxHeightForLines = currentSize * lineHeightMultiplier * maxLines;
-        const allowance = availableForTitle();
-        const maxHeight = Number.isFinite(allowance) ? Math.min(maxHeightForLines, allowance) : maxHeightForLines;
+    while (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
+        currentSize -= 0.25;
         title.style.fontSize = `${currentSize}px`;
-        title.style.lineHeight = `${lineHeightMultiplier.toFixed(3)}`;
+        title.style.lineHeight = '1.25';
+    }
+
+    let lines = maxLines;
+    while (title.scrollHeight > maxHeight + 0.5 && lines < 6) {
+        lines += 1;
+        maxHeight = lineHeight * lines;
         title.style.maxHeight = `${maxHeight}px`;
-        title.style.marginBottom = `${marginBottomPx}px`;
-        return maxHeight;
-    };
-
-    let maxHeight = applyMetrics();
-    let guard = 0;
-    const guardLimit = 200;
-
-    const needsAdjustment = () => (title.scrollHeight > maxHeight + 0.5) || hasWrapperOverflow() || buttonsClipped();
-
-    while (needsAdjustment() && guard < guardLimit) {
-        let adjusted = false;
-
-        if (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
-            currentSize = Math.max(dynamicMin, currentSize - 0.4);
-            adjusted = true;
-        } else if (title.scrollHeight > maxHeight + 0.5 && lineHeightMultiplier > minLineHeight) {
-            lineHeightMultiplier = Math.max(minLineHeight, lineHeightMultiplier - 0.015);
-            adjusted = true;
-        } else if ((hasWrapperOverflow() || buttonsClipped()) && currentSize > dynamicMin) {
-            currentSize = Math.max(dynamicMin, currentSize - 0.3);
-            adjusted = true;
-        } else if ((hasWrapperOverflow() || buttonsClipped()) && lineHeightMultiplier > minLineHeight) {
-            lineHeightMultiplier = Math.max(minLineHeight, lineHeightMultiplier - 0.01);
-            adjusted = true;
-        } else if ((hasWrapperOverflow() || buttonsClipped()) && marginBottomPx > minMarginBottom) {
-            marginBottomPx = Math.max(minMarginBottom, marginBottomPx - 1);
-            adjusted = true;
-        } else {
-            break;
-        }
-
-        if (adjusted) {
-            maxHeight = applyMetrics();
-        }
-
-        guard += 1;
     }
 }
 
