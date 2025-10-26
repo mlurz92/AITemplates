@@ -1458,35 +1458,71 @@ function loadJsonData(filename) {
 
 function adjustCardTitleFontSize(card) {
     const title = card.querySelector('h3');
-    if (!title) return;
+    const contentWrapper = card.querySelector('.card-content-wrapper');
+    if (!title || !contentWrapper) return;
 
     const rect = card.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
 
-    const maxLines = card.classList.contains('prompt-card') ? 4 : 3;
+    const isPromptCard = card.classList.contains('prompt-card');
+    const maxLines = isPromptCard ? 4 : 3;
     const dynamicMax = Math.min(20, Math.max(13, rect.width * 0.09));
-    const dynamicMin = Math.max(11, dynamicMax * 0.68);
+    const dynamicMin = Math.max(8, dynamicMax * 0.6);
     let currentSize = dynamicMax;
 
+    title.style.marginTop = '0';
+    title.style.marginBottom = '0';
     title.style.fontSize = `${currentSize}px`;
-    title.style.lineHeight = '1.25';
+    title.style.lineHeight = '1.24';
+    title.style.maxHeight = 'none';
 
-    const computed = window.getComputedStyle(title);
-    const lineHeight = parseFloat(computed.lineHeight) || currentSize * 1.25;
-    let maxHeight = lineHeight * maxLines;
-    title.style.maxHeight = `${maxHeight}px`;
+    const cardStyles = window.getComputedStyle(card);
+    const paddingTop = parseFloat(cardStyles.paddingTop) || 0;
+    const paddingBottom = parseFloat(cardStyles.paddingBottom) || 0;
+    const availableHeight = Math.max(0, card.clientHeight - (paddingTop + paddingBottom));
 
-    while (title.scrollHeight > maxHeight + 0.5 && currentSize > dynamicMin) {
+    const wrapperStyles = window.getComputedStyle(contentWrapper);
+    const gapValue = parseFloat(wrapperStyles.rowGap || wrapperStyles.gap || 0) || 0;
+    const otherChildren = Array.from(contentWrapper.children).filter((child) => child !== title);
+    const staticHeight = otherChildren.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0);
+    const gapCount = Math.max(0, contentWrapper.children.length - 1);
+    const totalGapHeight = gapValue * gapCount;
+
+    const applySizing = () => {
+        const titleStyles = window.getComputedStyle(title);
+        const lineHeight = parseFloat(titleStyles.lineHeight) || currentSize * 1.24;
+        const baselineAllowance = Math.max(0, availableHeight - staticHeight);
+        const gapAllowance = Math.min(totalGapHeight, baselineAllowance);
+        const availableForTitle = Math.max(0, baselineAllowance - gapAllowance);
+        const maxByLines = lineHeight * maxLines;
+        const allowedHeight = Math.min(maxByLines, Math.max(lineHeight, availableForTitle));
+        title.style.maxHeight = `${allowedHeight}px`;
+        return { allowedHeight };
+    };
+
+    let { allowedHeight } = applySizing();
+    let iterations = 0;
+
+    while (
+        iterations < 120 &&
+        currentSize > dynamicMin &&
+        (title.scrollHeight > allowedHeight + 0.5 || contentWrapper.scrollHeight > availableHeight + 0.5)
+    ) {
         currentSize -= 0.25;
         title.style.fontSize = `${currentSize}px`;
-        title.style.lineHeight = '1.25';
+        title.style.lineHeight = '1.24';
+        ({ allowedHeight } = applySizing());
+        iterations += 1;
     }
 
-    let lines = maxLines;
-    while (title.scrollHeight > maxHeight + 0.5 && lines < 6) {
-        lines += 1;
-        maxHeight = lineHeight * lines;
-        title.style.maxHeight = `${maxHeight}px`;
+    if (contentWrapper.scrollHeight > availableHeight + 0.5) {
+        const ratio = availableHeight / contentWrapper.scrollHeight;
+        if (ratio > 0 && ratio < 1) {
+            currentSize = Math.max(dynamicMin, currentSize * ratio);
+            title.style.fontSize = `${currentSize}px`;
+            title.style.lineHeight = '1.24';
+            ({ allowedHeight } = applySizing());
+        }
     }
 }
 
