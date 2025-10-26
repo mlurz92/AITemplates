@@ -407,7 +407,7 @@ body::before {
   text-align: center;
   white-space: normal;
   overflow: hidden;
-  margin-bottom: 0.5em;
+  margin: 0;
   line-height: 1.25;
   color: var(--fg-1);
   overflow-wrap: anywhere;
@@ -434,7 +434,7 @@ body::before {
 .folder-card:hover .folder-icon { stroke: var(--acc-2); }
 
 .prompt-card .card-content-wrapper { justify-content: space-between; }
-.prompt-card h3 { margin-bottom: 0.8em; flex-shrink: 0; }
+.prompt-card h3 { flex-shrink: 0; }
 .card-buttons { display: flex; justify-content: space-evenly; margin-top: auto; padding-top: 0.6em; flex-shrink: 0; width: 100%; }
 
 .btn {
