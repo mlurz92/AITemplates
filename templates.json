@@ -46,10 +46,16 @@
       "title": "Recherche",
       "items": [
         {
+          "id": "20c9c54d-ad09-45f8-9388-c57771a739d1",
+          "type": "prompt",
+          "title": "Recherche",
+          "content": "Recherchiere im Internet ausführlich und umfassend um alle relevanten Aspekte des Themas für mich zu erfassen. Decke alle Aspekte der Fragestellung vollständig ab. Nutze dafür verschiedene unterschiedliche Quellen und recherchiere auch in spezialisierten User-Foren. Überprüfe alle deine Ergebnisse und revidiere gegebenenfalls. Achte darauf, dass deine Antwort gut strukturiert, ausgewogen und übersichtlich formatiert ist. Alle Aspekte deiner Recherche müssen vollständig abbildet sein ohne etwas wegzulassen. Plane deine Recherche gut und arbeite die Ergebnisse strukturiert und mit System auf, um eine optimale Antwort zu liefern, die alle meine Anforderungen vollständig erfüllt. Nutze verschiedene passende Tools. Beeindrucke mich mit einer perfekten Antwort."
+        },
+        {
           "id": "e8f89c22-e04a-41c5-ab19-d45d68aa17be",
           "type": "prompt",
           "title": "Ausführliche Recherche",
-          "content": "Recherchiere im Internet ausführlich und umfassend genau bis ins lächerlich kleinste Detail. Nutze dafür verschiedene unterschiedliche Quellen und recherchiere auch in spezialisierten User-Foren. Nutze mehrere unterschiedliche passende Tools. Überprüfe alle deine Ergebnisse und revidiere gegebenenfalls. Achte darauf, dass deine Antwort gut strukturiert, ausgewogen und übersichtlich formatiert ist. Alle Aspekte deiner Recherche müssen vollständig abbildet sein ohne etwas zu kürzen oder wegzulassen, auch wenn deine Antwort sehr lang wird. Plane deine Recherche gut und arbeite die Ergebnisse strukturiert und mit System auf, um eine optimale Antwort zu liefern, die alle meine Anforderungen vollständig erfüllt. Nutze verschiedene passende Tools. Beeindrucke mich mit einer perfekten Antwort."
+          "content": "Recherchiere im Internet ausführlich und umfassend genau bis ins lächerlich kleinste Detail. Decke alle Aspekte der Fragestellung und des Themas vollständig und umfassend ab. Nutze dafür verschiedene unterschiedliche Quellen und recherchiere auch in spezialisierten User-Foren. Überprüfe alle deine Ergebnisse und revidiere gegebenenfalls. Achte darauf, dass deine Antwort gut strukturiert, ausgewogen und übersichtlich formatiert ist. Alle Aspekte deiner Recherche müssen vollständig abbildet sein ohne etwas zu kürzen oder wegzulassen, auch wenn deine Antwort sehr lang wird. Plane deine Recherche gut und arbeite die Ergebnisse strukturiert und mit System auf, um eine optimale Antwort zu liefern, die alle meine Anforderungen vollständig erfüllt. Nutze verschiedene passende Tools. Beeindrucke mich mit einer perfekten Antwort."
         },
         {
           "id": "949bc07b-f9ce-4152-adec-6ecdbeb3695f",
