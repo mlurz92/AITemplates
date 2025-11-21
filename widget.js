@@ -61,7 +61,7 @@ function renderFavorites(searchTerm = '') {
   const list = document.getElementById('favorites-list');
   const emptyState = document.getElementById('empty-favorites');
   const template = document.getElementById('favorite-chip-template');
-  list.innerHTML = '';
+  list.replaceChildren();
 
   const normalizedTerm = normalizeContent(searchTerm).toLowerCase();
   filteredFavorites = favorites
