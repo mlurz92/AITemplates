@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt Widget</title>
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="stylesheet" href="widget.css" />
+</head>
+<body>
+  <div class="aurora" aria-hidden="true">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+  </div>
+
+  <main class="widget-shell" role="region" aria-label="Prompt Widget">
+    <header class="widget-header">
+      <div>
+        <p class="eyebrow">Windows 11 Widget</p>
+        <h1>Prompt-Schnellzugriff</h1>
+      </div>
+      <div class="header-actions">
+        <a class="ghost-button" href="index.html" aria-label="Vollständige App öffnen">App</a>
+        <button id="refresh-widget" class="ghost-button" aria-label="Widget-Daten aktualisieren">Refresh</button>
+      </div>
+    </header>
+
+    <div class="controls" role="search">
+      <label class="sr-only" for="widget-search">Prompts durchsuchen</label>
+      <input id="widget-search" type="search" placeholder="Favoriten oder Titel suchen" autocomplete="off" />
+      <div class="status-chip" aria-live="polite" aria-atomic="true" id="widget-status"></div>
+    </div>
+
+    <section aria-live="polite" aria-atomic="false">
+      <div class="section-header">
+        <h2>Favoriten</h2>
+        <span class="hint">Tippe zum Kopieren</span>
+      </div>
+      <ul id="favorites-list" class="pill-list" role="list"></ul>
+      <p class="empty" id="empty-favorites" hidden>Keine Favoriten vorhanden. Öffne die App und markiere Prompts als Favorit.</p>
+    </section>
+
+    <section aria-live="polite" aria-atomic="false">
+      <div class="section-header">
+        <h2>Letzte Prompts</h2>
+        <span class="hint">Aus Root-Ebene</span>
+      </div>
+      <ul id="recent-prompts" class="prompt-grid" role="list"></ul>
+      <p class="empty" id="empty-prompts" hidden>Keine Prompts gefunden. Prüfe die Datenquelle.</p>
+    </section>
+  </main>
+
+  <template id="favorite-chip-template">
+    <li class="pill" role="listitem">
+      <button type="button" class="pill-button">
+        <span class="pill-title"></span>
+        <span class="pill-preview"></span>
+      </button>
+    </li>
+  </template>
+
+  <template id="prompt-card-template">
+    <li class="prompt-card" role="listitem">
+      <div class="prompt-title"></div>
+      <p class="prompt-preview"></p>
+      <div class="prompt-actions">
+        <button type="button" class="copy-button">Kopieren</button>
+        <a class="open-button" href="#" target="_blank" rel="noopener">In App öffnen</a>
+      </div>
+    </li>
+  </template>
+
+  <script src="widget.js"></script>
+</body>
+</html>

@@ -34,6 +34,7 @@ Die Anwendung besteht aus einem minimalen Set an Dateien, die alle im Hauptverze
 *   `manifest.json`: Definiert das Verhalten der PWA.
 *   `favicon.svg`, `favicon_animated.svg`: Statische und animierte Anwendungs-Icons.
 *   `icons/`: Ordner mit PWA-Icons in verschiedenen Auflösungen.
+*   `widget.html`, `widget.css`, `widget.js`: Schlanke Widget-Oberfläche für Windows 11 (Edge/WebView2), die nur den Schnellzugriff auf Favoriten und Root-Prompts darstellt.
 
 ### 2.2 Datenmanagement & Persistenz
 
@@ -174,3 +175,23 @@ Die Anwendung nutzt drei externe JavaScript-Bibliotheken, die per CDN geladen we
 1.  **Vivus.js**: Wird für die "Live-Drawing"-Animation der SVG-Pfade der Ordner-Icons bei Hover verwendet.
 2.  **Sortable.js**: Stellt die Kernfunktionalität für das Drag-and-Drop-Umsortieren der Karten im Organisationsmodus bereit.
 3.  **GSAP 3 + Flip Plugin**: Animiert das Favoriten-Dashboard (Expand/Collapse, Reflow der Chips) und sorgt für butterweiche Höhen-Transitionen.
+
+---
+
+## 7. Windows 11 Widget
+
+Die Dateien `widget.html`, `widget.css` und `widget.js` liefern eine auf Widgets optimierte, kompakte Ansicht mit:
+
+*   **Favoriten-Schnellzugriff:** Alle gespeicherten Favoriten aus `localStorage` werden als kopierbare Pills geladen.
+*   **Root-Prompt-Kacheln:** Bis zu sechs Prompts der Root-Ebene mit Copy- und "In App öffnen"-Link (`index.html#<id>`).
+*   **Suche & Status:** Ein Suchfeld filtert beide Listen live; der Status-Chip zeigt Lade- und Kopierfeedback an.
+
+### 7.1 Integration unter Windows 11 (Edge/WebView2)
+
+1.  **Lokalen Server starten:** In diesem Ordner `python -m http.server 4173` ausführen, damit `templates.json` via HTTP geladen werden kann.
+2.  **Widget-Ansicht öffnen:** In Microsoft Edge `http://localhost:4173/widget.html` aufrufen.
+3.  **Als App installieren:** Über das Edge-Menü `...` → **Apps** → **Diese Seite als App installieren** wählen. Edge erstellt ein rahmenloses Fenster (ideal für das Widgets-Panel oder die Seitenleiste).
+4.  **Desktop-Widget nutzen:** Die installierte App mit `Win` + `Shift` + `S` (Snap Layouts) kompakt andocken oder per PowerToys "Always on Top" (Win + Strg + T) als schwebendes Widget fixieren. Optional kann die App in Edge unter **Apps** → **Start beim Anmelden** aktiviert werden.
+5.  **Aktualisieren:** Der Refresh-Button im Widget lädt `localStorage`/`templates.json` neu; Favoriten bleiben mit der Haupt-App (`index.html`) synchron.
+
+> Hinweis: Die Widget-Ansicht bleibt strikt Vanilla JS/CSS und setzt keine zusätzlichen Frameworks voraus. Alle Aktionen greifen direkt auf die bestehenden Persistenz-Keys `customTemplatesJson` und `favoritePrompts` zu.
