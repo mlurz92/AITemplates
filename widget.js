@@ -64,7 +64,7 @@ function renderFavorites(searchTerm = '') {
   list.replaceChildren();
 
   const normalizedTerm = normalizeContent(searchTerm).toLowerCase();
-  filteredFavorites = favorites
+  let filteredFavorites = favorites
     .map((id) => findNodeById(jsonData, id))
     .filter(Boolean);
 
