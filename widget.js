@@ -101,7 +101,7 @@ function renderRecentPrompts(searchTerm = '') {
   const list = document.getElementById('recent-prompts');
   const emptyState = document.getElementById('empty-prompts');
   const template = document.getElementById('prompt-card-template');
-  list.innerHTML = '';
+  list.replaceChildren();
 
   const normalizedTerm = normalizeContent(searchTerm).toLowerCase();
   let prompts = collectRootPrompts();
