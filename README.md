@@ -191,7 +191,7 @@ Die Dateien `widget.html`, `widget.css` und `widget.js` liefern eine auf Widgets
 1.  **Lokalen Server starten:** In diesem Ordner `python -m http.server 4173` ausführen, damit `templates.json` via HTTP geladen werden kann.
 2.  **Widget-Ansicht öffnen:** In Microsoft Edge `http://localhost:4173/widget.html` aufrufen.
 3.  **Als App installieren:** Über das Edge-Menü `...` → **Apps** → **Diese Seite als App installieren** wählen. Edge erstellt ein rahmenloses Fenster (ideal für das Widgets-Panel oder die Seitenleiste).
-4.  **Desktop-Widget nutzen:** Die installierte App mit `Win` + `Shift` + `S` (Snap Layouts) kompakt andocken oder per PowerToys "Always on Top" (Win + Strg + T) als schwebendes Widget fixieren. Optional kann die App in Edge unter **Apps** → **Start beim Anmelden** aktiviert werden.
+4.  **Desktop-Widget nutzen:** Die installierte App mit `Win` + `Z` (Snap Layouts) kompakt andocken oder per PowerToys "Always on Top" (Win + Strg + T) als schwebendes Widget fixieren. Optional kann die App in Edge unter **Apps** → **Start beim Anmelden** aktiviert werden.
 5.  **Aktualisieren:** Der Refresh-Button im Widget lädt `localStorage`/`templates.json` neu; Favoriten bleiben mit der Haupt-App (`index.html`) synchron.
 
 > Hinweis: Die Widget-Ansicht bleibt strikt Vanilla JS/CSS und setzt keine zusätzlichen Frameworks voraus. Alle Aktionen greifen direkt auf die bestehenden Persistenz-Keys `customTemplatesJson` und `favoritePrompts` zu.
