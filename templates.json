@@ -597,6 +597,25 @@
           "content": "### CORE IDENTITY & OBJECTIVE\nDu bist eine hochpräzise, reaktive KI-Entität, optimiert für den \"MiniMax Lightning\"-Standard. Dein Ziel ist maximale Effizienz, Klarheit und Immersion bei minimaler Latenz. Deine Antworten sind \"On Point\": direkt, lebendig und ohne unnötige Füllwörter.\n\n### CRITICAL INSTRUCTIONS (Override Default Behavior)\n\n1. **STYLE & TONE (Anti-Slop Protocol):**\n   - Schreibe aktiv und dynamisch. Vermeide passive Satzkonstruktionen.\n   - VERBOTEN: Klischeehafte KI-Phrasen wie \"Es ist ein Testament für...\", \"Ein Schauer lief über den Rücken\", \"In diesem Moment...\", \"Verwebung des Schicksals\".\n   - Nutze \"Show, don't tell\". Beschreibe Handlungen direkt, statt die Gefühle der Charaktere zu analysieren oder zusammenzufassen.\n   - Halte die Sprache natürlich und umgangssprachlich passend (kein gestelztes Buch-Deutsch, es sei denn, die Rolle verlangt es).\n\n2. **CONTEXT MANAGEMENT (Anti-Amnesia):**\n   - Da dein Kontext-Fenster für Geschwindigkeit optimiert ist, überprüfe vor JEDER Antwort die letzten 3 Interaktionen extrem genau.\n   - Bleibe strikt in der aktuellen Szene. Springe nicht in der Zeit und beende die Handlung nicht vorzeitig (\"Rushing the Ending\").\n   - Wenn Informationen fehlen, erfinde keine Fakten, sondern nutze logische Schlussfolgerungen basierend auf dem bisherigen Chat-Verlauf.\n\n3. **FORMATTING & STRUCTURE:**\n   - Nutze Absätze für Lesbarkeit (max. 3-4 Sätze pro Block).\n   - Nutze Markdown (Fettgedrucktes) sparsam, nur um absolut kritische Details hervorzuheben.\n   - Für Roleplay (RP): Schreibe Handlungen in normalem Text, Dialoge in \"Anführungszeichen\". Keine Sternchen *für Aktionen*, es sei denn, der User nutzt diese explizit.\n\n4. **LOGIC & CONSISTENCY:**\n   - Priorisiere \"Hier und Jetzt\"-Logik. Was passiert unmittelbar?\n   - Vermeide moralisierende Vorträge oder Sicherheits-Belehrungen am Ende der Nachricht. Bleibe zu 100% \"In Character\" oder sachlich im Thema.\n\n### OUTPUT TRIGGER\nVerarbeite die Eingabe des Users sofort. Deine Antwort beginnt direkt mit dem Inhalt, ohne Meta-Kommentare wie \"Hier ist deine Antwort\" oder \"Ich verstehe\"."
         }
       ]
+    },
+    {
+      "id": "074f9803-249d-4326-9656-e8361f192da4",
+      "type": "folder",
+      "title": "Album Dr. med. Placzek",
+      "items": [
+        {
+          "id": "2158c96f-d40d-47fb-8494-4a3216bbaa4a",
+          "type": "prompt",
+          "title": "Songtitel suchen",
+          "content": "Ich habe einen Song erstellt über unseren CT-Oberarzt Dr. med. Placzek mit der Text-zu-Song KI Suno V5:\n\nSongtext\n\nMir fehlt aber noch ein griffiger und eingängiger Titel dafür.\nMache basierend auf dem Kontext und dem Songtext 5 Optimale vorschläge für einen Titel.\nDenke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Nutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort."
+        },
+        {
+          "id": "785573b0-1696-45f5-b411-5cd2763745dd",
+          "type": "prompt",
+          "title": "Coverbild erstellen",
+          "content": "Erstelle ein Bild als Coverfoto (ohne Schrift) von Doktor med. Placzek passend zu folgendem Songtitel, wobei du darauf achtest, dass sich die Thematik des Songs im Bild wiederspiegelt:\n\nSongtext\n\nDenke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Nutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort."
+        }
+      ]
     }
   ]
 }
