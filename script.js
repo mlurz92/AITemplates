@@ -2833,28 +2833,53 @@ function resetCardTilt(e) {
 }
 
 // === DEVICE ORIENTATION PARALLAX ===
+const DEVICE_ORIENTATION_PERMISSION_KEY = 'deviceOrientationPermission';
+
 function initDeviceOrientationParallax() {
     if (prefersReducedMotion) return;
     
     if (window.DeviceOrientationEvent) {
         // Check if permission is needed (iOS 13+)
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            // Permission will be requested on first user interaction
-            document.addEventListener('click', requestOrientationPermission, { once: true });
+            // Check if we already have a stored permission decision
+            const permissionState = localStorage.getItem(DEVICE_ORIENTATION_PERMISSION_KEY);
+            
+            if (permissionState === 'granted') {
+                // Permission was already granted, enable listener directly
+                enableDeviceOrientationListener();
+            } else if (permissionState === 'denied') {
+                // Permission was denied, don't ask again
+                return;
+            } else {
+                // No decision yet, request permission on first user interaction
+                document.addEventListener('click', requestOrientationPermissionOnce, { once: true });
+            }
         } else {
-            window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
+            // Non-iOS devices or older iOS versions don't need permission
+            enableDeviceOrientationListener();
         }
     }
 }
 
-function requestOrientationPermission() {
+function requestOrientationPermissionOnce() {
     DeviceOrientationEvent.requestPermission()
         .then(response => {
+            // Store the permission decision in localStorage
+            localStorage.setItem(DEVICE_ORIENTATION_PERMISSION_KEY, response);
+            
             if (response === 'granted') {
-                window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
+                enableDeviceOrientationListener();
             }
         })
-        .catch(console.error);
+        .catch(error => {
+            // Store 'denied' on error to prevent repeated prompts
+            localStorage.setItem(DEVICE_ORIENTATION_PERMISSION_KEY, 'denied');
+            console.warn('Device orientation permission denied or error:', error);
+        });
+}
+
+function enableDeviceOrientationListener() {
+    window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
 }
 
 function handleDeviceOrientation(e) {
