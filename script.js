@@ -18,6 +18,8 @@ let konfettiContainer = null;
 
 // Card Tilt State
 let tiltEnabled = true;
+let tiltRafId = null;
+let tiltPending = false;
 
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCancelBtn;
@@ -42,6 +44,8 @@ let motionMediaQuery = null;
 let prefersReducedMotion = false;
 let auroraParallaxOffset = 0;
 let motionPreferenceChangeHandler = null;
+let auroraVisibilityObserver = null;
+let isAuroraVisible = true;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -163,6 +167,7 @@ function initApp() {
     updateParallax();
     
     // Initialize enhanced animation systems
+    setupAuroraVisibilityObserver();
     initParticlesSystem();
     initGlowBurstSystem();
     initKonfettiSystem();
@@ -640,8 +645,12 @@ function getFavoriteChipObserver() {
         return null;
     }
     if (!favoritesChipResizeObserver) {
+        let resizeDebounceTimer = null;
         favoritesChipResizeObserver = new ResizeObserver(() => {
-            requestFavoritesLayoutFrame();
+            clearTimeout(resizeDebounceTimer);
+            resizeDebounceTimer = setTimeout(() => {
+                requestFavoritesLayoutFrame();
+            }, 16); // ~1 Frame Debounce
         });
     }
     return favoritesChipResizeObserver;
@@ -812,7 +821,29 @@ function updateParallax() {
 }
 
 function shouldAnimateParallax() {
-    return Boolean(auroraContainerEl) && !prefersReducedMotion;
+    return Boolean(auroraContainerEl) && !prefersReducedMotion && isAuroraVisible;
+}
+
+function setupAuroraVisibilityObserver() {
+    if (typeof IntersectionObserver === 'undefined' || !auroraContainerEl) return;
+    
+    auroraVisibilityObserver = new IntersectionObserver(
+        (entries) => {
+            entries.forEach(entry => {
+                isAuroraVisible = entry.isIntersecting;
+                if (!isAuroraVisible) {
+                    // Pause animations when not visible
+                    auroraContainerEl.classList.add('paused');
+                } else {
+                    // Resume animations when visible
+                    auroraContainerEl.classList.remove('paused');
+                }
+            });
+        },
+        { threshold: 0, rootMargin: '100px' }
+    );
+    
+    auroraVisibilityObserver.observe(auroraContainerEl);
 }
 
 function setupMotionPreferenceHandling() {
@@ -1428,8 +1459,8 @@ function setupVivusAnimation(parentElement, svgId) {
     parentElement.addEventListener('mouseleave', () => { if (!isTouchStarted) finishAnimation(); });
     parentElement.addEventListener('touchstart', () => { isTouchStarted = true; playAnimation(true); }, { passive: true });
     const touchEndHandler = () => { if (isTouchStarted) { isTouchStarted = false; finishAnimation(); } };
-    parentElement.addEventListener('touchend', touchEndHandler);
-    parentElement.addEventListener('touchcancel', touchEndHandler);
+    parentElement.addEventListener('touchend', touchEndHandler, { passive: true });
+    parentElement.addEventListener('touchcancel', touchEndHandler, { passive: true });
 }
 
 function processJson(data) {
@@ -1477,11 +1508,13 @@ function loadJsonData(filename) {
         });
 }
 
+// Performance-Optimierte Version mit Binary Search und Layout-Caching
 function adjustCardTitleFontSize(card) {
     const title = card.querySelector('h3');
     const contentWrapper = card.querySelector('.card-content-wrapper');
     if (!title || !contentWrapper) return;
 
+    // Einmalige Layout-Berechnung - Cache alle Werte
     const rect = card.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
 
@@ -1489,60 +1522,73 @@ function adjustCardTitleFontSize(card) {
     const maxLines = isPromptCard ? 4 : 3;
     const dynamicMax = Math.min(20, Math.max(13, rect.width * 0.09));
     const dynamicMin = Math.max(8, dynamicMax * 0.6);
-    let currentSize = dynamicMax;
 
-    title.style.marginTop = '0';
-    title.style.marginBottom = '0';
-    title.style.fontSize = `${currentSize}px`;
-    title.style.lineHeight = '1.24';
-    title.style.maxHeight = 'none';
-
+    // Einmaliges getComputedStyle für Card
     const cardStyles = window.getComputedStyle(card);
     const paddingTop = parseFloat(cardStyles.paddingTop) || 0;
     const paddingBottom = parseFloat(cardStyles.paddingBottom) || 0;
     const availableHeight = Math.max(0, card.clientHeight - (paddingTop + paddingBottom));
 
+    // Einmaliges getComputedStyle für Wrapper
     const wrapperStyles = window.getComputedStyle(contentWrapper);
     const gapValue = parseFloat(wrapperStyles.rowGap || wrapperStyles.gap || 0) || 0;
     const otherChildren = Array.from(contentWrapper.children).filter((child) => child !== title);
+    
+    // Statische Höhe einmal berechnen
     const staticHeight = otherChildren.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0);
     const gapCount = Math.max(0, contentWrapper.children.length - 1);
     const totalGapHeight = gapValue * gapCount;
 
-    const applySizing = () => {
-        const titleStyles = window.getComputedStyle(title);
-        const lineHeight = parseFloat(titleStyles.lineHeight) || currentSize * 1.24;
-        const baselineAllowance = Math.max(0, availableHeight - staticHeight);
-        const gapAllowance = Math.min(totalGapHeight, baselineAllowance);
-        const availableForTitle = Math.max(0, baselineAllowance - gapAllowance);
-        const maxByLines = lineHeight * maxLines;
-        const allowedHeight = Math.min(maxByLines, Math.max(lineHeight, availableForTitle));
-        title.style.maxHeight = `${allowedHeight}px`;
-        return { allowedHeight };
+    // Vorberechnete Werte für allowedHeight
+    const baselineAllowance = Math.max(0, availableHeight - staticHeight);
+    const gapAllowance = Math.min(totalGapHeight, baselineAllowance);
+    const availableForTitle = Math.max(0, baselineAllowance - gapAllowance);
+
+    title.style.marginTop = '0';
+    title.style.marginBottom = '0';
+    title.style.lineHeight = '1.24';
+    title.style.maxHeight = 'none';
+
+    // Binary Search Algorithmus - max 8 Iterationen statt 120
+    const lineHeight = dynamicMax * 1.24;
+    const maxByLines = lineHeight * maxLines;
+    const allowedHeight = Math.min(maxByLines, Math.max(lineHeight, availableForTitle));
+    
+    let low = dynamicMin;
+    let high = dynamicMax;
+    let bestSize = dynamicMax;
+
+    // Hilfsfunktion für Layout-Messung (minimiert Reflows)
+    const measureOverflow = (size) => {
+        title.style.fontSize = `${size}px`;
+        // Nur scrollHeight lesen - ein Reflow pro Messung
+        return title.scrollHeight;
     };
 
-    let { allowedHeight } = applySizing();
-    let iterations = 0;
-
-    while (
-        iterations < 120 &&
-        currentSize > dynamicMin &&
-        (title.scrollHeight > allowedHeight + 0.5 || contentWrapper.scrollHeight > availableHeight + 0.5)
-    ) {
-        currentSize -= 0.25;
-        title.style.fontSize = `${currentSize}px`;
-        title.style.lineHeight = '1.24';
-        ({ allowedHeight } = applySizing());
-        iterations += 1;
+    // Binary Search mit max. 8 Iterationen
+    for (let i = 0; i < 8; i++) {
+        const mid = (low + high) / 2;
+        const scrollHeight = measureOverflow(mid);
+        const maxAllowed = mid * 1.24 * maxLines;
+        
+        if (scrollHeight <= maxAllowed + 0.5) {
+            bestSize = mid;
+            high = mid; // Versuche kleiner
+        } else {
+            low = mid; // Brauche größer
+        }
     }
 
+    // Finale Größe setzen
+    title.style.fontSize = `${bestSize}px`;
+    title.style.maxHeight = `${allowedHeight}px`;
+
+    // Fallback falls contentWrapper immer noch überläuft
     if (contentWrapper.scrollHeight > availableHeight + 0.5) {
         const ratio = availableHeight / contentWrapper.scrollHeight;
         if (ratio > 0 && ratio < 1) {
-            currentSize = Math.max(dynamicMin, currentSize * ratio);
-            title.style.fontSize = `${currentSize}px`;
-            title.style.lineHeight = '1.24';
-            ({ allowedHeight } = applySizing());
+            bestSize = Math.max(dynamicMin, bestSize * ratio);
+            title.style.fontSize = `${bestSize}px`;
         }
     }
 }
@@ -2652,6 +2698,9 @@ if (document.readyState === 'loading') {
    ============================================ */
 
 // === PARTICLE SYSTEM ===
+let particlesVisibilityObserver = null;
+let isParticlesVisible = true;
+
 function initParticlesSystem() {
     if (prefersReducedMotion) return;
     
@@ -2661,6 +2710,22 @@ function initParticlesSystem() {
     document.body.appendChild(particlesContainer);
     
     createParticles();
+    
+    // Setup visibility observer to pause particles when not visible
+    if (typeof IntersectionObserver !== 'undefined') {
+        particlesVisibilityObserver = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    isParticlesVisible = entry.isIntersecting;
+                    if (particlesContainer) {
+                        particlesContainer.classList.toggle('paused', !isParticlesVisible);
+                    }
+                });
+            },
+            { threshold: 0, rootMargin: '50px' }
+        );
+        particlesVisibilityObserver.observe(particlesContainer);
+    }
 }
 
 function createParticles() {
@@ -2726,6 +2791,9 @@ function triggerGlowBurst(x, y, color = 'rgba(124, 58, 237, 0.4)') {
 }
 
 // === KONFETTI SYSTEM ===
+const konfettiPool = [];
+const MAX_KONFETTI_PARTICLES = 100;
+
 function initKonfettiSystem() {
     if (prefersReducedMotion) return;
     
@@ -2735,6 +2803,19 @@ function initKonfettiSystem() {
     document.body.appendChild(konfettiContainer);
 }
 
+function getKonfettiParticle() {
+    return konfettiPool.pop() || document.createElement('div');
+}
+
+function releaseKonfettiParticle(particle) {
+    if (konfettiPool.length < MAX_KONFETTI_PARTICLES) {
+        particle.remove();
+        konfettiPool.push(particle);
+    } else {
+        particle.remove();
+    }
+}
+
 function triggerKonfetti(x, y) {
     if (!konfettiContainer || prefersReducedMotion) return;
     
@@ -2742,7 +2823,7 @@ function triggerKonfetti(x, y) {
     const particleCount = 20;
     
     for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement('div');
+        const particle = getKonfettiParticle();
         particle.className = 'konfetti-particle';
         
         const color = colors[Math.floor(Math.random() * colors.length)];
@@ -2781,7 +2862,7 @@ function triggerKonfetti(x, y) {
         konfettiContainer.appendChild(particle);
         
         animation.onfinish = () => {
-            particle.remove();
+            releaseKonfettiParticle(particle);
         };
     }
 }
@@ -2798,31 +2879,36 @@ function initCardTiltEffect() {
 }
 
 function handleCardTilt(e) {
-    if (!tiltEnabled) return;
+    if (!tiltEnabled || tiltPending) return;
+    tiltPending = true;
     
-    const card = e.target.closest('.card');
-    if (!card || containerEl.classList.contains('edit-mode')) return;
-    
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    
-    const rotateX = (y - centerY) / 10;
-    const rotateY = (centerX - x) / 10;
-    
-    // Clamp values to prevent extreme rotations
-    const clampedRotateX = Math.max(-10, Math.min(10, rotateX));
-    const clampedRotateY = Math.max(-10, Math.min(10, rotateY));
-    
-    card.style.transform = `translateY(-6px) scale(1.04) perspective(1000px) rotateX(${clampedRotateX}deg) rotateY(${clampedRotateY}deg) translateZ(0)`;
-    
-    // Update glow position
-    const glowX = (x / rect.width) * 100;
-    const glowY = (y / rect.height) * 100;
-    card.style.setProperty('--glow-x', `${glowX}%`);
-    card.style.setProperty('--glow-y', `${glowY}%`);
+    tiltRafId = requestAnimationFrame(() => {
+        tiltPending = false;
+        
+        const card = e.target.closest('.card');
+        if (!card || containerEl.classList.contains('edit-mode')) return;
+        
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        const rotateX = (y - centerY) / 10;
+        const rotateY = (centerX - x) / 10;
+        
+        // Clamp values to prevent extreme rotations
+        const clampedRotateX = Math.max(-10, Math.min(10, rotateX));
+        const clampedRotateY = Math.max(-10, Math.min(10, rotateY));
+        
+        card.style.transform = `translateY(-6px) scale(1.04) perspective(1000px) rotateX(${clampedRotateX}deg) rotateY(${clampedRotateY}deg) translateZ(0)`;
+        
+        // Update glow position
+        const glowX = (x / rect.width) * 100;
+        const glowY = (y / rect.height) * 100;
+        card.style.setProperty('--glow-x', `${glowX}%`);
+        card.style.setProperty('--glow-y', `${glowY}%`);
+    });
 }
 
 function resetCardTilt(e) {
@@ -2834,6 +2920,10 @@ function resetCardTilt(e) {
 
 // === DEVICE ORIENTATION PARALLAX ===
 const DEVICE_ORIENTATION_PERMISSION_KEY = 'deviceOrientationPermission';
+let lastOrientationTime = 0;
+const ORIENTATION_THROTTLE_MS = 100; // ~10 FPS for better performance
+let orientationRafId = null;
+let pendingOrientation = null;
 
 function initDeviceOrientationParallax() {
     if (prefersReducedMotion) return;
@@ -2883,26 +2973,44 @@ function enableDeviceOrientationListener() {
 }
 
 function handleDeviceOrientation(e) {
+    // Throttle with time check
+    const now = Date.now();
+    if (now - lastOrientationTime < ORIENTATION_THROTTLE_MS) return;
+    lastOrientationTime = now;
+    
     if (!auroraContainerEl || prefersReducedMotion) return;
     
-    const beta = e.beta || 0;   // -180 to 180 (front/back tilt)
-    const gamma = e.gamma || 0; // -90 to 90 (left/right tilt)
+    // Store pending values for rAF
+    pendingOrientation = {
+        beta: e.beta || 0,
+        gamma: e.gamma || 0
+    };
     
-    // Normalize and clamp values
-    const normalizedBeta = Math.max(-30, Math.min(30, beta)) / 30;
-    const normalizedGamma = Math.max(-30, Math.min(30, gamma)) / 30;
-    
-    // Apply subtle parallax to aurora
-    const moveX = normalizedGamma * 20;
-    const moveY = normalizedBeta * 15;
-    
-    auroraContainerEl.classList.add('parallax-active');
-    
-    const shapes = auroraContainerEl.querySelectorAll('.aurora-shape');
-    shapes.forEach((shape, index) => {
-        const factor = (index + 1) * 0.3;
-        shape.style.transform = `translate3d(${moveX * factor}px, ${moveY * factor + auroraParallaxOffset}px, 0)`;
-    });
+    // Use rAF for actual DOM updates
+    if (!orientationRafId) {
+        orientationRafId = requestAnimationFrame(() => {
+            orientationRafId = null;
+            if (!pendingOrientation) return;
+            
+            const { beta, gamma } = pendingOrientation;
+            
+            // Normalize and clamp values
+            const normalizedBeta = Math.max(-30, Math.min(30, beta)) / 30;
+            const normalizedGamma = Math.max(-30, Math.min(30, gamma)) / 30;
+            
+            // Apply subtle parallax to aurora
+            const moveX = normalizedGamma * 20;
+            const moveY = normalizedBeta * 15;
+            
+            auroraContainerEl.classList.add('parallax-active');
+            
+            const shapes = auroraContainerEl.querySelectorAll('.aurora-shape');
+            shapes.forEach((shape, index) => {
+                const factor = (index + 1) * 0.3;
+                shape.style.transform = `translate3d(${moveX * factor}px, ${moveY * factor + auroraParallaxOffset}px, 0)`;
+            });
+        });
+    }
 }
 
 // === TOUCH FEEDBACK ===

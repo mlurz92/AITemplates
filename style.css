@@ -134,7 +134,7 @@ body::before {
   height: 100%;
   pointer-events: none;
   z-index: -1;
-  will-change: transform;
+  transform: translateZ(0);
   overflow: hidden;
 }
 
@@ -143,10 +143,9 @@ body::before {
   position: absolute;
   border-radius: 50%;
   opacity: 0.32;
-  filter: blur(60px);
+  filter: blur(40px);
   transform: translate3d(0, 0, 0);
   transition: transform 0.8s var(--ease-smooth), opacity 0.8s var(--ease-smooth);
-  will-change: transform, opacity;
 }
 
 .shape1 {
@@ -210,6 +209,11 @@ body::before {
   transition: none;
 }
 
+/* Aurora paused state - stops animations when not visible */
+.aurora-container.paused .aurora-shape {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora-shape {
     transition: none;
@@ -224,13 +228,12 @@ body::before {
   left: var(--safe-area-inset-left);
   right: var(--safe-area-inset-right);
   background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
-  backdrop-filter: blur(var(--blur)) saturate(220%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(220%);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
   border: 1px solid transparent;
   background-clip: padding-box;
   z-index: 999;
   transform: translateZ(0);
-  will-change: transform, opacity, backdrop-filter;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -240,6 +243,8 @@ body::before {
   border-bottom: 1px solid var(--glass-stroke);
   box-shadow: var(--shadow-2), 
               0 4px 20px rgba(124, 58, 237, 0.08);
+  /* Performance: CSS Containment */
+  contain: layout style;
 }
 
 .breadcrumb {
@@ -308,8 +313,8 @@ body::before {
     border-radius: 12px;
     padding: 0.5rem;
     box-shadow: var(--shadow-1);
-    backdrop-filter: blur(var(--blur)) saturate(150%);
-    -webkit-backdrop-filter: blur(var(--blur)) saturate(150%);
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
     z-index: 1000;
     opacity: 0;
     transform: scale(0.95) translateY(-10px);
@@ -353,7 +358,7 @@ body::before {
   padding-bottom: calc(6.5rem + var(--safe-area-inset-bottom));
   position: relative;
   min-height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
-  will-change: transform;
+  transform: translateZ(0);
   transition: padding-bottom var(--duration-3) var(--ease-smooth);
   max-width: min(1440px, 100%);
   margin: 0 auto;
@@ -393,8 +398,8 @@ body::before {
 /* === CARD COMPONENT - Enhanced Design === */
 .card {
   background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
-  backdrop-filter: blur(var(--blur)) saturate(220%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(220%);
+  backdrop-filter: blur(8px) saturate(180%);
+  -webkit-backdrop-filter: blur(8px) saturate(180%);
   border: 1px solid transparent;
   background-clip: padding-box;
   border-radius: var(--radius-lg);
@@ -402,7 +407,8 @@ body::before {
   padding: clamp(0.75rem, 1.8vw, 1.15rem);
   transition: transform var(--duration-2) var(--ease-smooth), 
               box-shadow var(--duration-2) var(--ease-smooth), 
-              border-color var(--duration-2) var(--ease-smooth);
+              border-color var(--duration-2) var(--ease-smooth),
+              backdrop-filter var(--duration-2) var(--ease-smooth);
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -415,7 +421,11 @@ body::before {
   height: auto;
   opacity: 0;
   transform: translateY(20px) scale(0.98) translateZ(0);
-  will-change: transform, opacity, box-shadow, backdrop-filter;
+  /* Performance: CSS Containment for better rendering */
+  contain: layout style paint;
+  /* Performance: Skip rendering for off-screen cards */
+  content-visibility: auto;
+  contain-intrinsic-size: 200px 140px;
 }
 
 .card.is-visible {
@@ -430,6 +440,8 @@ body::before {
               0 20px 50px rgba(0,0,0,.55),
               var(--shadow-glow-1);
   border-color: var(--glass-stroke-hover);
+  backdrop-filter: blur(12px) saturate(200%);
+  -webkit-backdrop-filter: blur(12px) saturate(200%);
   z-index: 10;
 }
 
@@ -439,9 +451,7 @@ body::before {
 }
 
 .cards-container.edit-mode .card { cursor: grab; animation: jiggle 0.4s infinite; }
-.cards-container.edit-mode .card:hover { transform: translateY(-5px) scale(1.03); animation-name: jiggle;
-  will-change: transform, opacity, box-shadow, backdrop-filter;
-}
+.cards-container.edit-mode .card:hover { transform: translateY(-5px) scale(1.03); animation-name: jiggle; }
 .cards-container.edit-mode .card.sortable-ghost { background: rgba(0,230,255,.12); border: 2px dashed var(--acc-2); opacity: 0.7; }
 .cards-container.edit-mode .card.sortable-drag { cursor: grabbing; opacity: 0.85; transform: scale(1.05); box-shadow: var(--shadow-1); z-index: 999; animation: none; }
 .card.drop-target-folder { transform: scale(1.05); border: 2px solid var(--acc-2); box-shadow: 0 0 15px 5px rgba(0,230,255,.24); }
@@ -639,14 +649,14 @@ body::before {
 .modal.visible { 
   opacity: 1; 
   visibility: visible; 
-  backdrop-filter: blur(18px); 
-  -webkit-backdrop-filter: blur(18px); 
+  backdrop-filter: blur(12px); 
+  -webkit-backdrop-filter: blur(12px); 
 }
 
 .modal .modal-content {
   background: var(--glass-highlight), var(--glass-shadow-overlay), var(--glass-bg);
-  backdrop-filter: blur(var(--blur)) saturate(220%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(220%);
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
   border: 1px solid transparent;
   background-clip: padding-box;
   box-shadow: var(--vignette-shadow), 
@@ -798,17 +808,16 @@ body.favorites-dock-visible #notification-area {
                 0 0 20px rgba(124, 58, 237, 0.12);
     border: 1px solid transparent;
     background-clip: padding-box;
-    backdrop-filter: blur(var(--blur)) saturate(220%);
-    -webkit-backdrop-filter: blur(var(--blur)) saturate(220%);
+    backdrop-filter: blur(10px) saturate(160%);
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
     font-size: 0.95rem;
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(20px) translateZ(0);
     display: flex;
     align-items: center;
     gap: 0.7rem;
     transition: transform var(--duration-2) var(--ease-smooth), 
                 opacity var(--duration-2) var(--ease-smooth);
-    will-change: transform, opacity, backdrop-filter;
 }
 
 .notification.show { 
@@ -848,14 +857,13 @@ body.favorites-dock-visible #notification-area {
     border-radius: 12px;
     padding: 0.5rem;
     box-shadow: var(--shadow-1);
-    backdrop-filter: blur(var(--blur)) saturate(200%);
-    -webkit-backdrop-filter: blur(var(--blur)) saturate(200%);
+    backdrop-filter: blur(10px) saturate(160%);
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
     z-index: 2000;
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.95) translateZ(0);
     transition: opacity var(--duration-2) var(--ease-smooth), transform var(--duration-2) var(--ease-smooth);
     pointer-events: none;
-    will-change: transform, opacity, backdrop-filter;
 }
 .context-menu.visible { opacity: 1; transform: scale(1); pointer-events: all; }
 .context-menu-item { display: flex; align-items: center; padding: 0.6rem 1.2rem; cursor: pointer; transition: background-color var(--duration-1) var(--ease-smooth), color var(--duration-1) var(--ease-smooth); color: var(--fg-1); white-space: nowrap; border-radius: 8px; }
@@ -969,8 +977,8 @@ body.favorites-dock-visible .favorites-dock {
     background: linear-gradient(165deg, 
         rgba(12, 15, 28, 0.88), 
         rgba(18, 22, 38, 0.65));
-    backdrop-filter: blur(calc(var(--blur) * 0.95)) saturate(220%);
-    -webkit-backdrop-filter: blur(calc(var(--blur) * 0.95)) saturate(220%);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
     box-shadow: 0 -20px 40px rgba(0, 0, 0, 0.5), 
                 0 16px 35px rgba(0, 0, 0, 0.35),
                 inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -1015,7 +1023,7 @@ body.favorites-dock-visible .favorites-dock {
     position: absolute;
     top: -1px;
     right: clamp(0.35rem, 1vw, 0.8rem);
-    transform: translate(55%, -100%);
+    transform: translate(55%, -100%) translateZ(0);
     min-width: clamp(32px, 4.5vw, 44px);
     height: clamp(22px, 2.7vw, 28px);
     border-radius: 14px 14px 8px 8px;
@@ -1033,8 +1041,8 @@ body.favorites-dock-visible .favorites-dock {
         color var(--duration-2) var(--ease-smooth),
         box-shadow var(--duration-2) var(--ease-smooth),
         border-color var(--duration-2) var(--ease-smooth);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
     box-shadow: 0 12px 26px rgba(0, 0, 0, 0.38);
     z-index: 5;
 }
@@ -1201,6 +1209,9 @@ body.favorites-dock-visible .favorites-dock {
         box-shadow var(--duration-2) var(--ease-smooth),
         background var(--duration-2) var(--ease-smooth),
         height var(--duration-3) var(--ease-smooth);
+    /* Performance: Skip rendering for off-screen favorite chips */
+    content-visibility: auto;
+    contain-intrinsic-size: 200px 78px;
 }
 
 .favorite-chip::before {
@@ -1538,7 +1549,6 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
 .btn {
   position: relative;
   overflow: hidden;
-  will-change: transform, box-shadow, background-color;
 }
 
 .btn::before {
@@ -1553,7 +1563,6 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   transform: translate(-50%, -50%) translateZ(0);
   opacity: 0;
   pointer-events: none;
-  will-change: width, height, opacity;
 }
 
 .btn:active::before {
@@ -1590,7 +1599,6 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   filter: blur(12px);
   transform: scale(0.95) translateZ(0);
   transition: opacity 300ms var(--ease-smooth), transform 300ms var(--ease-smooth);
-  will-change: opacity, transform;
 }
 
 .btn-primary:hover::after {
@@ -1621,7 +1629,6 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
     rgba(6, 214, 214, 0.15) 30%, 
     transparent 60%);
   transition: opacity 400ms var(--ease-smooth);
-  will-change: opacity, background;
   z-index: 0;
 }
 
@@ -1731,7 +1738,7 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   height: 10px;
   border-radius: 2px;
   opacity: 0;
-  will-change: transform, opacity;
+  transform: translateZ(0);
   animation: konfetti-fall 1.2s ease-out forwards;
 }
 
@@ -1757,14 +1764,17 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   pointer-events: none;
   z-index: -1;
   overflow: hidden;
-  will-change: transform;
+  transform: translateZ(0);
+}
+
+.particles-container.paused .particle {
+  animation-play-state: paused;
 }
 
 .particle {
   position: absolute;
   border-radius: 50%;
   opacity: 0;
-  will-change: transform, opacity;
   animation: particle-float linear infinite;
 }
 
@@ -1794,7 +1804,7 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   pointer-events: none;
   z-index: 9998;
   opacity: 0;
-  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 .glow-burst.active {
@@ -1834,7 +1844,7 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   border-radius: 50%;
   opacity: 0;
   box-shadow: 0 0 6px var(--favorite-color), 0 0 12px var(--favorite-color);
-  will-change: transform, opacity;
+  transform: translateZ(0);
 }
 
 .favorite-chip:hover .sparkle {
@@ -1898,7 +1908,6 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   transform: scale(0) translateZ(0);
   opacity: 0;
   pointer-events: none;
-  will-change: transform, opacity;
 }
 
 .touch-ripple.active {
@@ -2070,7 +2079,6 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   background: linear-gradient(90deg, var(--acc-2), var(--acc-1));
   transform: translateX(-100%) translateZ(0);
   transition: transform 300ms var(--ease-smooth);
-  will-change: transform;
 }
 
 .breadcrumb-link:hover::after {
@@ -2078,10 +2086,6 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
 }
 
 /* === FAVORITES DOCK ENHANCED === */
-
-.favorites-dock {
-  will-change: transform, opacity;
-}
 
 body.favorites-dock-visible .favorites-dock {
   animation: dock-enter 600ms var(--ease-smooth) forwards;
@@ -2101,8 +2105,7 @@ body.favorites-dock-visible .favorites-dock {
 /* === AURORA ENHANCED === */
 
 .aurora-shape {
-  filter: blur(60px) saturate(1.2);
-  will-change: transform, opacity, filter;
+  filter: blur(40px) saturate(1.2);
   contain: strict;
 }
 
