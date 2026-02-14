@@ -5,6 +5,21 @@ const currentJsonFile = "templates.json";
 const localStorageKey = 'customTemplatesJson';
 const favoritesKey = 'favoritePrompts';
 
+// Particle System State
+let particlesContainer = null;
+let particleAnimationId = null;
+let particles = [];
+const PARTICLE_COUNT = 25;
+
+// Glow Burst State
+let glowBurstElement = null;
+
+// Konfetti State
+let konfettiContainer = null;
+
+// Card Tilt State
+let tiltEnabled = true;
+
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCancelBtn;
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
@@ -147,6 +162,13 @@ function initApp() {
 
     loadJsonData(currentJsonFile);
     updateParallax();
+    
+    // Initialize enhanced animation systems
+    initParticlesSystem();
+    initGlowBurstSystem();
+    initKonfettiSystem();
+    initCardTiltEffect();
+    initDeviceOrientationParallax();
 }
 
 function createContextMenu() {
@@ -1600,6 +1622,12 @@ function renderView(node) {
             contentWrapper.appendChild(btnContainer);
         }
         card.appendChild(contentWrapper);
+        
+        // Add glow burst element for hover effect
+        const glowBurst = document.createElement('div');
+        glowBurst.className = 'card-glow-burst';
+        card.appendChild(glowBurst);
+        
         containerEl.appendChild(card);
         renderedCards.push(card);
     });
@@ -2052,6 +2080,12 @@ function copyToClipboard(text, buttonElement = null, node = null, previewText = 
                     }
                 }, 2000);
             }
+            
+            // Enhanced animation effects
+            const rect = buttonElement.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            enhancedCopySuccess(buttonElement, x, y);
         }
 
         if ('vibrate' in navigator && isMobile()) {
@@ -2590,6 +2624,9 @@ function renderFavoritesDock() {
         button.addEventListener('click', () => {
             copyToClipboard(node.content || '', button, node, previewText);
         });
+        
+        // Add sparkle effect to favorite chip
+        addSparklesToFavoriteChip(button);
 
         const chipObserver = getFavoriteChipObserver();
         if (chipObserver) {
@@ -2609,4 +2646,358 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
 } else {
     initApp();
+}
+
+/* ============================================
+   GPU-OPTIMIERTE ANIMATION SYSTEMS
+   ============================================ */
+
+// === PARTICLE SYSTEM ===
+function initParticlesSystem() {
+    if (prefersReducedMotion) return;
+    
+    particlesContainer = document.createElement('div');
+    particlesContainer.className = 'particles-container';
+    particlesContainer.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(particlesContainer);
+    
+    createParticles();
+}
+
+function createParticles() {
+    if (!particlesContainer) return;
+    
+    const colors = [
+        'rgba(124, 58, 237, 0.6)',
+        'rgba(6, 214, 214, 0.5)',
+        'rgba(255, 107, 157, 0.4)',
+        'rgba(255, 209, 102, 0.5)'
+    ];
+    
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        
+        const size = Math.random() * 4 + 2;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const left = Math.random() * 100;
+        const duration = Math.random() * 15 + 10;
+        const delay = Math.random() * 10;
+        
+        particle.style.cssText = `
+            width: ${size}px;
+            height: ${size}px;
+            left: ${left}%;
+            background: ${color};
+            box-shadow: 0 0 ${size * 2}px ${color};
+            animation-duration: ${duration}s;
+            animation-delay: ${delay}s;
+        `;
+        
+        particlesContainer.appendChild(particle);
+        particles.push(particle);
+    }
+}
+
+// === GLOW BURST SYSTEM ===
+function initGlowBurstSystem() {
+    if (prefersReducedMotion) return;
+    
+    glowBurstElement = document.createElement('div');
+    glowBurstElement.className = 'glow-burst';
+    glowBurstElement.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(glowBurstElement);
+}
+
+function triggerGlowBurst(x, y, color = 'rgba(124, 58, 237, 0.4)') {
+    if (!glowBurstElement || prefersReducedMotion) return;
+    
+    const size = 100;
+    glowBurstElement.style.cssText = `
+        left: ${x - size / 2}px;
+        top: ${y - size / 2}px;
+        width: ${size}px;
+        height: ${size}px;
+        background: radial-gradient(circle, ${color} 0%, transparent 70%);
+    `;
+    
+    glowBurstElement.classList.remove('active');
+    void glowBurstElement.offsetWidth; // Force reflow
+    glowBurstElement.classList.add('active');
+}
+
+// === KONFETTI SYSTEM ===
+function initKonfettiSystem() {
+    if (prefersReducedMotion) return;
+    
+    konfettiContainer = document.createElement('div');
+    konfettiContainer.className = 'konfetti-container';
+    konfettiContainer.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(konfettiContainer);
+}
+
+function triggerKonfetti(x, y) {
+    if (!konfettiContainer || prefersReducedMotion) return;
+    
+    const colors = ['#7c3aed', '#06d6d6', '#ff6b9d', '#ffd166', '#50fa7b'];
+    const particleCount = 20;
+    
+    for (let i = 0; i < particleCount; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'konfetti-particle';
+        
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const angle = (Math.PI * 2 * i) / particleCount;
+        const velocity = Math.random() * 100 + 50;
+        const size = Math.random() * 8 + 4;
+        const rotation = Math.random() * 360;
+        
+        particle.style.cssText = `
+            left: ${x}px;
+            top: ${y}px;
+            width: ${size}px;
+            height: ${size * 0.6}px;
+            background: ${color};
+            transform: rotate(${rotation}deg);
+            --tx: ${Math.cos(angle) * velocity}px;
+            --ty: ${Math.sin(angle) * velocity - 100}px;
+        `;
+        
+        // Custom animation for each particle
+        const animation = particle.animate([
+            { 
+                transform: `translate(0, 0) rotate(${rotation}deg) scale(1)`,
+                opacity: 1 
+            },
+            { 
+                transform: `translate(${Math.cos(angle) * velocity}px, ${Math.sin(angle) * velocity + 200}px) rotate(${rotation + 720}deg) scale(0.5)`,
+                opacity: 0 
+            }
+        ], {
+            duration: 1000 + Math.random() * 500,
+            easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+            fill: 'forwards'
+        });
+        
+        konfettiContainer.appendChild(particle);
+        
+        animation.onfinish = () => {
+            particle.remove();
+        };
+    }
+}
+
+// === CARD 3D TILT EFFECT ===
+function initCardTiltEffect() {
+    if (prefersReducedMotion) {
+        tiltEnabled = false;
+        return;
+    }
+    
+    containerEl.addEventListener('mousemove', handleCardTilt, { passive: true });
+    containerEl.addEventListener('mouseleave', resetCardTilt, { passive: true });
+}
+
+function handleCardTilt(e) {
+    if (!tiltEnabled) return;
+    
+    const card = e.target.closest('.card');
+    if (!card || containerEl.classList.contains('edit-mode')) return;
+    
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    const rotateX = (y - centerY) / 10;
+    const rotateY = (centerX - x) / 10;
+    
+    // Clamp values to prevent extreme rotations
+    const clampedRotateX = Math.max(-10, Math.min(10, rotateX));
+    const clampedRotateY = Math.max(-10, Math.min(10, rotateY));
+    
+    card.style.transform = `translateY(-6px) scale(1.04) perspective(1000px) rotateX(${clampedRotateX}deg) rotateY(${clampedRotateY}deg) translateZ(0)`;
+    
+    // Update glow position
+    const glowX = (x / rect.width) * 100;
+    const glowY = (y / rect.height) * 100;
+    card.style.setProperty('--glow-x', `${glowX}%`);
+    card.style.setProperty('--glow-y', `${glowY}%`);
+}
+
+function resetCardTilt(e) {
+    const card = e.target.closest('.card');
+    if (!card) return;
+    
+    card.style.transform = '';
+}
+
+// === DEVICE ORIENTATION PARALLAX ===
+function initDeviceOrientationParallax() {
+    if (prefersReducedMotion) return;
+    
+    if (window.DeviceOrientationEvent) {
+        // Check if permission is needed (iOS 13+)
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            // Permission will be requested on first user interaction
+            document.addEventListener('click', requestOrientationPermission, { once: true });
+        } else {
+            window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
+        }
+    }
+}
+
+function requestOrientationPermission() {
+    DeviceOrientationEvent.requestPermission()
+        .then(response => {
+            if (response === 'granted') {
+                window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
+            }
+        })
+        .catch(console.error);
+}
+
+function handleDeviceOrientation(e) {
+    if (!auroraContainerEl || prefersReducedMotion) return;
+    
+    const beta = e.beta || 0;   // -180 to 180 (front/back tilt)
+    const gamma = e.gamma || 0; // -90 to 90 (left/right tilt)
+    
+    // Normalize and clamp values
+    const normalizedBeta = Math.max(-30, Math.min(30, beta)) / 30;
+    const normalizedGamma = Math.max(-30, Math.min(30, gamma)) / 30;
+    
+    // Apply subtle parallax to aurora
+    const moveX = normalizedGamma * 20;
+    const moveY = normalizedBeta * 15;
+    
+    auroraContainerEl.classList.add('parallax-active');
+    
+    const shapes = auroraContainerEl.querySelectorAll('.aurora-shape');
+    shapes.forEach((shape, index) => {
+        const factor = (index + 1) * 0.3;
+        shape.style.transform = `translate3d(${moveX * factor}px, ${moveY * factor + auroraParallaxOffset}px, 0)`;
+    });
+}
+
+// === TOUCH FEEDBACK ===
+function triggerTouchFeedback(element, x, y) {
+    if (prefersReducedMotion) return;
+    
+    const ripple = document.createElement('div');
+    ripple.className = 'touch-ripple';
+    
+    const rect = element.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 2;
+    
+    ripple.style.cssText = `
+        left: ${x - rect.left - size / 2}px;
+        top: ${y - rect.top - size / 2}px;
+        width: ${size}px;
+        height: ${size}px;
+    `;
+    
+    element.style.position = 'relative';
+    element.style.overflow = 'hidden';
+    element.appendChild(ripple);
+    
+    // Trigger animation
+    requestAnimationFrame(() => {
+        ripple.classList.add('active');
+    });
+    
+    setTimeout(() => {
+        ripple.remove();
+    }, 500);
+}
+
+// === HAPTIC FEEDBACK ===
+function triggerHapticFeedback(type = 'light') {
+    if (!('vibrate' in navigator) || prefersReducedMotion) return;
+    
+    const patterns = {
+        light: [10],
+        medium: [20],
+        heavy: [30],
+        success: [10, 50, 10],
+        error: [30, 50, 30]
+    };
+    
+    navigator.vibrate(patterns[type] || patterns.light);
+}
+
+// === ENHANCED COPY SUCCESS ===
+function enhancedCopySuccess(buttonElement, x, y) {
+    if (prefersReducedMotion) return;
+    
+    // Trigger glow burst
+    triggerGlowBurst(x, y, 'rgba(6, 214, 214, 0.5)');
+    
+    // Trigger konfetti
+    triggerKonfetti(x, y);
+    
+    // Haptic feedback
+    triggerHapticFeedback('success');
+}
+
+// === SPARKLE EFFECT FOR FAVORITES ===
+function addSparklesToFavoriteChip(chip) {
+    if (prefersReducedMotion) return;
+    
+    // Check if sparkles already exist
+    if (chip.querySelector('.sparkle-container')) return;
+    
+    const sparkleContainer = document.createElement('div');
+    sparkleContainer.className = 'sparkle-container';
+    sparkleContainer.setAttribute('aria-hidden', 'true');
+    
+    for (let i = 0; i < 5; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'sparkle';
+        sparkleContainer.appendChild(sparkle);
+    }
+    
+    chip.appendChild(sparkleContainer);
+}
+
+// === ENHANCED SCROLL ANIMATIONS ===
+function initScrollAnimations() {
+    if (prefersReducedMotion) return;
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+            }
+        });
+    }, {
+        threshold: 0.1,
+        rootMargin: '50px'
+    });
+    
+    document.querySelectorAll('.card').forEach(card => {
+        observer.observe(card);
+    });
+}
+
+// === PERFORMANCE OPTIMIZATION ===
+function throttleAnimation(callback, limit = 16) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            callback.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    };
+}
+
+// Debounce for resize events
+function debounceAnimation(callback, wait = 100) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => callback.apply(this, args), wait);
+    };
 }
