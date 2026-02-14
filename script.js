@@ -7,7 +7,6 @@ const favoritesKey = 'favoritePrompts';
 
 // Particle System State
 let particlesContainer = null;
-let particleAnimationId = null;
 let particles = [];
 const PARTICLE_COUNT = 25;
 
@@ -2961,43 +2960,3 @@ function addSparklesToFavoriteChip(chip) {
     chip.appendChild(sparkleContainer);
 }
 
-// === ENHANCED SCROLL ANIMATIONS ===
-function initScrollAnimations() {
-    if (prefersReducedMotion) return;
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('is-visible');
-            }
-        });
-    }, {
-        threshold: 0.1,
-        rootMargin: '50px'
-    });
-    
-    document.querySelectorAll('.card').forEach(card => {
-        observer.observe(card);
-    });
-}
-
-// === PERFORMANCE OPTIMIZATION ===
-function throttleAnimation(callback, limit = 16) {
-    let inThrottle;
-    return function(...args) {
-        if (!inThrottle) {
-            callback.apply(this, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
-        }
-    };
-}
-
-// Debounce for resize events
-function debounceAnimation(callback, wait = 100) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => callback.apply(this, args), wait);
-    };
-}

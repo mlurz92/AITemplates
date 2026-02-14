@@ -1889,59 +1889,6 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   }
 }
 
-/* === NAVIGATION SLIDE EFFEKTE === */
-
-/* Verbesserte View Transitions */
-@keyframes slide-from-right-enhanced {
-  from {
-    transform: translateX(50px) scale(0.95);
-    opacity: 0;
-    filter: blur(2px);
-  }
-  to {
-    transform: translateX(0) scale(1);
-    opacity: 1;
-    filter: blur(0);
-  }
-}
-
-@keyframes slide-to-left-enhanced {
-  from {
-    transform: translateX(0) scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(-50px) scale(0.95);
-    opacity: 0;
-    filter: blur(2px);
-  }
-}
-
-@keyframes slide-from-left-enhanced {
-  from {
-    transform: translateX(-50px) scale(0.95);
-    opacity: 0;
-    filter: blur(2px);
-  }
-  to {
-    transform: translateX(0) scale(1);
-    opacity: 1;
-    filter: blur(0);
-  }
-}
-
-@keyframes slide-to-right-enhanced {
-  from {
-    transform: translateX(0) scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(50px) scale(0.95);
-    opacity: 0;
-    filter: blur(2px);
-  }
-}
-
 /* === TOUCH FEEDBACK ANIMATIONEN === */
 
 .touch-ripple {
