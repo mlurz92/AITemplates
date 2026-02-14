@@ -93,6 +93,7 @@ body {
   border: 1px solid var(--glass-stroke);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border-radius: var(--radius-lg);
   padding: 14px 16px;
   display: flex;
@@ -148,6 +149,7 @@ body {
   border: 1px solid var(--glass-stroke);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border-radius: var(--radius-lg);
   padding: 12px 14px;
   display: grid;
@@ -219,6 +221,7 @@ body {
   overflow: hidden;
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .pill-button {
@@ -269,6 +272,7 @@ body {
   padding: 12px;
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   display: grid;
   gap: 10px;
 }

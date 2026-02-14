@@ -4,7 +4,6 @@ const MAX_RECENT_PROMPTS = 6;
 
 let jsonData = null;
 let favorites = [];
-let filteredFavorites = [];
 
 async function loadJsonData() {
   try {
@@ -32,7 +31,9 @@ function loadFavorites() {
 
 function saveStatus(message) {
   const statusChip = document.getElementById('widget-status');
-  statusChip.textContent = message;
+  if (statusChip) {
+    statusChip.textContent = message;
+  }
 }
 
 function normalizeContent(text) {
@@ -61,6 +62,9 @@ function renderFavorites(searchTerm = '') {
   const list = document.getElementById('favorites-list');
   const emptyState = document.getElementById('empty-favorites');
   const template = document.getElementById('favorite-chip-template');
+  
+  if (!list || !emptyState || !template) return;
+  
   list.replaceChildren();
 
   const normalizedTerm = normalizeContent(searchTerm).toLowerCase();
@@ -101,6 +105,9 @@ function renderRecentPrompts(searchTerm = '') {
   const list = document.getElementById('recent-prompts');
   const emptyState = document.getElementById('empty-prompts');
   const template = document.getElementById('prompt-card-template');
+  
+  if (!list || !emptyState || !template) return;
+  
   list.replaceChildren();
 
   const normalizedTerm = normalizeContent(searchTerm).toLowerCase();
@@ -148,7 +155,22 @@ async function copyToClipboard(node) {
       saveStatus('Kein Inhalt zum Kopieren');
       return;
     }
-    await navigator.clipboard.writeText(text);
+    
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      // Fallback für unsichere Kontexte
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    
     saveStatus(`Kopiert: ${node.title}`);
   } catch (error) {
     console.error('Kopieren fehlgeschlagen', error);
@@ -160,24 +182,29 @@ async function refreshWidget() {
   saveStatus('Lade ...');
   await loadJsonData();
   loadFavorites();
-  const searchValue = document.getElementById('widget-search').value;
+  const searchInput = document.getElementById('widget-search');
+  const searchValue = searchInput ? searchInput.value : '';
   renderFavorites(searchValue);
   renderRecentPrompts(searchValue);
   const total = collectRootPrompts().length;
-  saveStatus(`Bereit • ${favorites.length} Favoriten • ${total} Root-Prompts`);
+  saveStatus(`Bereit · ${favorites.length} Favoriten · ${total} Root-Prompts`);
 }
 
 function wireEvents() {
   const search = document.getElementById('widget-search');
   const refresh = document.getElementById('refresh-widget');
 
-  search.addEventListener('input', (event) => {
-    const value = event.target.value;
-    renderFavorites(value);
-    renderRecentPrompts(value);
-  });
+  if (search) {
+    search.addEventListener('input', (event) => {
+      const value = event.target.value;
+      renderFavorites(value);
+      renderRecentPrompts(value);
+    });
+  }
 
-  refresh.addEventListener('click', () => refreshWidget());
+  if (refresh) {
+    refresh.addEventListener('click', () => refreshWidget());
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

@@ -1,7 +1,7 @@
 let jsonData = null;
 let currentNode = null;
 let pathStack = [];
-const currentJsonFile = "templates.json";
+const currentJsonFile = 'templates.json';
 const localStorageKey = 'customTemplatesJson';
 const favoritesKey = 'favoritePrompts';
 
@@ -1657,12 +1657,23 @@ function renderView(node) {
             }
         } else {
             card.classList.add('prompt-card');
-            const btnContainer = document.createElement('div'); btnContainer.classList.add('card-buttons');
+            const btnContainer = document.createElement('div');
+            btnContainer.classList.add('card-buttons');
             if (svgTemplateExpand) {
-                const expandBtn = document.createElement('button'); expandBtn.classList.add('btn', 'btn-ghost'); expandBtn.setAttribute('aria-label', 'Details anzeigen'); expandBtn.setAttribute('data-action', 'expand'); expandBtn.appendChild(svgTemplateExpand.cloneNode(true)); btnContainer.appendChild(expandBtn);
+                const expandBtn = document.createElement('button');
+                expandBtn.classList.add('btn', 'btn-ghost');
+                expandBtn.setAttribute('aria-label', 'Details anzeigen');
+                expandBtn.setAttribute('data-action', 'expand');
+                expandBtn.appendChild(svgTemplateExpand.cloneNode(true));
+                btnContainer.appendChild(expandBtn);
             }
             if (svgTemplateCopy) {
-                const copyBtn = document.createElement('button'); copyBtn.classList.add('btn', 'btn-ghost'); copyBtn.setAttribute('aria-label', 'Prompt kopieren'); copyBtn.setAttribute('data-action', 'copy'); copyBtn.appendChild(svgTemplateCopy.cloneNode(true)); btnContainer.appendChild(copyBtn);
+                const copyBtn = document.createElement('button');
+                copyBtn.classList.add('btn', 'btn-ghost');
+                copyBtn.setAttribute('aria-label', 'Prompt kopieren');
+                copyBtn.setAttribute('data-action', 'copy');
+                copyBtn.appendChild(svgTemplateCopy.cloneNode(true));
+                btnContainer.appendChild(copyBtn);
             }
             contentWrapper.appendChild(btnContainer);
         }
@@ -2093,8 +2104,13 @@ function clearAllFavorites() {
     }
 }
 
-function copyPromptText(buttonElement = null) { copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button')); }
-function copyPromptTextForCard(node, buttonElement) { copyToClipboard(node.content || '', buttonElement); }
+function copyPromptText(buttonElement = null) {
+    copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button'));
+}
+
+function copyPromptTextForCard(node, buttonElement) {
+    copyToClipboard(node.content || '', buttonElement);
+}
 
 function copyToClipboard(text, buttonElement = null, node = null, previewText = '') {
     const sanitizedPreview = previewText || (node ? getFavoritePreviewText(node.content) : '');
@@ -2148,7 +2164,10 @@ function copyToClipboard(text, buttonElement = null, node = null, previewText = 
     } else {
         const textArea = document.createElement('textarea');
         textArea.value = text;
-        textArea.style.position = 'fixed'; textArea.style.top = '-9999px'; textArea.style.left = '-9999px'; textArea.style.opacity = '0';
+        textArea.style.position = 'fixed';
+        textArea.style.top = '-9999px';
+        textArea.style.left = '-9999px';
+        textArea.style.opacity = '0';
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
