@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024"><svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1024"><svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" shape-rendering="geometricPrecision">
+  <defs>
+    <!-- Background gradients -->
+    <radialGradient id="bgVignette" cx="50%" cy="45%" r="75%">
+      <stop offset="0%" stop-color="#0b0c14"></stop>
+      <stop offset="65%" stop-color="#08080a"></stop>
+      <stop offset="100%" stop-color="#050507"></stop>
+    </radialGradient>
+
+    <radialGradient id="auroraViolet" cx="35%" cy="25%" r="60%">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.90"></stop>
+      <stop offset="55%" stop-color="#7c3aed" stop-opacity="0.18"></stop>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"></stop>
+    </radialGradient>
+
+    <radialGradient id="auroraCyan" cx="70%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#06d6d6" stop-opacity="0.85"></stop>
+      <stop offset="55%" stop-color="#06d6d6" stop-opacity="0.16"></stop>
+      <stop offset="100%" stop-color="#06d6d6" stop-opacity="0"></stop>
+    </radialGradient>
+
+    <radialGradient id="auroraCoral" cx="55%" cy="80%" r="65%">
+      <stop offset="0%" stop-color="#ff6b9d" stop-opacity="0.80"></stop>
+      <stop offset="55%" stop-color="#ff6b9d" stop-opacity="0.14"></stop>
+      <stop offset="100%" stop-color="#ff6b9d" stop-opacity="0"></stop>
+    </radialGradient>
+
+    <!-- Glass highlight -->
+    <radialGradient id="glassHighlight" cx="22%" cy="18%" r="55%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.34"></stop>
+      <stop offset="45%" stop-color="#ffffff" stop-opacity="0.10"></stop>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
+    </radialGradient>
+
+    <!-- Accent strokes -->
+    <linearGradient id="strokeAccent" x1="20%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.95"></stop>
+      <stop offset="55%" stop-color="#06d6d6" stop-opacity="0.95"></stop>
+      <stop offset="100%" stop-color="#ff6b9d" stop-opacity="0.90"></stop>
+    </linearGradient>
+
+    <filter id="blurBig" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="60"></feGaussianBlur>
+    </filter>
+
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="b"></feGaussianBlur>
+      <feColorMatrix in="b" type="matrix" values="1 0 0 0 0
+                0 1 0 0 0
+                0 0 1 0 0
+                0 0 0 0.55 0" result="g"></feColorMatrix>
+      <feMerge>
+        <feMergeNode in="g"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+
+    <filter id="innerSoft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="b"></feGaussianBlur>
+      <feComposite in="b" in2="SourceAlpha" operator="in" result="i"></feComposite>
+      <feColorMatrix in="i" type="matrix" values="1 0 0 0 1
+                0 1 0 0 1
+                0 0 1 0 1
+                0 0 0 0.18 0" result="c"></feColorMatrix>
+      <feMerge>
+        <feMergeNode in="c"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Rounded-square background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="240" fill="url(#bgVignette)"></rect>
+  <rect x="18" y="18" width="988" height="988" rx="228" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="2"></rect>
+
+  <!-- Aurora blobs -->
+  <g filter="url(#blurBig)">
+    <circle cx="360" cy="260" r="270" fill="url(#auroraViolet)"></circle>
+    <circle cx="740" cy="420" r="290" fill="url(#auroraCyan)"></circle>
+    <circle cx="560" cy="820" r="300" fill="url(#auroraCoral)"></circle>
+  </g>
+
+  <!-- Central glass tile -->
+  <g filter="url(#innerSoft)">
+    <rect x="172" y="172" width="680" height="680" rx="190" fill="#0f1220" fill-opacity="0.72" stroke="#ffffff" stroke-opacity="0.12" stroke-width="2"></rect>
+    <rect x="190" y="190" width="644" height="644" rx="176" fill="url(#glassHighlight)" opacity="0.85"></rect>
+  </g>
+
+  <!-- Icon mark: glass folder + template cards + hierarchy -->
+  <g filter="url(#softGlow)">
+    <!-- Subtle glow behind mark -->
+    <circle cx="512" cy="560" r="240" fill="#06d6d6" fill-opacity="0.06"></circle>
+    <circle cx="512" cy="560" r="260" fill="#7c3aed" fill-opacity="0.05"></circle>
+
+    <!-- Back “template cards” -->
+    <rect x="328" y="360" width="440" height="320" rx="64" fill="#0f1220" fill-opacity="0.30" stroke="url(#strokeAccent)" stroke-opacity="0.28" stroke-width="2"></rect>
+    <rect x="304" y="392" width="440" height="320" rx="64" fill="#0f1220" fill-opacity="0.34" stroke="url(#strokeAccent)" stroke-opacity="0.32" stroke-width="2"></rect>
+
+    <!-- Folder (front) -->
+    <path d="
+      M 286 440
+      C 286 406 314 378 348 378
+      L 458 378
+      C 476 378 489 371 502 356
+      L 528 326
+      C 540 312 553 304 572 304
+      L 676 304
+      C 714 304 744 334 744 372
+      L 744 700
+      C 744 744 710 778 666 778
+      L 330 778
+      C 286 778 252 744 252 700
+      L 252 440
+      C 252 440 252 440 286 440
+      Z" fill="#0f1220" fill-opacity="0.62" stroke="url(#strokeAccent)" stroke-opacity="0.95" stroke-width="3.5" stroke-linejoin="round"></path>
+
+    <!-- Folder inner highlight -->
+    <path d="
+      M 280 452
+      C 280 425 302 404 330 404
+      L 456 404
+      C 470 404 481 399 492 388
+      L 520 358
+      C 529 348 540 342 555 342
+      L 682 342
+      C 706 342 726 362 726 386
+      L 726 430
+      L 280 430
+      Z" fill="#ffffff" fill-opacity="0.06"></path>
+
+    <!-- Template page inside folder -->
+    <path d="
+      M 344 520
+      C 344 486 372 458 406 458
+      L 634 458
+      C 668 458 696 486 696 520
+      L 696 664
+      C 696 698 668 726 634 726
+      L 406 726
+      C 372 726 344 698 344 664
+      Z" fill="#0f1220" fill-opacity="0.55" stroke="#ffffff" stroke-opacity="0.18" stroke-width="2.2"></path>
+
+    <!-- “Folded corner” -->
+    <path d="M 626 458 L 696 528 L 696 520 C 696 486 668 458 634 458 Z" fill="#ffffff" fill-opacity="0.08"></path>
+
+    <!-- Hierarchy lines + nodes (left inside page) -->
+    <g stroke="#ffffff" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" fill="none">
+      <path d="M 416 520 L 416 664"></path>
+      <path d="M 416 568 L 468 568"></path>
+      <path d="M 416 632 L 468 632"></path>
+    </g>
+    <g fill="#ffffff" fill-opacity="0.70">
+      <circle cx="416" cy="520" r="16"></circle>
+      <circle cx="468" cy="568" r="16"></circle>
+      <circle cx="468" cy="632" r="16"></circle>
+    </g>
+
+    <!-- “Prompt text lines” -->
+    <g stroke="#ffffff" stroke-opacity="0.22" stroke-width="12" stroke-linecap="round">
+      <path d="M 520 548 L 650 548"></path>
+      <path d="M 520 588 L 630 588"></path>
+      <path d="M 520 628 L 660 628"></path>
+      <path d="M 520 668 L 612 668"></path>
+    </g>
+
+    <!-- Favorite star (gold) -->
+    <path d="
+      M 728 420
+      L 745 455
+      L 784 460
+      L 755 487
+      L 762 526
+      L 728 508
+      L 694 526
+      L 701 487
+      L 672 460
+      L 711 455
+      Z" fill="#ffd166" fill-opacity="0.95" stroke="#ffd166" stroke-opacity="0.55" stroke-width="2"></path>
+  </g>
+</svg></svg><style>@media (prefers-color-scheme: light) { :root { filter: none; } }
+@media (prefers-color-scheme: dark) { :root { filter: none; } }
+</style></svg>

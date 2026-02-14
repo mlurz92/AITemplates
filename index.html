@@ -8,12 +8,29 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0c0f17">
+
+    <!-- Favicon - Klassisch für alle Browser -->
+    <link rel="icon" href="icons/favicon.ico" sizes="any">
+
+    <!-- Favicon - SVG für moderne Browser -->
+    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+
+    <!-- Favicon - PNG für Browser ohne SVG-Support -->
+    <link rel="icon" href="icons/favicon-96x96.png" type="image/png" sizes="96x96">
+
+    <!-- Apple Touch Icon für iOS-Geräte -->
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+    <!-- Apple Meta-Tags -->
+    <meta name="apple-mobile-web-app-title" content="Prompt-Templates">
+
+    <!-- Windows Kachel Meta-Tags -->
+    <meta name="msapplication-TileColor" content="#0c0f17">
+    <meta name="msapplication-config" content="browserconfig.xml">
+
     <title>Prompt-Templates</title>
 
     <link rel="manifest" href="manifest.json">
-
-    <link rel="icon" href="favicon_animated.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
 
     <link rel="stylesheet" href="style.css">
   </head>
@@ -89,7 +106,7 @@
          </svg>
       </button>
       <button id="app-logo-button" class="btn btn-ghost" aria-label="Zur Startseite">
-        <img id="app-logo-svg" src="favicon_animated.svg" alt="App Logo" width="30" height="30">
+        <img id="app-logo-svg" src="icons/favicon.svg" alt="App Logo" width="30" height="30">
       </button>
     </header>
 

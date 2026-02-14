@@ -92,9 +92,9 @@ Die Anwendung besteht aus statischen Dateien und kann auf jedem Webserver gehost
 
 Die Anwendung kann als Progressive Web App installiert werden:
 
-- **Desktop**: Adressleiste → Installations-Icon oder Browser-Menü → "App installieren"
-- **Android**: Browser-Menü → "Zum Startbildschirm hinzufügen" oder "App installieren"
-- **iOS**: Share-Menü → "Zum Home-Bildschirm"
+- **Desktop**: Adressleiste â Installations-Icon oder Browser-Menü â "App installieren"
+- **Android**: Browser-Menü â "Zum Startbildschirm hinzufügen" oder "App installieren"
+- **iOS**: Share-Menü â "Zum Home-Bildschirm"
 
 ### Offline-Fähigkeit
 
@@ -112,9 +112,9 @@ Die [`manifest.json`](manifest.json) definiert die PWA-Eigenschaften:
 | Name | Prompt-Templates Browser |
 | Short Name | Prompts |
 | Display Mode | Standalone |
-| Theme Color | #08080a |
+| Theme Color | #0c0f17 |
 | Background Color | #08080a |
-| Icons | 192×192px, 512×512px |
+| Icons | 192Ã192px, 512Ã512px |
 
 ---
 
@@ -253,12 +253,12 @@ Die Navigation nutzt die View Transitions API für animierte Übergänge:
 
 #### Favorit hinzufügen
 - **Im Modal**: Stern-Button klicken
-- **Kontextmenü**: Rechtsklick auf Prompt-Karte → "Zu Favoriten hinzufügen"
+- **Kontextmenü**: Rechtsklick auf Prompt-Karte â "Zu Favoriten hinzufügen"
 
 #### Favorit entfernen
 - **Im Modal**: Gefüllten Stern-Button klicken
-- **Kontextmenü**: Rechtsklick auf Prompt-Karte → "Aus Favoriten entfernen"
-- **Im Favoriten-Dock**: Rechtsklick auf Chip → "Aus Favoriten entfernen"
+- **Kontextmenü**: Rechtsklick auf Prompt-Karte â "Aus Favoriten entfernen"
+- **Im Favoriten-Dock**: Rechtsklick auf Chip â "Aus Favoriten entfernen"
 
 #### Alle Favoriten löschen
 - **Clear-Favorites-Button** in der Top-Bar
@@ -301,17 +301,17 @@ Der Organisationsmodus ermöglicht das Umstrukturieren der Vorlagen:
 4. **"Erstellen"** klicken
 
 #### Element umbenennen
-- **Kontextmenü**: Rechtsklick → "Umbenennen"
+- **Kontextmenü**: Rechtsklick â "Umbenennen"
 - **Organisationsmodus**: Bearbeiten-Button klicken
 - Eingabefeld erscheint direkt auf der Karte
 
 #### Element löschen
-- **Kontextmenü**: Rechtsklick → "Löschen"
+- **Kontextmenü**: Rechtsklick â "Löschen"
 - **Organisationsmodus**: Löschen-Button klicken
 - Bestätigungsdialog erscheint
 
 #### Element verschieben
-1. **Kontextmenü**: Rechtsklick → "Verschieben..."
+1. **Kontextmenü**: Rechtsklick â "Verschieben..."
 2. Zielordner im Baum auswählen
 3. **"Verschieben"** klicken
 
@@ -490,18 +490,23 @@ Der **Reset-Button** setzt alle Daten zurück:
 
 ```
 /
-├── index.html          # HTML-Struktur der SPA
-├── style.css           # Alle Styles, Animationen, Responsive-Regeln
-├── script.js           # Komplette Anwendungslogik
-├── manifest.json       # PWA-Konfiguration
-├── templates.json      # Standard-Datenquelle (Fallback)
-├── AGENTS.md           # Entwickler-Richtlinien
-├── favicon.svg         # Vektor-Icon
-├── favicon_animated.svg # Animiertes Vektor-Icon
-├── favicon.ico         # Fallback-Icon
-└── icons/
-    ├── icon-192x192.png
-    └── icon-512x512.png
+âââ index.html                  # HTML-Struktur der SPA
+âââ style.css                   # Alle Styles, Animationen, Responsive-Regeln
+âââ script.js                   # Komplette Anwendungslogik
+âââ manifest.json               # PWA-Konfiguration
+âââ templates.json              # Standard-Datenquelle (Fallback)
+âââ browserconfig.xml           # Windows Kachel-Konfiguration
+âââ widget.html                 # Widget-HTML-Struktur
+âââ widget.css                  # Widget-Styles
+âââ widget.js                   # Widget-Logik
+âââ README.md                   # Projektdokumentation
+âââ icons/
+    âââ favicon.svg                   # Vektor-Icon (animiert)
+    âââ favicon.ico                   # Fallback-Icon fÃ¼r Ã¤ltere Browser
+    âââ favicon-96x96.png             # PNG-Icon fÃ¼r Browser ohne SVG-Support
+    âââ apple-touch-icon.png          # iOS Home-Screen-Icon
+    âââ web-app-manifest-192x192.png  # PWA-Icon 192x192
+    âââ web-app-manifest-512x512.png  # PWA-Icon 512x512
 ```
 
 ### Globale Zustandsvariablen
@@ -578,12 +583,12 @@ Der **Reset-Button** setzt alle Daten zurück:
 | Breakpoint | Anpassungen |
 |------------|-------------|
 | > 1320px | Standard-Layout |
-| ≤ 1320px | Kleinere Karten |
-| ≤ 1120px | Weitere Karten-Verkleinerung |
-| ≤ 900px | Kompaktere Karten |
-| ≤ 720px | 3-Spalten-Grid fix |
-| ≤ 640px | Kompakte Favoriten-Dock-Toggle |
-| ≤ 480px | Kleinste Karten- und Chip-Größen |
+| â¤ 1320px | Kleinere Karten |
+| â¤ 1120px | Weitere Karten-Verkleinerung |
+| â¤ 900px | Kompaktere Karten |
+| â¤ 720px | 3-Spalten-Grid fix |
+| â¤ 640px | Kompakte Favoriten-Dock-Toggle |
+| â¤ 480px | Kleinste Karten- und Chip-Größen |
 
 ### Kartendimensionen
 
