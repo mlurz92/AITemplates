@@ -497,7 +497,7 @@
           "id": "52e5dad3-a648-451f-9fe9-997997c1f8b6",
           "type": "prompt",
           "title": "MC",
-          "content": "Beantworte die Folgende MC Frage. Gib bei jeder der Antwortmöglichkeiten an, warum diese richtig ist oder warum falsch. Gib zuerst die richtige Antwort (ggf. Antwortkombination) an und danach die Begründungen.\nDenke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Nutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort."
+          "content": "Beantworte die Folgende MC Frage. Gib bei jeder der Antwortmöglichkeiten an, warum diese richtig ist oder warum falsch. Gib zuerst die richtige Antwort (ggf. Antwortkombination) an und danach die Begründungen.\nWenn ich dir im Verlauf weitere Fragen nenne, beantworte immer die Frage aus meiner aktuellsten Nachricht.\nDenke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Nutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort."
         },
         {
           "id": "fdc04b89-f160-416c-80ce-675c1856ee0b",
