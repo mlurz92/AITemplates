@@ -235,6 +235,12 @@
           "type": "prompt",
           "title": "README.md",
           "content": "Erstelle eine neue README.md, die wie eine vollständige und ausführliche Anwendungsbeschreibung jeden noch so lächerlich kleinen Aspekt der Anwendung komplett beleleuchtet und diese vollständig entsprechend des aktuellen Standes der Anwendung beschreibt und nicht nur ein einfacher Changelog gegenüber der aktuellen README ist."
+        },
+        {
+          "id": "4e196163-6c09-478c-ae4d-c877c7e2c56b",
+          "type": "prompt",
+          "title": "RM2",
+          "content": "Erstelle zum Abschluss eine neue README.md, die wie eine vollständige und ausführliche Anwendungsbeschreibung jeden noch so lächerlich kleinen Aspekt der Anwendung komplett beleleuchtet, inklusive aller Regeln, Einschränkungen, Gewichtungen, Entscheidungsschritte und Logiken des Algorithmus bis ins lächerlich kleinste Detail, und diese vollständig entsprechend des aktuellen Standes der Anwendung beschreibt und nicht nur ein einfacher Changelog gegenüber der aktuellen README ist."
         }
       ]
     },
