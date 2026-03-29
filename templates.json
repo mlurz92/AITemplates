@@ -80,7 +80,7 @@
           "id": "3-1-2",
           "type": "prompt",
           "title": "Code Analyse und Verständnis",
-          "content": "Lese und Analysiere den vollständigen Code aller Dateien von der ersten bis zur letzten Zeile. Verstehe den Code, die Zusammenhänge der Dateien, den gesamten Zweck des Codes und der Anwendung, deren Aufbau, Bestandteile und Funktionen die Integration und das Zusammenspiel der Dateien vollständig und bis ins kleinste Detail. Simuliere intern jeden Aspekt der Anwendung von Anfang bis Ende. Verstehe das UI und dessen responsives Verhalten sowie die Designsprache der UI. Denke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Nutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort."
+          "content": "Lese und Analysiere den vollständigen Code aller Dateien von der ersten bis zur letzten Zeile. Verstehe den Code, die Zusammenhänge der Dateien, den gesamten Zweck des Codes und der Anwendung, deren Aufbau, Bestandteile und Funktionen die Integration und das Zusammenspiel der Dateien vollständig und bis ins kleinste Detail. Simuliere intern jeden Aspekt der Anwendung von Anfang bis Ende. Verstehe das UI und dessen responsives Verhalten sowie die Designsprache der UI. \n\nDenke ausreichend lange über alle deine Antwort nach und überlege gut, für eine optimale Planung und Durchführung deiner Antwort, die jeden Aspekt meiner Anforderung vollständig erfüllt. Nutze die passenden Tools. Beeindrucke mich mit einer perfekten Antwort."
         },
         {
           "id": "3-1-1",
