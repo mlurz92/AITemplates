@@ -1,6 +1,16 @@
 export async function onRequestGet(context) {
   const { request, env } = context;
 
+  // Zusätzlicher Schutz: Prüfen, ob der KV Namespace gebunden ist
+  if (!env || typeof env.TEMPLATES_KV === 'undefined') {
+    return new Response(JSON.stringify({ 
+      error: "Der KV Namespace 'TEMPLATES_KV' ist nicht gebunden oder env ist undefined." 
+    }), { 
+      status: 500, 
+      headers: { 'Content-Type': 'application/json' } 
+    });
+  }
+
   try {
     // Hole die Daten aus dem KV Namespace
     const kvDataStr = await env.TEMPLATES_KV.get('current_templates');
@@ -11,7 +21,7 @@ export async function onRequestGet(context) {
     } else {
       // Wenn nichts im KV ist, lade die statische templates.json als Fallback
       const originUrl = new URL(request.url);
-      const staticResponse = await fetch(new URL('/templates.json', originUrl));
+      const staticResponse = await fetch(new URL('/templates.json', originUrl.origin));
       if (staticResponse.ok) {
         const staticData = await staticResponse.json();
         kvData = {
@@ -21,7 +31,7 @@ export async function onRequestGet(context) {
         // Initial im KV speichern
         await env.TEMPLATES_KV.put('current_templates', JSON.stringify(kvData));
       } else {
-        return new Response(JSON.stringify({ error: "Fehler beim Laden des Fallbacks." }), { 
+        return new Response(JSON.stringify({ error: "Fehler beim Laden des lokalen Fallbacks (templates.json) vom Server." }), { 
           status: 500, 
           headers: { 'Content-Type': 'application/json' } 
         });
@@ -37,7 +47,7 @@ export async function onRequestGet(context) {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { 
+    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -46,6 +56,16 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  // Zusätzlicher Schutz: Prüfen, ob der KV Namespace gebunden ist
+  if (!env || typeof env.TEMPLATES_KV === 'undefined') {
+    return new Response(JSON.stringify({ 
+      error: "Der KV Namespace 'TEMPLATES_KV' ist nicht gebunden oder env ist undefined." 
+    }), { 
+      status: 500, 
+      headers: { 'Content-Type': 'application/json' } 
+    });
+  }
 
   try {
     const payload = await request.json();
@@ -88,7 +108,7 @@ export async function onRequestPost(context) {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { 
+    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

@@ -2786,11 +2786,7 @@ function renderFavoritesDock() {
     requestFavoritesLayoutFrame();
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
-} else {
-    initApp();
-}
+
 
 /* ============================================
    GPU-OPTIMIERTE ANIMATION SYSTEMS
@@ -3192,3 +3188,9 @@ function addSparklesToFavoriteChip(chip) {
     chip.appendChild(sparkleContainer);
 }
 
+// Initialisiere die Anwendung erst, wenn das gesamte DOM und alle Variablen geladen sind
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
