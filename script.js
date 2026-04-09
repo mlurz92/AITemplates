@@ -15,9 +15,6 @@ const PARTICLE_COUNT = 25;
 // Glow Burst State
 let glowBurstElement = null;
 
-// Konfetti State
-let konfettiContainer = null;
-
 // Card Tilt State
 let tiltEnabled = true;
 let tiltRafId = null;
@@ -172,7 +169,6 @@ function initApp() {
     setupAuroraVisibilityObserver();
     initParticlesSystem();
     initGlowBurstSystem();
-    initKonfettiSystem();
     initCardTiltEffect();
     initDeviceOrientationParallax();
 }
@@ -2886,82 +2882,6 @@ function triggerGlowBurst(x, y, color = 'rgba(124, 58, 237, 0.4)') {
 }
 
 // === KONFETTI SYSTEM ===
-const konfettiPool = [];
-const MAX_KONFETTI_PARTICLES = 100;
-
-function initKonfettiSystem() {
-    if (prefersReducedMotion) return;
-    
-    konfettiContainer = document.createElement('div');
-    konfettiContainer.className = 'konfetti-container';
-    konfettiContainer.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(konfettiContainer);
-}
-
-function getKonfettiParticle() {
-    return konfettiPool.pop() || document.createElement('div');
-}
-
-function releaseKonfettiParticle(particle) {
-    if (konfettiPool.length < MAX_KONFETTI_PARTICLES) {
-        particle.remove();
-        konfettiPool.push(particle);
-    } else {
-        particle.remove();
-    }
-}
-
-function triggerKonfetti(x, y) {
-    if (!konfettiContainer || prefersReducedMotion) return;
-    
-    const colors = ['#7c3aed', '#06d6d6', '#ff6b9d', '#ffd166', '#50fa7b'];
-    const particleCount = 20;
-    
-    for (let i = 0; i < particleCount; i++) {
-        const particle = getKonfettiParticle();
-        particle.className = 'konfetti-particle';
-        
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const angle = (Math.PI * 2 * i) / particleCount;
-        const velocity = Math.random() * 100 + 50;
-        const size = Math.random() * 8 + 4;
-        const rotation = Math.random() * 360;
-        
-        particle.style.cssText = `
-            left: ${x}px;
-            top: ${y}px;
-            width: ${size}px;
-            height: ${size * 0.6}px;
-            background: ${color};
-            transform: rotate(${rotation}deg);
-            --tx: ${Math.cos(angle) * velocity}px;
-            --ty: ${Math.sin(angle) * velocity - 100}px;
-        `;
-        
-        // Custom animation for each particle
-        const animation = particle.animate([
-            { 
-                transform: `translate(0, 0) rotate(${rotation}deg) scale(1)`,
-                opacity: 1 
-            },
-            { 
-                transform: `translate(${Math.cos(angle) * velocity}px, ${Math.sin(angle) * velocity + 200}px) rotate(${rotation + 720}deg) scale(0.5)`,
-                opacity: 0 
-            }
-        ], {
-            duration: 1000 + Math.random() * 500,
-            easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-            fill: 'forwards'
-        });
-        
-        konfettiContainer.appendChild(particle);
-        
-        animation.onfinish = () => {
-            releaseKonfettiParticle(particle);
-        };
-    }
-}
-
 // === CARD 3D TILT EFFECT ===
 function initCardTiltEffect() {
     if (prefersReducedMotion) {
@@ -3160,9 +3080,6 @@ function enhancedCopySuccess(buttonElement, x, y) {
     
     // Trigger glow burst
     triggerGlowBurst(x, y, 'rgba(6, 214, 214, 0.5)');
-    
-    // Trigger konfetti
-    triggerKonfetti(x, y);
     
     // Haptic feedback
     triggerHapticFeedback('success');
