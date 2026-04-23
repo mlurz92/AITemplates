@@ -49,6 +49,8 @@ let auroraParallaxOffset = 0;
 let motionPreferenceChangeHandler = null;
 let auroraVisibilityObserver = null;
 let isAuroraVisible = true;
+let visualViewportHandlersBound = false;
+let displayModeMediaQuery = null;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -161,6 +163,7 @@ function initApp() {
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
 
+    updateViewportMetrics();
     updateDockPositioning();
     setupEventListeners();
     checkFullscreenSupport();
@@ -705,6 +708,8 @@ function updatePersistenceButtonsVisibility() {
 }
 
 function setupEventListeners() {
+    bindViewportObservers();
+
     topbarBackBtn.addEventListener('click', () => {
         if (modalEl.classList.contains('visible')) {
             closeModal({ fromBackdrop: true });
@@ -1887,6 +1892,7 @@ function updateBreadcrumb() {
     const isTrulyAtHome = pathStack.length === 0 && currentNode === jsonData;
     fixedBackBtn.classList.toggle('hidden', isTrulyAtHome && !isModalVisible);
     topbarBackBtn.style.visibility = (isTrulyAtHome && !isModalVisible) ? 'hidden' : 'visible';
+    updateDockPositioning();
 }
 
 function adjustTextareaHeight(element) {
@@ -2413,11 +2419,80 @@ function updateFavoriteButton(promptId) {
     modalFavoriteBtn.setAttribute('aria-label', isFavorite ? 'Von Favoriten entfernen' : 'Zu Favoriten hinzufügen');
 }
 
+
+function detectDisplayMode() {
+    const standaloneMatch = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(display-mode: standalone)').matches
+        : false;
+    const fullscreenMatch = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(display-mode: fullscreen)').matches
+        : false;
+    const navigatorStandalone = typeof navigator !== 'undefined' && navigator.standalone === true;
+    const fullscreenElementActive = Boolean(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+
+    if (fullscreenElementActive || fullscreenMatch) return 'fullscreen';
+    if (standaloneMatch || navigatorStandalone) return 'standalone';
+    return 'browser';
+}
+
+function calculateViewportBottomOffset() {
+    if (typeof window === 'undefined') return 0;
+
+    const vv = window.visualViewport;
+    if (!vv) return 0;
+
+    const layoutHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+    const visualBottom = vv.height + vv.offsetTop;
+    const keyboardOrChromeOffset = Math.max(0, layoutHeight - visualBottom);
+
+    return Math.round(keyboardOrChromeOffset);
+}
+
+function updateViewportMetrics() {
+    const root = document.documentElement;
+    const mode = detectDisplayMode();
+    const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+    const bottomOffset = mode === 'browser' ? calculateViewportBottomOffset() : 0;
+
+    root.style.setProperty('--app-vh', `${Math.round(viewportHeight)}px`);
+    root.style.setProperty('--app-vw', `${Math.round(viewportWidth)}px`);
+    root.style.setProperty('--viewport-bottom-offset', `${bottomOffset}px`);
+
+    if (document.body) {
+        document.body.setAttribute('data-display-mode', mode);
+    }
+}
+
+function bindViewportObservers() {
+    if (visualViewportHandlersBound) return;
+
+    window.addEventListener('resize', updateViewportMetrics, { passive: true });
+    window.addEventListener('orientationchange', updateViewportMetrics, { passive: true });
+    document.addEventListener('fullscreenchange', updateViewportMetrics);
+    document.addEventListener('webkitfullscreenchange', updateViewportMetrics);
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', updateViewportMetrics, { passive: true });
+        window.visualViewport.addEventListener('scroll', updateViewportMetrics, { passive: true });
+    }
+
+    if (typeof window.matchMedia === 'function') {
+        displayModeMediaQuery = window.matchMedia('(display-mode: standalone)');
+        if (displayModeMediaQuery && typeof displayModeMediaQuery.addEventListener === 'function') {
+            displayModeMediaQuery.addEventListener('change', updateViewportMetrics);
+        }
+    }
+
+    visualViewportHandlersBound = true;
+}
+
 function handleWindowResize() {
     if (resizeRafId) {
         cancelAnimationFrame(resizeRafId);
     }
     resizeRafId = requestAnimationFrame(() => {
+        updateViewportMetrics();
         updateDockPositioning();
         requestFavoritesLayoutFrame();
         document.querySelectorAll('.card').forEach((card) => adjustCardTitleFontSize(card));
@@ -2426,10 +2501,25 @@ function handleWindowResize() {
 }
 
 function updateDockPositioning() {
-    if (!favoritesDockEl) return;
-    const computedStyle = getComputedStyle(document.documentElement);
+    const root = document.documentElement;
+    const computedStyle = getComputedStyle(root);
     const safeInset = parseFloat(computedStyle.getPropertyValue('--safe-area-inset-bottom')) || 0;
-    favoritesDockEl.style.setProperty('--favorites-safe-offset', `${safeInset}px`);
+
+    if (favoritesDockEl) {
+        favoritesDockEl.style.setProperty('--favorites-safe-offset', `${safeInset}px`);
+    }
+
+    if (topBarEl) {
+        const topBarHeight = Math.ceil(topBarEl.getBoundingClientRect().height);
+        root.style.setProperty('--top-bar-height', `${Math.max(52, topBarHeight)}px`);
+    }
+
+    if (fixedBackBtn && !fixedBackBtn.classList.contains('hidden')) {
+        const fixedBackWidth = Math.ceil(fixedBackBtn.getBoundingClientRect().width);
+        root.style.setProperty('--fixed-back-clearance', `${Math.max(0, fixedBackWidth + 12)}px`);
+    } else {
+        root.style.setProperty('--fixed-back-clearance', '0px');
+    }
 }
 
 function applyFavoriteChipMetrics() {
