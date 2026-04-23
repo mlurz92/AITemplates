@@ -2226,9 +2226,7 @@ function copyPromptTextForCard(node, buttonElement) {
     copyToClipboard(node.content || '', buttonElement);
 }
 
-function copyToClipboard(text, buttonElement = null, node = null, previewText = '') {
-    const sanitizedPreview = previewText || (node ? getFavoritePreviewText(node.content) : '');
-
+function copyToClipboard(text, buttonElement = null, node = null) {
     const showSuccess = () => {
         showNotification('Prompt kopiert!', 'success');
 
@@ -2800,7 +2798,7 @@ function renderFavoritesDock() {
         button.append(badge, textWrap);
 
         button.addEventListener('click', () => {
-            copyToClipboard(node.content || '', button, node, previewText);
+            copyToClipboard(node.content || '', button, node);
         });
         
         // Add sparkle effect to favorite chip
@@ -3064,37 +3062,6 @@ function handleDeviceOrientation(e) {
             });
         });
     }
-}
-
-// === TOUCH FEEDBACK ===
-function triggerTouchFeedback(element, x, y) {
-    if (prefersReducedMotion) return;
-    
-    const ripple = document.createElement('div');
-    ripple.className = 'touch-ripple';
-    
-    const rect = element.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height) * 2;
-    
-    ripple.style.cssText = `
-        left: ${x - rect.left - size / 2}px;
-        top: ${y - rect.top - size / 2}px;
-        width: ${size}px;
-        height: ${size}px;
-    `;
-    
-    element.style.position = 'relative';
-    element.style.overflow = 'hidden';
-    element.appendChild(ripple);
-    
-    // Trigger animation
-    requestAnimationFrame(() => {
-        ripple.classList.add('active');
-    });
-    
-    setTimeout(() => {
-        ripple.remove();
-    }, 500);
 }
 
 // === HAPTIC FEEDBACK ===

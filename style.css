@@ -1904,32 +1904,6 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   }
 }
 
-/* === TOUCH FEEDBACK ANIMATIONEN === */
-
-.touch-ripple {
-  position: absolute;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, transparent 70%);
-  transform: scale(0) translateZ(0);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.touch-ripple.active {
-  animation: touch-ripple-anim 500ms ease-out forwards;
-}
-
-@keyframes touch-ripple-anim {
-  0% {
-    transform: scale(0) translateZ(0);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(4) translateZ(0);
-    opacity: 0;
-  }
-}
-
 /* === NOTIFICATION ENHANCED === */
 
 .notification.show {
@@ -2141,7 +2115,6 @@ body.favorites-dock-visible .favorites-dock {
   .card .card-glow-burst,
   .sparkle,
   .particle,
-  .touch-ripple,
   .glow-burst {
     display: none !important;
     animation: none !important;
