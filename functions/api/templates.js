@@ -12,7 +12,6 @@ export async function onRequestGet(context) {
   }
 
   try {
-    // Hole die Daten aus dem KV Namespace
     const kvDataStr = await env.TEMPLATES_KV.get('current_templates');
     let kvData = null;
 
@@ -38,11 +37,16 @@ export async function onRequestGet(context) {
       }
     }
 
-    return new Response(JSON.stringify(kvData), {
+    return new Response(JSON.stringify({
+      ...kvData,
+      syncedFrom: 'cloudflare-kv',
+      syncedAtIso: new Date().toISOString()
+    }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, no-cache, must-revalidate'
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache'
       }
     });
 
@@ -69,7 +73,7 @@ export async function onRequestPost(context) {
 
   try {
     const payload = await request.json();
-    if (!payload || !payload.data) {
+    if (!payload || !payload.data || typeof payload.data !== 'object') {
       return new Response(JSON.stringify({ error: "Invalid payload format." }), { status: 400 });
     }
 
@@ -96,13 +100,14 @@ export async function onRequestPost(context) {
     const newTimestamp = Date.now();
     const newRecord = {
       data: newData,
-      lastUpdated: newTimestamp
+      lastUpdated: newTimestamp,
+      syncedFrom: 'cloudflare-kv'
     };
 
     // Im KV speichern
     await env.TEMPLATES_KV.put('current_templates', JSON.stringify(newRecord));
 
-    return new Response(JSON.stringify({ success: true, lastUpdated: newTimestamp }), {
+    return new Response(JSON.stringify({ success: true, lastUpdated: newTimestamp, syncedFrom: 'cloudflare-kv' }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
