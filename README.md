@@ -12,7 +12,7 @@ Eine moderne, performante Prompt-Template-Webanwendung mit Fokus auf **strukturi
 4. [Informationsarchitektur](#informationsarchitektur)
 5. [Kompletter UI-Aufbau](#kompletter-ui-aufbau)
 6. [UX-Prinzipien und Interaktionsdesign](#ux-prinzipien-und-interaktionsdesign)
-7. [Responsive Verhalten, Viewport-Strategie und Fullscreen/PWA-Betrieb](#responsive-verhalten-viewport-strategie-und-fullscreenpwa-betrieb)
+15:7. [Responsives Verhalten, Viewport-Strategie und Fullscreen/PWA-Betrieb](#responsives-verhalten-viewport-strategie-und-fullscreenpwa-betrieb)
 8. [Favoriten-Dock: Architektur, Verhalten, Gesten und Platzoptimierung](#favoriten-dock-architektur-verhalten-gesten-und-platzoptimierung)
 9. [Datenmodell und Datenflüsse](#datenmodell-und-datenflüsse)
 10. [Synchronisierung, Konflikterkennung und Offline-Fallback](#synchronisierung-konflikterkennung-und-offline-fallback)
