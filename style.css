@@ -87,7 +87,14 @@
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --app-vh: 100dvh;
+  --app-vw: 100vw;
+  --viewport-bottom-offset: 0px;
+  --top-bar-height: 60px;
+  --card-aspect-ratio: 10 / 7;
 }
+
+
 
 html {
   background: var(--bg-0);
@@ -115,9 +122,15 @@ html, body {
 
 /* PWA Fullscreen: Body-Hintergrund bis zum sicheren Bereich */
 body {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--viewport-bottom-offset));
   background: var(--bg-0);
 }
+
+body[data-display-mode='standalone'],
+body[data-display-mode='fullscreen'] {
+  --viewport-bottom-offset: 0px;
+}
+
 
 body::before {
   content: "";
@@ -416,10 +429,11 @@ body::before {
   grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
   gap: clamp(0.8rem, 2.2vw, 1.6rem);
   padding: clamp(0.8rem, 2.5vw, 1.8rem);
-  padding-top: calc(6rem + var(--safe-area-inset-top));
+  padding-inline: clamp(0.8rem, 2.5vw, 1.8rem);
+  padding-top: calc(var(--top-bar-height) + clamp(0.9rem, 2.5vw, 1.8rem) + var(--safe-area-inset-top));
   padding-bottom: calc(6.5rem + var(--safe-area-inset-bottom));
   position: relative;
-  min-height: calc(100vh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+  min-height: calc(var(--app-vh, 100dvh) - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
   transform: translateZ(0);
   transition: padding-bottom var(--duration-3) var(--ease-smooth);
   max-width: min(1440px, 100%);
@@ -486,7 +500,7 @@ body::before {
   cursor: pointer;
   width: min(100%, var(--card-max-width));
   min-width: min(100%, var(--card-min-width));
-  aspect-ratio: 1 / 0.7;
+  aspect-ratio: var(--card-aspect-ratio);
   height: auto;
   opacity: 0;
   transform: translateY(20px) scale(0.98) translateZ(0);
@@ -496,7 +510,7 @@ body::before {
   contain: layout style paint;
   /* Performance: Skip rendering for off-screen cards */
   content-visibility: auto;
-  contain-intrinsic-size: 200px 140px;
+  contain-intrinsic-size: 220px 154px;
 }
 
 .card.is-visible {
@@ -506,7 +520,7 @@ body::before {
 }
 
 .card:hover {
-  transform: translateY(-6px) scale(1.04) translateZ(0);
+  transform: translateY(-6px) translateZ(0);
   box-shadow: var(--vignette-shadow), 
               0 20px 50px rgba(0,0,0,.55),
               var(--shadow-glow-1);
@@ -517,15 +531,15 @@ body::before {
 }
 
 .card:active {
-  transform: translateY(-2px) scale(1.02) translateZ(0);
+  transform: translateY(-2px) translateZ(0);
   transition: transform 80ms var(--ease-smooth);
 }
 
 .cards-container.edit-mode .card { cursor: grab; animation: jiggle 0.4s infinite; }
-.cards-container.edit-mode .card:hover { transform: translateY(-5px) scale(1.03); animation-name: jiggle; }
+.cards-container.edit-mode .card:hover { transform: translateY(-5px); animation-name: jiggle; }
 .cards-container.edit-mode .card.sortable-ghost { background: rgba(0,230,255,.12); border: 2px dashed var(--acc-2); opacity: 0.7; }
-.cards-container.edit-mode .card.sortable-drag { cursor: grabbing; opacity: 0.85; transform: scale(1.05); box-shadow: var(--shadow-1); z-index: 999; animation: none; }
-.card.drop-target-folder { transform: scale(1.05); border: 2px solid var(--acc-2); box-shadow: 0 0 15px 5px rgba(0,230,255,.24); }
+.cards-container.edit-mode .card.sortable-drag { cursor: grabbing; opacity: 0.85; transform: none; box-shadow: var(--shadow-1); z-index: 999; animation: none; }
+.card.drop-target-folder { transform: none; border: 2px solid var(--acc-2); box-shadow: 0 0 15px 5px rgba(0,230,255,.24); }
 .card.drop-target-combine { border: 2px dashed var(--acc-2); background: rgba(0,230,255,.12); }
 
 @keyframes jiggle {
@@ -688,9 +702,9 @@ body::before {
 
 .fixed-back {
   position: fixed;
-  left: calc(1.2rem + var(--safe-area-inset-left));
-  top: 50%;
-  transform: translateY(-50%) translateZ(0);
+  left: calc(0.9rem + var(--safe-area-inset-left));
+  top: calc(var(--top-bar-height) + var(--safe-area-inset-top) + clamp(0.35rem, 1.2vw, 0.8rem));
+  transform: translateZ(0);
   background: var(--glass-bg);
   border: 1px solid var(--glass-stroke);
   border-radius: 50%;
@@ -702,7 +716,7 @@ body::before {
   -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--shadow-2);
 }
-.fixed-back:hover { transform: translateY(-50%) scale(1.12); box-shadow: var(--shadow-1); }
+.fixed-back:hover { transform: scale(1.08); box-shadow: var(--shadow-1); }
 .fixed-back.hidden { display: none; }
 .fixed-back svg.icon { width: 26px; height: 26px; display: block; }
 
@@ -854,7 +868,7 @@ svg.icon {
     transition: bottom var(--duration-3) var(--ease-smooth);
 }
 body.favorites-dock-visible #notification-area {
-    bottom: calc(clamp(7.5rem, 14vh, 10.5rem) + var(--safe-area-inset-bottom));
+    bottom: calc(var(--favorites-footprint, 0px) + clamp(1.4rem, 3vh, 2.2rem) + max(var(--viewport-bottom-offset), var(--safe-area-inset-bottom)));
 }
 
 /* === NOTIFICATION - Enhanced Design === */
@@ -989,7 +1003,7 @@ body.favorites-dock-visible #notification-area {
 }
 
 body.favorites-dock-visible .cards-container {
-    padding-bottom: calc(var(--favorites-footprint, 0px) + clamp(3.1rem, 7vh, 4.75rem));
+    padding-bottom: calc(var(--favorites-footprint, 0px) + clamp(2.1rem, 5vh, 3.3rem) + max(var(--viewport-bottom-offset), var(--safe-area-inset-bottom)));
 }
 
 .favorites-dock {
@@ -1000,9 +1014,9 @@ body.favorites-dock-visible .cards-container {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
-    /* PWA Fullscreen: Berücksichtige safe-area-inset-bottom für sichere Bereiche */
-    padding: 0 clamp(10px, 3.2vw, 32px) calc(clamp(6px, 2.4vw, 14px) + env(safe-area-inset-bottom, 0px));
+    bottom: calc(max(var(--viewport-bottom-offset), 0px));
+    /* Browser und PWA: sichere Position am Visual-Viewport-Ende + Safe Area */
+    padding: 0 clamp(10px, 3.2vw, 32px) calc(clamp(6px, 2.4vw, 14px) + max(env(safe-area-inset-bottom, 0px), var(--viewport-bottom-offset)));
     z-index: 998;
     pointer-events: none;
     opacity: 0;
@@ -1501,7 +1515,6 @@ body.favorites-dock-visible .favorites-dock {
 @media screen and (min-aspect-ratio: 1/1) and (max-height: 500px) {
     .fixed-back { left: calc(0.6rem + var(--safe-area-inset-left)); padding: 0.45rem; }
     .fixed-back svg.icon { width: 20px; height: 20px; }
-    .cards-container { padding-top: calc(5rem + var(--safe-area-inset-top)); }
     .top-bar { min-height: 3.5rem; }
 }
 
