@@ -236,7 +236,7 @@ Das Favoriten-Dock ist als eigenständige Interaktionsebene umgesetzt:
 
 ### Lokaler Betrieb
 - Als statische WebApp mit lokalem/entwicklungsseitigem API-Mock oder vorhandener Function.
-- Für produktiven Cloud-Sync ist KV-Bindung in der Laufzeitumgebung erforderlich.
+- Für produktiven Cloud-Sync ist eine KV-Bindung (Namespace-Name: TEMPLATES_KV) in der Laufzeitumgebung erforderlich.
 
 ### Typische Anpassungsfelder
 - Corporate Branding (Farben, Icons, Schrift).
