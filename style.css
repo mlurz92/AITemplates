@@ -2,11 +2,6 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  /* GPU-Beschleunigung aktivieren */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 :root {
@@ -91,7 +86,6 @@
   --app-vw: 100vw;
   --viewport-bottom-offset: 0px;
   --top-bar-height: 60px;
-  --fixed-back-clearance: 0px;
   --card-aspect-ratio: 10 / 7;
 }
 
@@ -132,6 +126,18 @@ body[data-display-mode='fullscreen'] {
   --viewport-bottom-offset: 0px;
 }
 
+
+
+/* Nur gezielte GPU-Layer: kein globales transform, damit fixed-Elemente zuverlässig fixiert bleiben */
+.top-bar,
+.favorites-dock,
+.card,
+.modal .modal-content,
+.fixed-back {
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
 
 body::before {
   content: "";
@@ -431,7 +437,6 @@ body::before {
   gap: clamp(0.8rem, 2.2vw, 1.6rem);
   padding: clamp(0.8rem, 2.5vw, 1.8rem);
   padding-inline: clamp(0.8rem, 2.5vw, 1.8rem);
-  padding-inline: calc(clamp(0.8rem, 2.5vw, 1.8rem) + var(--fixed-back-clearance)) clamp(0.8rem, 2.5vw, 1.8rem);
   padding-top: calc(var(--top-bar-height) + clamp(0.9rem, 2.5vw, 1.8rem) + var(--safe-area-inset-top));
   padding-bottom: calc(6.5rem + var(--safe-area-inset-bottom));
   position: relative;

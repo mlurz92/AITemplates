@@ -2514,12 +2514,6 @@ function updateDockPositioning() {
         root.style.setProperty('--top-bar-height', `${Math.max(52, topBarHeight)}px`);
     }
 
-    if (fixedBackBtn && !fixedBackBtn.classList.contains('hidden')) {
-        const fixedBackWidth = Math.ceil(fixedBackBtn.getBoundingClientRect().width);
-        root.style.setProperty('--fixed-back-clearance', `${Math.max(0, fixedBackWidth + 12)}px`);
-    } else {
-        root.style.setProperty('--fixed-back-clearance', '0px');
-    }
 }
 
 function applyFavoriteChipMetrics() {
