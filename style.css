@@ -430,6 +430,7 @@ body::before {
   grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
   gap: clamp(0.8rem, 2.2vw, 1.6rem);
   padding: clamp(0.8rem, 2.5vw, 1.8rem);
+  padding-inline: clamp(0.8rem, 2.5vw, 1.8rem);
   padding-inline: calc(clamp(0.8rem, 2.5vw, 1.8rem) + var(--fixed-back-clearance)) clamp(0.8rem, 2.5vw, 1.8rem);
   padding-top: calc(var(--top-bar-height) + clamp(0.9rem, 2.5vw, 1.8rem) + var(--safe-area-inset-top));
   padding-bottom: calc(6.5rem + var(--safe-area-inset-bottom));
