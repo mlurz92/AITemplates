@@ -2,10 +2,18 @@ let jsonData = null;
 let currentNode = null;
 let pathStack = [];
 const currentJsonFile = 'templates.json';
-const localStorageKey = 'customTemplatesJson';
 const favoritesKey = 'favoritePrompts';
+const storageModeKey = 'templateStorageMode';
+const localFileStorageKey = 'customTemplatesJsonLocalFile';
+const cloudStorageKey = 'customTemplatesJsonCloud';
+const cloudSyncTimestampKey = 'syncTimestampCloud';
+const STORAGE_MODES = {
+    CLOUDFLARE: 'cloudflare',
+    LOCAL_FILE: 'local-file'
+};
 
 let serverSyncTimestamp = null;
+let templateStorageMode = STORAGE_MODES.CLOUDFLARE;
 
 // Particle System State
 let particlesContainer = null;
@@ -23,7 +31,7 @@ let tiltPending = false;
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCancelBtn;
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn, storageSourceBtn, storageSourceLabel, storageCloudIcon, storageFileIcon;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
 let favoritesDockEl, favoritesListEl, favoritesScrollAreaEl, favoritesToggleBtn, auroraContainerEl;
 let favoritesChipResizeObserver = null;
@@ -117,6 +125,12 @@ function initApp() {
     organizeBtn = document.getElementById('organize-button');
     appLogoBtn = document.getElementById('app-logo-button');
     clearFavoritesBtn = document.getElementById('clear-favorites-button');
+    storageSourceBtn = document.getElementById('storage-source-button');
+    storageSourceLabel = document.getElementById('storage-source-label');
+    if (storageSourceBtn) {
+        storageCloudIcon = storageSourceBtn.querySelector('.icon-storage-cloud');
+        storageFileIcon = storageSourceBtn.querySelector('.icon-storage-file');
+    }
 
     favoritesDockEl = document.getElementById('favorites-dock');
     favoritesListEl = document.getElementById('favorites-list');
@@ -157,6 +171,8 @@ function initApp() {
     checkFullscreenSupport();
     createContextMenu();
     loadFavorites();
+    templateStorageMode = getStorageModePreference();
+    updateStorageSourceButton();
 
     if (isMobile()) {
         setupMobileSpecificFeatures();
@@ -673,6 +689,52 @@ function navigateToHome() {
     }
 }
 
+function getStorageModePreference() {
+    const savedMode = localStorage.getItem(storageModeKey);
+    return savedMode === STORAGE_MODES.LOCAL_FILE ? STORAGE_MODES.LOCAL_FILE : STORAGE_MODES.CLOUDFLARE;
+}
+
+function getActiveDataStorageKey() {
+    return templateStorageMode === STORAGE_MODES.LOCAL_FILE ? localFileStorageKey : cloudStorageKey;
+}
+
+function getStorageModeLabel() {
+    return templateStorageMode === STORAGE_MODES.LOCAL_FILE ? 'Datei' : 'Cloud';
+}
+
+function updateStorageSourceButton() {
+    if (!storageSourceBtn) return;
+    const isCloud = templateStorageMode === STORAGE_MODES.CLOUDFLARE;
+    storageSourceBtn.classList.toggle('is-cloud', isCloud);
+    storageSourceBtn.classList.toggle('is-local', !isCloud);
+    storageSourceBtn.setAttribute('aria-label', `Datenquelle: ${isCloud ? 'Cloudflare KV' : 'templates.json lokal'}. Klicken zum Wechseln.`);
+    if (storageSourceLabel) {
+        storageSourceLabel.textContent = getStorageModeLabel();
+    }
+    if (storageCloudIcon) storageCloudIcon.classList.toggle('hidden', !isCloud);
+    if (storageFileIcon) storageFileIcon.classList.toggle('hidden', isCloud);
+    if (resetBtn) {
+        resetBtn.setAttribute('aria-label', isCloud ? 'Lokalen Cache verwerfen und Cloud-Stand neu laden' : 'Lokale Änderungen verwerfen und templates.json neu laden');
+    }
+}
+
+function updatePersistenceButtonsVisibility() {
+    if (!downloadBtn || !resetBtn) return;
+    const hasLocalData = Boolean(localStorage.getItem(getActiveDataStorageKey()));
+    downloadBtn.style.display = hasLocalData ? 'inline-flex' : 'none';
+    resetBtn.style.display = hasLocalData ? 'inline-flex' : 'none';
+}
+
+function switchStorageMode() {
+    templateStorageMode = templateStorageMode === STORAGE_MODES.CLOUDFLARE ? STORAGE_MODES.LOCAL_FILE : STORAGE_MODES.CLOUDFLARE;
+    localStorage.setItem(storageModeKey, templateStorageMode);
+    serverSyncTimestamp = null;
+    updateStorageSourceButton();
+    updatePersistenceButtonsVisibility();
+    showNotification(`Datenquelle gewechselt: ${templateStorageMode === STORAGE_MODES.CLOUDFLARE ? 'Cloudflare KV' : 'Lokale templates.json'}.`, 'info');
+    loadJsonData(currentJsonFile);
+}
+
 function setupEventListeners() {
     topbarBackBtn.addEventListener('click', () => {
         if (modalEl.classList.contains('visible')) {
@@ -712,6 +774,9 @@ function setupEventListeners() {
 
     downloadBtn.addEventListener('click', downloadCustomJson);
     resetBtn.addEventListener('click', resetLocalStorage);
+    if (storageSourceBtn) {
+        storageSourceBtn.addEventListener('click', switchStorageMode);
+    }
     
     if (clearFavoritesBtn) {
         clearFavoritesBtn.addEventListener('click', clearAllFavorites);
@@ -1476,42 +1541,48 @@ function processJson(data) {
 }
 
 async function loadJsonData(filename) {
-    try {
-        // Zuerst vom Server (KV) laden
-        const response = await fetch('/api/templates');
-        if (response.ok) {
-            const dataResponse = await response.json();
-            if (dataResponse && dataResponse.data) {
-                serverSyncTimestamp = dataResponse.lastUpdated || null;
-                processJson(dataResponse.data);
-                
-                // Lokalen Storage updaten für Offline-Zugriff / Fallback
-                localStorage.setItem(localStorageKey, JSON.stringify(dataResponse.data));
-                if (dataResponse.lastUpdated) {
-                    localStorage.setItem('syncTimestamp', dataResponse.lastUpdated.toString());
-                }
+    const activeStorageKey = getActiveDataStorageKey();
+    const isCloudMode = templateStorageMode === STORAGE_MODES.CLOUDFLARE;
+    serverSyncTimestamp = null;
+    updateStorageSourceButton();
 
-                if (downloadBtn) downloadBtn.style.display = 'inline-flex';
-                if (resetBtn) resetBtn.style.display = 'inline-flex';
-                return;
+    if (isCloudMode) {
+        try {
+            // Zuerst vom Server (KV) laden
+            const response = await fetch('/api/templates');
+            if (response.ok) {
+                const dataResponse = await response.json();
+                if (dataResponse && dataResponse.data) {
+                    serverSyncTimestamp = dataResponse.lastUpdated || null;
+                    processJson(dataResponse.data);
+                    
+                    // Lokalen Storage updaten für Offline-Zugriff / Fallback
+                    localStorage.setItem(activeStorageKey, JSON.stringify(dataResponse.data));
+                    if (dataResponse.lastUpdated) {
+                        localStorage.setItem(cloudSyncTimestampKey, dataResponse.lastUpdated.toString());
+                    }
+                    updatePersistenceButtonsVisibility();
+                    return;
+                }
             }
+        } catch (e) {
+            console.warn('Fehler beim Laden von KV API, versuche lokale Quellen.', e);
         }
-    } catch (e) {
-        console.warn('Fehler beim Laden von KV API, versuche lokale Quellen.', e);
     }
 
-    // Fallback: LocalStorage (Offline)
-    const storedJson = localStorage.getItem(localStorageKey);
+    // Fallback: LocalStorage (Offline / lokaler Modus)
+    const storedJson = localStorage.getItem(activeStorageKey);
     if (storedJson) {
         try {
             const parsedData = JSON.parse(storedJson);
-            const savedTimestamp = localStorage.getItem('syncTimestamp');
-            if (savedTimestamp) {
-                serverSyncTimestamp = parseInt(savedTimestamp, 10);
+            if (isCloudMode) {
+                const savedTimestamp = localStorage.getItem(cloudSyncTimestampKey);
+                if (savedTimestamp) {
+                    serverSyncTimestamp = parseInt(savedTimestamp, 10);
+                }
             }
             processJson(parsedData);
-            if (downloadBtn) downloadBtn.style.display = 'inline-flex';
-            if (resetBtn) resetBtn.style.display = 'inline-flex';
+            updatePersistenceButtonsVisibility();
             return;
         } catch (error) {
             console.error("Fehler beim Laden aus Local Storage:", error);
@@ -1519,8 +1590,7 @@ async function loadJsonData(filename) {
     }
 
     // Fallback: statische Datei
-    if (downloadBtn) downloadBtn.style.display = 'none';
-    if (resetBtn) resetBtn.style.display = 'none';
+    updatePersistenceButtonsVisibility();
     fetch(filename)
         .then(response => { 
             if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`); 
@@ -1528,6 +1598,10 @@ async function loadJsonData(filename) {
         })
         .then(data => {
             processJson(data);
+            if (templateStorageMode === STORAGE_MODES.LOCAL_FILE) {
+                localStorage.setItem(activeStorageKey, JSON.stringify(data));
+                updatePersistenceButtonsVisibility();
+            }
         })
         .catch(error => {
             console.error(`Load/Parse Error for ${filename}:`, error);
@@ -2073,61 +2147,64 @@ function savePromptChanges() {
 
 async function persistJsonData(successMsg, type) {
     try {
+        const activeStorageKey = getActiveDataStorageKey();
+        const isCloudMode = templateStorageMode === STORAGE_MODES.CLOUDFLARE;
         // Lokales JSON konvertieren
         const jsonString = JSON.stringify(jsonData, null, 2);
         
         // Zunächst optimistisch im Browser speichern (damit UI nicht blockiert)
-        localStorage.setItem(localStorageKey, jsonString);
+        localStorage.setItem(activeStorageKey, jsonString);
         
-        let apiSuccess = false;
-        try {
-            // An Cloudflare KV API senden
-            const payload = {
-                data: jsonData,
-                lastUpdated: serverSyncTimestamp
-            };
-            
-            const req = await fetch('/api/templates', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (req.status === 409) {
-                // Konflikt: Daten wurden anderweitig geändert
-                const responseData = await req.json();
-                showNotification('Konflikt: Daten wurden auf einem anderen Gerät aktualisiert! Lade neue Daten...', 'error');
-                console.error("Konflikt beim Speichern. Serverdaten:", responseData.serverData);
+        let saveSuccessful = false;
+        if (isCloudMode) {
+            try {
+                // An Cloudflare KV API senden
+                const payload = {
+                    data: jsonData,
+                    lastUpdated: serverSyncTimestamp
+                };
                 
-                // Neue Daten laden (wartet kurz)
-                setTimeout(() => {
-                    location.reload();
-                }, 2500);
+                const req = await fetch('/api/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (req.status === 409) {
+                    // Konflikt: Daten wurden anderweitig geändert
+                    const responseData = await req.json();
+                    showNotification('Konflikt: Daten wurden auf einem anderen Gerät aktualisiert! Lade neue Daten...', 'error');
+                    console.error("Konflikt beim Speichern. Serverdaten:", responseData.serverData);
+                    
+                    // Neue Daten laden (wartet kurz)
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2500);
+                    return;
+                }
+
+                if (req.ok) {
+                    const responseData = await req.json();
+                    serverSyncTimestamp = responseData.lastUpdated;
+                    localStorage.setItem(cloudSyncTimestampKey, serverSyncTimestamp.toString());
+                    saveSuccessful = true;
+                } else {
+                    throw new Error(`API antwortete nicht mit OK: ${req.status}`);
+                }
+            } catch (apiError) {
+                console.error("Fehler beim Senden zur Cloud:", apiError);
+                showNotification('Cloud-Speicherung fehlgeschlagen. Nur lokal gespeichert.', 'error');
                 return;
             }
-
-            if (req.ok) {
-                const responseData = await req.json();
-                serverSyncTimestamp = responseData.lastUpdated;
-                localStorage.setItem('syncTimestamp', serverSyncTimestamp.toString());
-                apiSuccess = true;
-            } else {
-                throw new Error(`API antwortete nicht mit OK: ${req.status}`);
-            }
-        } catch (apiError) {
-            console.error("Fehler beim Senden zur Cloud:", apiError);
-            showNotification('Cloud-Speicherung fehlgeschlagen. Nur lokal gespeichert.', 'error');
-            return;
+        } else {
+            saveSuccessful = true;
         }
 
-        if (apiSuccess) {
-            showNotification(successMsg, type);
+        if (saveSuccessful) {
+            showNotification(isCloudMode ? successMsg : 'Lokal gespeichert (templates.json Modus).', type);
         }
 
-        if (downloadBtn) {
-            downloadBtn.style.display = 'inline-flex';
-            resetBtn.style.display = 'inline-flex';
-        }
+        updatePersistenceButtonsVisibility();
     } catch (e) {
         console.error("Allgemeiner Fehler beim Speichern:", e);
         showNotification('Speichern fehlgeschlagen!', 'error');
@@ -2135,7 +2212,7 @@ async function persistJsonData(successMsg, type) {
 }
 
 function downloadCustomJson() {
-    const jsonString = localStorage.getItem(localStorageKey);
+    const jsonString = localStorage.getItem(getActiveDataStorageKey());
     if (!jsonString) {
         showNotification('Keine Änderungen zum Herunterladen vorhanden.', 'info');
         return;
@@ -2153,12 +2230,22 @@ function downloadCustomJson() {
 }
 
 function resetLocalStorage() {
-    const confirmation = confirm("Möchten Sie lokale Änderungen verwerfen und den aktuellen Cloud-Stand neu laden? (Dies löscht keine globalen Daten im KV-Speicher).");
+    const isCloudMode = templateStorageMode === STORAGE_MODES.CLOUDFLARE;
+    const confirmation = confirm(
+        isCloudMode
+            ? "Möchten Sie lokale Änderungen verwerfen und den aktuellen Cloud-Stand neu laden? (Dies löscht keine globalen Daten im KV-Speicher)."
+            : "Möchten Sie lokale Änderungen im Datei-Modus verwerfen und wieder templates.json laden?"
+    );
     if (confirmation) {
-        localStorage.removeItem(localStorageKey);
-        localStorage.removeItem('syncTimestamp');
+        localStorage.removeItem(getActiveDataStorageKey());
+        if (isCloudMode) {
+            localStorage.removeItem(cloudSyncTimestampKey);
+        }
         localStorage.removeItem(favoritesKey);
-        showNotification('Lokaler Speicher geleert. Lade Cloud-Daten...', 'info');
+        showNotification(
+            isCloudMode ? 'Lokaler Speicher geleert. Lade Cloud-Daten...' : 'Lokale Datei-Änderungen verworfen. Lade templates.json...',
+            'info'
+        );
         setTimeout(() => {
             location.reload();
         }, 1000);

@@ -370,6 +370,28 @@ body::before {
 #app-logo-svg { transition: transform var(--duration-2) var(--ease-smooth); }
 #app-logo-button:hover #app-logo-svg { transform: scale(1.05) rotate(-3deg); }
 
+.source-toggle {
+  padding: 0.42rem 0.72rem;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.source-toggle-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+.source-toggle.is-cloud .source-toggle-label {
+  color: #7dd3fc;
+}
+
+.source-toggle.is-local .source-toggle-label {
+  color: #facc15;
+}
+
 .cards-container {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
@@ -412,6 +434,14 @@ body::before {
 @media (max-width: 720px) {
   .cards-container {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .source-toggle {
+    padding: 0.42rem;
+  }
+
+  .source-toggle-label {
+    display: none;
   }
 }
 
