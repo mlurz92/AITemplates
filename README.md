@@ -127,7 +127,7 @@ Die aktuelle Navigationsebene wird in einem Pfad-Stack gehalten und über Breadc
 
 ---
 
-## Responsive Verhalten, Viewport-Strategie und Fullscreen/PWA-Betrieb
+## Responsives Verhalten, Viewport-Strategie und Fullscreen/PWA-Betrieb
 
 Die Anwendung ist konsequent auf variable Umgebungen ausgelegt:
 
