@@ -1082,8 +1082,8 @@ function resolveCardDropIntent(evt) {
         return { targetCard: null, intent: 'reorder' };
     }
 
-    const cardFromPoint = document.elementFromPoint(coordinates.x, coordinates.y)?.closest('.card');
-    const targetCard = cardFromPoint && cardFromPoint !== evt.item ? cardFromPoint : null;
+    const elements = document.elementsFromPoint(coordinates.x, coordinates.y);
+    const targetCard = elements.map(el => el.closest('.card')).find(card => card && card !== evt.item) || null;
     if (!targetCard) {
         return { targetCard: null, intent: 'reorder' };
     }
