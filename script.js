@@ -27,7 +27,7 @@ let tiltPending = false;
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCancelBtn;
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn, storageSourceBtn, storageSourceLabel, storageCloudIcon;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn, storageSourceBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
 let favoritesDockEl, favoritesListEl, favoritesScrollAreaEl, favoritesToggleBtn, auroraContainerEl;
 let favoritesChipResizeObserver = null;
@@ -124,10 +124,6 @@ function initApp() {
     appLogoBtn = document.getElementById('app-logo-button');
     clearFavoritesBtn = document.getElementById('clear-favorites-button');
     storageSourceBtn = document.getElementById('storage-source-button');
-    storageSourceLabel = document.getElementById('storage-source-label');
-    if (storageSourceBtn) {
-        storageCloudIcon = storageSourceBtn.querySelector('.icon-storage-cloud');
-    }
 
     favoritesDockEl = document.getElementById('favorites-dock');
     favoritesListEl = document.getElementById('favorites-list');
@@ -691,10 +687,6 @@ function updateStorageSourceButton() {
     if (!storageSourceBtn) return;
     storageSourceBtn.classList.add('is-cloud');
     storageSourceBtn.setAttribute('aria-label', 'Datenquelle: Cloudflare KV (automatische Live-Synchronisierung aktiv)');
-    if (storageSourceLabel) {
-        storageSourceLabel.textContent = 'Cloud Live';
-    }
-    if (storageCloudIcon) storageCloudIcon.classList.remove('hidden');
     if (resetBtn) {
         resetBtn.setAttribute('aria-label', 'Lokalen Cache verwerfen und Cloud-Stand neu laden');
     }
@@ -2354,6 +2346,27 @@ function toggleOrganizeMode() {
             onEnd: (evt) => {
                 const { oldIndex, newIndex, to } = evt;
                 if (oldIndex === newIndex && evt.from === to) return;
+
+                const itemEl = evt.item;
+                const sourceId = itemEl?.getAttribute('data-id');
+                if (!sourceId) return;
+
+                const sourceNode = findNodeById(jsonData, sourceId);
+                if (!sourceNode) return;
+
+                const pointerTargetCard = evt.originalEvent?.target?.closest?.('.card') || null;
+                const relatedEl = pointerTargetCard && pointerTargetCard !== itemEl
+                    ? pointerTargetCard
+                    : (evt.related && evt.related !== itemEl ? evt.related.closest('.card') : null);
+                const targetFolderId = relatedEl && relatedEl.getAttribute('data-type') === 'folder'
+                    ? relatedEl.getAttribute('data-id')
+                    : null;
+
+                if (targetFolderId && sourceNode.type === 'prompt' && sourceId !== targetFolderId) {
+                    moveNode(sourceId, targetFolderId);
+                    showNotification('Prompt in Ordner verschoben!', 'success');
+                    return;
+                }
 
                 const itemNode = currentNode.items.splice(oldIndex, 1)[0];
                 
