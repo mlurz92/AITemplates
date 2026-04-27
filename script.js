@@ -70,6 +70,7 @@ let contextMenu = null;
 let dragSource = null;
 let dragTarget = null;
 let springLoadTimeout = null;
+let sortableDragState = null;
 
 let touchStartX = 0, touchStartY = 0, touchEndX = 0, touchEndY = 0;
 const swipeThreshold = 50;
@@ -947,6 +948,7 @@ function handleContextMenu(e) {
 }
 
 function handleDragStart(e) {
+    if (sortableInstance) return;
     if (!containerEl.classList.contains('edit-mode') || !e.target.closest('.card')) {
         e.preventDefault();
         return;
@@ -964,12 +966,14 @@ function handleDragStart(e) {
 }
 
 function handleDragOver(e) {
+    if (sortableInstance) return;
     if (!containerEl.classList.contains('edit-mode')) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
 }
 
 function handleDragEnter(e) {
+    if (sortableInstance) return;
     if (!containerEl.classList.contains('edit-mode')) return;
     e.preventDefault();
     const targetCard = e.target.closest('.card');
@@ -991,6 +995,7 @@ function handleDragEnter(e) {
 }
 
 function handleDragLeave(e) {
+    if (sortableInstance) return;
     if (!containerEl.classList.contains('edit-mode')) return;
     const targetCard = e.target.closest('.card');
     if (targetCard) {
@@ -1038,6 +1043,7 @@ function handleDrop(e) {
 }
 
 function handleDragEnd(e) {
+    if (sortableInstance) return;
     clearTimeout(springLoadTimeout);
     if (dragSource) {
         dragSource.classList.remove('dragging');
@@ -1091,6 +1097,93 @@ function resolveCardDropIntent(evt) {
     const rect = targetCard.getBoundingClientRect();
     const intent = isPointInsideCombineZone(coordinates, rect) ? 'onto-card' : 'reorder';
     return { targetCard, intent };
+}
+
+function getCardById(nodeId) {
+    if (!nodeId) return null;
+    return containerEl.querySelector(`.card[data-id="${nodeId}"]`);
+}
+
+function clearDropTargetHighlights() {
+    document.querySelectorAll('.drop-target-folder, .drop-target-combine').forEach(el => {
+        el.classList.remove('drop-target-folder', 'drop-target-combine');
+    });
+}
+
+function setDropTargetHighlight(targetId, targetType) {
+    clearDropTargetHighlights();
+    const targetCard = getCardById(targetId);
+    if (!targetCard) return;
+    if (targetType === 'folder') {
+        targetCard.classList.add('drop-target-folder');
+    } else {
+        targetCard.classList.add('drop-target-combine');
+    }
+}
+
+function resolveSortableCombineIntent(evt) {
+    const draggedCard = evt.dragged?.closest('.card');
+    const relatedCard = evt.related?.closest('.card');
+    if (!draggedCard || !relatedCard || draggedCard === relatedCard) {
+        return null;
+    }
+
+    const point = resolveDropEventCoordinates(evt.originalEvent);
+    if (!point) return null;
+
+    const relatedRect = relatedCard.getBoundingClientRect();
+    if (!isPointInsideCombineZone(point, relatedRect)) {
+        return null;
+    }
+
+    const sourceId = draggedCard.getAttribute('data-id');
+    const targetId = relatedCard.getAttribute('data-id');
+    if (!sourceId || !targetId || sourceId === targetId) {
+        return null;
+    }
+
+    const sourceNode = findNodeById(jsonData, sourceId);
+    const targetNode = findNodeById(jsonData, targetId);
+    if (!sourceNode || !targetNode || sourceNode.type !== 'prompt') {
+        return null;
+    }
+
+    if (targetNode.type === 'prompt') {
+        return { sourceId, targetId, targetType: 'prompt', action: 'combine' };
+    }
+
+    if (targetNode.type === 'folder') {
+        return { sourceId, targetId, targetType: 'folder', action: 'move-to-folder' };
+    }
+
+    return null;
+}
+
+function reorderCurrentNodeItemsFromDom() {
+    if (!currentNode?.items) return false;
+    const orderedIds = Array.from(containerEl.querySelectorAll('.card'))
+        .map(card => card.getAttribute('data-id'))
+        .filter(Boolean);
+    if (!orderedIds.length || orderedIds.length !== currentNode.items.length) {
+        return false;
+    }
+
+    const itemMap = new Map(currentNode.items.map(item => [item.id, item]));
+    const reorderedItems = orderedIds
+        .map(id => itemMap.get(id))
+        .filter(Boolean);
+
+    if (reorderedItems.length !== currentNode.items.length) {
+        return false;
+    }
+
+    const hasChanged = reorderedItems.some((item, index) => currentNode.items[index]?.id !== item.id);
+    if (!hasChanged) {
+        return false;
+    }
+
+    currentNode.items = reorderedItems;
+    return true;
 }
 
 function moveNode(sourceId, targetFolderId, newIndex = -1) {
@@ -2388,54 +2481,55 @@ function toggleOrganizeMode() {
         sortableInstance = new Sortable(containerEl, {
             animation: 200,
             ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            onStart: (evt) => {
+                sortableDragState = {
+                    sourceId: evt.item?.getAttribute('data-id') || null,
+                    combineIntent: null
+                };
+                clearDropTargetHighlights();
+            },
+            onMove: (evt) => {
+                const combineIntent = resolveSortableCombineIntent(evt);
+                if (combineIntent) {
+                    if (sortableDragState) {
+                        sortableDragState.combineIntent = combineIntent;
+                    }
+                    setDropTargetHighlight(combineIntent.targetId, combineIntent.targetType);
+                    return false;
+                }
+
+                if (sortableDragState) {
+                    sortableDragState.combineIntent = null;
+                }
+                clearDropTargetHighlights();
+                return true;
+            },
             onEnd: (evt) => {
-                const { oldIndex, newIndex, to } = evt;
-                if (oldIndex === newIndex && evt.from === to) return;
+                const combineIntent = sortableDragState?.combineIntent || null;
+                clearDropTargetHighlights();
 
-                const itemEl = evt.item;
-                const sourceId = itemEl?.getAttribute('data-id');
-                if (!sourceId) return;
-
-                const sourceNode = findNodeById(jsonData, sourceId);
-                if (!sourceNode) return;
-
-                const { targetCard, intent } = resolveCardDropIntent(evt);
-
-                if (targetCard && intent === 'onto-card') {
-                    const targetId = targetCard.getAttribute('data-id');
-                    if (!targetId || targetId === sourceId) {
-                        renderView(currentNode);
-                        return;
-                    }
-
-                    const targetNode = findNodeById(jsonData, targetId);
-                    if (!targetNode) {
-                        renderView(currentNode);
-                        return;
-                    }
-
-                    if (sourceNode.type === 'prompt' && targetNode.type === 'prompt') {
-                        combineIntoNewFolder(sourceId, targetId);
-                        return;
-                    }
-
-                    if (sourceNode.type === 'prompt' && targetNode.type === 'folder') {
-                        moveNode(sourceId, targetId);
-                        showNotification('Prompt in Ordner verschoben!', 'success');
-                        return;
-                    }
-
-                    renderView(currentNode);
+                if (combineIntent?.action === 'combine') {
+                    combineIntoNewFolder(combineIntent.sourceId, combineIntent.targetId);
+                    sortableDragState = null;
                     return;
                 }
 
-                const itemNode = currentNode.items.splice(oldIndex, 1)[0];
-                
-                if (evt.from === to) {
-                    currentNode.items.splice(newIndex, 0, itemNode);
+                if (combineIntent?.action === 'move-to-folder') {
+                    moveNode(combineIntent.sourceId, combineIntent.targetId);
+                    showNotification('Prompt in Ordner verschoben!', 'success');
+                    sortableDragState = null;
+                    return;
                 }
-                
-                persistJsonData('Reihenfolge gespeichert!', 'success');
+
+                const orderChanged = reorderCurrentNodeItemsFromDom();
+                if (orderChanged) {
+                    persistJsonData('Reihenfolge gespeichert!', 'success');
+                } else {
+                    renderView(currentNode);
+                }
+
+                sortableDragState = null;
             },
         });
     } else {
@@ -2443,6 +2537,8 @@ function toggleOrganizeMode() {
             sortableInstance.destroy();
             sortableInstance = null;
         }
+        sortableDragState = null;
+        clearDropTargetHighlights();
     }
 }
 
