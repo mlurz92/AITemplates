@@ -1,276 +1,404 @@
 # AITemplates
 
-Eine moderne, performante Prompt-Template-Webanwendung mit Fokus auf **strukturierte Wissensablage**, **ultraschnellen Zugriff**, **mobile-first Nutzbarkeit** und **zuverlässige Persistenz/Synchronisierung**. Die Anwendung ist so gestaltet, dass sie gleichermaßen als klassische Browser-Seite, installierte PWA (Standalone) und expliziter Vollbildmodus betrieben werden kann.
+Eine moderne Prompt-Template-Anwendung als **Single-Page-WebApp** mit Fokus auf:
+
+- klar strukturierte Wissensablage,
+- sehr schnelle Wiederverwendung von Prompts,
+- mobile-first Bedienbarkeit,
+- visuelle Qualität mit ruhigem „Cosmic Aurora“-Design,
+- robuster Persistenz über **Cloudflare KV** (inkl. lokaler Fallback-Strategie).
+
+Dieses Dokument beschreibt den **aktuellen Ist-Zustand der Anwendung vollständig** – Architektur, Datenmodell, Interaktionsmuster, UI/UX-Verhalten, technische Integrationen sowie Betrieb und Erweiterbarkeit.
 
 ---
 
 ## Inhaltsverzeichnis
 
-1. [Produktvision und Nutzenversprechen](#produktvision-und-nutzenversprechen)
-2. [Zielgruppen und Anwendungsszenarien](#zielgruppen-und-anwendungsszenarien)
-3. [Funktionsumfang im Überblick](#funktionsumfang-im-überblick)
-4. [Informationsarchitektur](#informationsarchitektur)
-5. [Kompletter UI-Aufbau](#kompletter-ui-aufbau)
-6. [UX-Prinzipien und Interaktionsdesign](#ux-prinzipien-und-interaktionsdesign)
-7. [Responsives Verhalten, Viewport-Strategie und Fullscreen/PWA-Betrieb](#responsives-verhalten-viewport-strategie-und-fullscreenpwa-betrieb)
-8. [Favoriten-Dock: Architektur, Verhalten, Gesten und Platzoptimierung](#favoriten-dock-architektur-verhalten-gesten-und-platzoptimierung)
-9. [Datenmodell und Datenflüsse](#datenmodell-und-datenflüsse)
-10. [Synchronisierung, Konflikterkennung und Offline-Fallback](#synchronisierung-konflikterkennung-und-offline-fallback)
-11. [Animationen, Motion und Performance](#animationen-motion-und-performance)
-12. [Accessibility und ergonomische Details](#accessibility-und-ergonomische-details)
-13. [Technischer Stack und externe Bibliotheken](#technischer-stack-und-externe-bibliotheken)
-14. [Datei- und Modulstruktur](#datei--und-modulstruktur)
-15. [Betrieb, Entwicklung und Anpassung](#betrieb-entwicklung-und-anpassung)
-16. [Sicherheits- und Qualitätsaspekte](#sicherheits--und-qualitätsaspekte)
-17. [Bekannte Grenzen und sinnvolle nächste Ausbaustufen](#bekannte-grenzen-und-sinnvolle-nächste-ausbaustufen)
-18. [Zusammenfassung](#zusammenfassung)
+1. [Produktidee und Nutzungskontext](#produktidee-und-nutzungskontext)
+2. [Kern-Workflow der Anwendung](#kern-workflow-der-anwendung)
+3. [Informationsarchitektur und Navigationsmodell](#informationsarchitektur-und-navigationsmodell)
+4. [UI-Struktur im Detail](#ui-struktur-im-detail)
+5. [Interaktionsdesign und UX-Verhalten](#interaktionsdesign-und-ux-verhalten)
+6. [Kartenmodell: Prompt- und Ordnerkarten](#kartenmodell-prompt--und-ordnerkarten)
+7. [Bearbeitungsansicht / Organize-Modus](#bearbeitungsansicht--organize-modus)
+8. [Modale Dialoge und deren Verhalten](#modale-dialoge-und-deren-verhalten)
+9. [Favoriten-Dock: Schnellzugriff und Raumökonomie](#favoriten-dock-schnellzugriff-und-raumökonomie)
+10. [Cloud-Sync, lokale Persistenz und Konflikte](#cloud-sync-lokale-persistenz-und-konflikte)
+11. [Animation, Motion und Performance-Optimierung](#animation-motion-und-performance-optimierung)
+12. [Responsive Verhalten, Safe Areas und PWA-Modi](#responsive-verhalten-safe-areas-und-pwa-modi)
+13. [Accessibility und ergonomische Details](#accessibility-und-ergonomische-details)
+14. [Datei- und Modulübersicht](#datei--und-modulübersicht)
+15. [Technischer Stack und externe Bibliotheken](#technischer-stack-und-externe-bibliotheken)
+16. [Betrieb, Deployment und Entwicklung](#betrieb-deployment-und-entwicklung)
+17. [Qualität, Robustheit und bekannte Grenzen](#qualität-robustheit-und-bekannte-grenzen)
+18. [Erweiterungsoptionen](#erweiterungsoptionen)
+19. [Kurzfazit](#kurzfazit)
 
 ---
 
-## Produktvision und Nutzenversprechen
+## Produktidee und Nutzungskontext
 
-AITemplates ist ein spezialisiertes Arbeitswerkzeug für Menschen, die mit Prompts, Textbausteinen oder strukturiertem Wissensmaterial arbeiten. Das Ziel ist nicht nur „Speichern und Anzeigen“, sondern ein vollständig optimierter Arbeitsfluss:
+AITemplates dient als zentraler Arbeitsraum für alle, die regelmäßig mit wiederkehrenden Textbausteinen, Prompt-Sets oder strukturiertem Prompt-Wissen arbeiten.
 
-- Inhalte **hierarchisch organisieren** (Ordner, Unterordner, Prompt-Karten).
-- Inhalte **im Kontext finden** (Breadcrumb, Kartenansicht, Favoriten).
-- Inhalte **ohne Reibung nutzen** (Modal, One-Tap-Copy).
-- Inhalte **zuverlässig bewahren** (Cloud-Sync + lokale Fallbacks).
+### Typische Einsatzfelder
 
-Der Fokus liegt auf einem ruhigen, hochwertigen Erlebnis mit klarer visueller Hierarchie, konsistenten Aktionen und schneller Rückmeldung.
+- persönliche Prompt-Bibliotheken,
+- Team-Standards für wiederkehrende AI-Aufgaben,
+- thematisch organisierte Prompt-Sammlungen pro Projekt/Domain,
+- mobile Nutzung als installierte PWA.
 
----
+### Leitprinzipien
 
-## Zielgruppen und Anwendungsszenarien
-
-### Primäre Zielgruppen
-- Prompt Engineers und AI Power-User.
-- Teams mit wiederkehrenden Prompt-Standards.
-- Content-/Marketing-/Ops-Rollen mit Textvorlagen.
-- Einzelpersonen mit persönlicher Prompt-Bibliothek.
-
-### Typische Nutzungsszenarien
-- Aufbau einer persönlichen Prompt-Sammlung mit thematischer Ordnerstruktur.
-- Teamweite, cloudgestützte Pflege von Standards.
-- Mobile Nutzung unterwegs (inkl. installierter WebApp).
-- Schneller Zugriff auf häufige Inhalte über das Favoriten-Dock.
+- **Sofort verständlich:** klare visuelle Semantik (Ordner vs. Prompt).
+- **Sofort nutzbar:** schnelle Interaktionen ohne Umwege.
+- **Sofort verlässlich:** Datenhaltung mit Cloud- und Lokalstrategie.
+- **Sofort angenehm:** visuell ruhige Oberfläche mit hochwertigen Mikrointeraktionen.
 
 ---
 
-## Funktionsumfang im Überblick
+## Kern-Workflow der Anwendung
 
-- Kartenbasiertes Browsing durch Ordner und Prompts.
-- Öffnen, Lesen, Bearbeiten und Speichern einzelner Prompts.
-- Favorisieren/Entfavorisieren und separater Favoriten-Schnellzugriff.
-- Kontextmenü mit Umbenennen, Verschieben, Löschen und Favoriten-Toggle.
-- Erstellen neuer Ordner und Prompts direkt in der Oberfläche.
-- Organize-Modus mit Reorder-/Management-Fokus.
-- Cloud-Live-Sync via API inklusive Konflikterkennung.
-- Lokale Persistenz als Fallback.
-- Download/Reset lokaler Änderungen.
-- Vollbildunterstützung plus PWA-optimiertes Verhalten.
+1. App laden und Root-Übersicht öffnen.
+2. Über Karten in Ordner navigieren.
+3. Prompt-Karte öffnen, lesen, kopieren, ggf. bearbeiten.
+4. Inhalte reorganisieren (Reihenfolge, Verschieben, Umbenennen, Löschen).
+5. Häufig genutzte Prompts als Favoriten markieren.
+6. Änderungen automatisch persistieren (Cloud + lokaler Fallback).
+
+Das Ziel ist ein **reibungsarmer Kreis aus Organisieren → Nutzen → Verfeinern**.
 
 ---
 
-## Informationsarchitektur
+## Informationsarchitektur und Navigationsmodell
 
-Die Anwendung folgt einer baumbasierten Struktur:
+Die Daten folgen einer Baumstruktur:
 
-- **Ordnerknoten** enthalten weitere Elemente (`items`).
-- **Promptknoten** enthalten Titel und Inhalt.
+- `folder`-Knoten: enthalten `items` (Ordner oder Prompts),
+- `prompt`-Knoten: enthalten Inhalt plus Titel.
 
-Die aktuelle Navigationsebene wird in einem Pfad-Stack gehalten und über Breadcrumbs gespiegelt. Dadurch bleibt Orientierung auch in tiefen Hierarchien stabil.
+### Navigationszustand
+
+- `currentNode`: aktueller Ordnerkontext,
+- `pathStack`: Pfad von Root bis zur aktuellen Ebene,
+- Breadcrumb als direktes visuelles Abbild des Pfads.
+
+### Navigationskanäle
+
+- Klick auf Ordnerkarte,
+- Back-Buttons (Topbar / fixed),
+- Logo-Home-Navigation,
+- Breadcrumb-Sprünge.
 
 ---
 
-## Kompletter UI-Aufbau
+## UI-Struktur im Detail
 
-### 1) Hintergrund- und Atmosphärenebene
-- Aurora-Hintergrund mit subtiler Bewegung.
-- Körnungs-/Noise-Layer für Tiefe.
-- Fokus: visuelle Qualität ohne Funktionseinbußen.
+### 1) Hintergrundebene
 
-### 2) Top-Bar (globale Steuerung)
-- Zurück-Button.
-- Breadcrumb-Navigation.
-- Organisieren-Toggle.
-- Hinzufügen-Menü (Prompt/Ordner).
-- Persistenzaktionen (Download/Reset, wenn lokal relevant).
-- Cloud/Storage-Quelle-Indikator.
-- Favoriten löschen.
-- Vollbild-Toggle.
+- Aurora-Verläufe und subtile Bewegung,
+- Noise-/Textur-Layer für Tiefe,
+- reduzierte Motion bei aktivem `prefers-reduced-motion`.
+
+### 2) Top-Bar (globale Steuerzentrale)
+
+Elemente (abhängig vom Zustand sichtbar/aktiv):
+
+- Zurück,
+- Breadcrumb,
+- Organize-Toggle,
+- Add-Menü (Prompt/Ordner),
+- Reset und Download (bei lokalem Cache),
+- Cloud-Verbindungsindikator (Punkt),
+- Favoriten löschen,
+- Vollbild,
 - App-Logo (Home).
 
-### 3) Hauptinhalt (Cards-Grid)
-- Responsives Grid für Ordner- und Prompt-Karten.
-- Dynamische Spaltenanpassung je Viewportbreite.
-- Klares, touchfreundliches Trefferbild.
+### 3) Hauptbereich (Cards-Grid)
 
-### 4) Modale Ebenen
-- Prompt-Modal (Lesen/Bearbeiten/Favorisieren/Kopieren).
-- Ordner-Erstellen-Modal.
-- Verschieben-Modal mit Zielbaum.
+- responsive Kartenmatrix,
+- Ordner- und Prompt-Karten in einheitlichem Kartenraster,
+- dynamischer Abstand nach unten für das Favoriten-Dock.
 
-### 5) Fixe Utility-Flächen
-- Fixed Back-Button für schnelle Rücknavigation.
-- Notification-Area für unmittelbares Feedback.
-- **Favoriten-Dock** am unteren Viewportende als permanenter Schnellzugriff.
+### 4) Overlay-/Modalebene
 
----
+- Prompt-Modal,
+- Ordner-erstellen-Modal,
+- Move-Dialog (Baumauswahl),
+- Kontextmenü auf Karten/Favoriten,
+- Notification-Area.
 
-## UX-Prinzipien und Interaktionsdesign
+### 5) Persistenter Schnellzugriff
 
-- **Direkte Manipulation:** Aktionen wirken unmittelbar auf das sichtbare UI.
-- **Progressive Offenlegung:** Sekundäraktionen im Kontextmenü statt überladener Karten.
-- **Fehlertoleranz:** Konflikte und Problemfälle werden als verständliche Zustände angezeigt.
-- **Kurze Interaktionswege:** Modal-Aktionen bündeln den primären Workflow.
-- **Konsistente Semantik:** Gleichartige Aktionen verhalten sich überall ähnlich.
+- Favoriten-Dock als untere, zustandsabhängige Utility-Leiste.
 
 ---
 
-## Responsives Verhalten, Viewport-Strategie und Fullscreen/PWA-Betrieb
+## Interaktionsdesign und UX-Verhalten
 
-Die Anwendung ist konsequent auf variable Umgebungen ausgelegt:
+### Direkte Manipulation
 
-- Responsive Grid-Strategie für kleine bis sehr große Displays.
-- Safe-Area-Berücksichtigung (`env(safe-area-inset-*)`) auf iOS/Notch-Geräten.
-- Dynamische Viewport-Variablen (`--app-vh`, `--app-vw`) für präzises Höhenlayout.
-- Erkennung des Darstellungsmodus:
-  - Browser
-  - Standalone (installierte PWA)
-  - Fullscreen
-- Zusätzliche Berechnung eines Bottom-Offsets über `visualViewport`, damit die untere Dock-Position robust gegenüber Browser-Chrome/Viewport-Verschiebungen bleibt.
+Die App priorisiert direkte Auswirkungen auf sichtbare Objekte (Karten), z. B. Reorder, Verschieben oder Favorisieren.
 
-Ergebnis: Die Oberfläche nutzt verfügbaren Platz maximal aus, ohne dass essentielle Bedienflächen abgeschnitten oder von Browser-UI überlagert werden.
+### Progressive Offenlegung
 
----
+Sekundäraktionen liegen im Kontextmenü statt in jeder Karte sichtbar zu sein. So bleibt das Layout sauber, aber mächtig.
 
-## Favoriten-Dock: Architektur, Verhalten, Gesten und Platzoptimierung
+### Zustandsfeedback
 
-Das Favoriten-Dock ist als eigenständige Interaktionsebene umgesetzt:
+- visuelle Highlights bei Drag-and-Drop,
+- Success-/Info-/Error-Notifications,
+- aktive/inaktive Iconzustände (z. B. Organize, Favorit).
 
-- Fest am unteren Viewportrand positioniert.
-- Sichtbar nur bei vorhandenem Favoritenbestand.
-- Ein-/Ausklappbar mit klarer visueller Rückmeldung.
-- Horizontaler Schnellzugriff im kompakten Zustand.
-- Mehrzeiliges Layout im erweiterten Zustand.
-- Automatische Chip-Metrik-Berechnung (Breite/Höhe/Content-Fit) für optimale Platznutzung.
-- Scroll-Indikatoren und temporäre Scrollbar-Sichtbarkeit für bessere Orientierung.
-- Touch-Gesten zur komfortablen Bedienung auf Mobilgeräten.
-- Reservierter Inhaltsabstand im Cards-Bereich über gemessene Dock-Footprint-Höhe, damit Inhalte nicht vom Dock überdeckt werden.
+### Fehlerrobustheit
+
+- unzulässige Aktionen werden abgefangen,
+- Konflikte bei Cloud-Sync werden explizit behandelt,
+- lokale Datensicherung verhindert harte Datenverluste.
 
 ---
 
-## Datenmodell und Datenflüsse
+## Kartenmodell: Prompt- und Ordnerkarten
 
-### Primäre Datenobjekte
-- Root-Folder mit verschachtelten `items`.
-- Knoten-Typen mindestens `folder` und `prompt`.
+### Prompt-Karten
 
-### Laufzeitfluss (vereinfacht)
-1. Daten laden (Cloud bevorzugt, lokal als Fallback).
-2. In-Memory-Zustand aktualisieren.
-3. UI rendern (Grid, Breadcrumb, Favoriten).
-4. Nutzeraktion führt zu lokalen Zustand-Updates.
-5. Persistenz-/Sync-Operationen synchronisieren den Stand.
+- öffnen das Prompt-Modal,
+- unterstützen Favoritenstatus,
+- können kopiert, verschoben, umbenannt und gelöscht werden.
 
----
+### Ordnerkarten
 
-## Synchronisierung, Konflikterkennung und Offline-Fallback
+- dienen als Navigationsziel,
+- enthalten weitere Knoten,
+- können ebenfalls umbenannt, verschoben und gelöscht werden.
 
-- API-Endpunkt liest/schreibt Template-Zustände.
-- Bei Writes wird ein Zeitstempel-/Versionskontext geprüft.
-- Bei Konflikten (z. B. zwischen zwei Clients) wird statt Blind-Overwrite ein Konfliktstatus zurückgegeben.
-- Lokale Speicherung verhindert Datenverlust bei Verbindungs- oder Serverproblemen.
-- Re-Sync-Mechanismen sorgen für schnelle Angleichung zwischen Tabs/Sitzungen.
+### Kontextmenüaktionen
+
+- Favorit umschalten (bei Prompts/Favoriten),
+- Umbenennen,
+- Verschieben…,
+- Löschen.
 
 ---
 
-## Animationen, Motion und Performance
+## Bearbeitungsansicht / Organize-Modus
 
-### Motion-Ebenen
-- Aurora-Hintergrundbewegung.
-- Mikrointeraktionen an Buttons/Karten.
-- Weiche Übergänge beim Umschalten von Zuständen.
-- FLIP-Animationen für Layoutwechsel, wenn verfügbar.
+Der Organize-Modus ist auf aktive Strukturbearbeitung optimiert.
 
-### Performance-Strategien
-- `requestAnimationFrame` für layoutrelevante Aktualisierungen.
-- CSS-Containment und transformbasierte Effekte.
-- Entkoppelte Berechnung von Dock- und Chip-Metriken.
-- Respektierung von `prefers-reduced-motion`.
+### Funktionen
+
+- Reihenfolge per Drag-and-Drop ändern,
+- Promptkarten direkt auf Ordnerkarten ziehen,
+- bei Drop auf Ordner wird der Prompt **in den Ordner verschoben**,
+- kombinierende „in neuen Ordner zusammenführen“-Interaktion via Drag/Drop auf Prompt möglich (außerhalb des gezielten Prompt→Ordner-Moves im Organize-Flow).
+
+### Designentscheidung
+
+Der Modus reduziert Ablenkung (z. B. Add-Button ausgeblendet), damit der Fokus auf Strukturpflege liegt.
+
+---
+
+## Modale Dialoge und deren Verhalten
+
+### Prompt-Modal
+
+- Volltextanzeige,
+- optionaler Edit-Modus,
+- Speichern,
+- Kopieren,
+- Favoriten-Toggle,
+- sauberer Close-Flow (Button, Backdrop, Escape).
+
+### Ordner-Modal (Erstellen)
+
+- einfacher Input,
+- Validierung auf nicht-leeren Titel,
+- Erstellen/Abbrechen.
+
+### Verschieben-Modal
+
+- Ordnerzielauswahl im Baum,
+- deaktivierter Confirm-Button bis gültiges Ziel gewählt ist,
+- anschließendes persistiertes Move.
+
+---
+
+## Favoriten-Dock: Schnellzugriff und Raumökonomie
+
+Das Favoriten-Dock ist als sekundäre Navigation für „Hot Prompts“ gedacht.
+
+### Eigenschaften
+
+- nur sichtbar bei vorhandenen Favoriten,
+- ein-/ausklappbar,
+- horizontales/kompaktes Verhalten je verfügbarer Breite,
+- dynamische Chipgrößen inkl. Text-Fitting,
+- Touch- und Scroll-Optimierung,
+- auto-berechneter Platzbedarf für den Hauptinhalt.
+
+### UX-Nutzen
+
+- minimiert Wege für wiederkehrende Prompts,
+- beschleunigt mobile Sessions,
+- bleibt präsent ohne den Hauptkontext zu zerstören.
+
+---
+
+## Cloud-Sync, lokale Persistenz und Konflikte
+
+### Primärspeicher
+
+- Cloudflare KV über serverlose API (`functions/api/templates.js`).
+
+### Lokaler Fallback
+
+- Browser-Storage als Sicherheitsnetz,
+- Download-/Reset-Funktionen für lokale Zustände.
+
+### Synchronisationslogik
+
+- Polling/Visibility/Fokus-getriebene Sync-Anstöße,
+- Zeitstempel-basierte Konflikterkennung,
+- UI-Feedback bei Änderungen oder Problemen.
+
+### Verbindungsindikator
+
+- Topbar zeigt einen **Punktindikator** für Cloud-Live-Verbindung,
+- textuelle Zusatzkennzeichnung wird bewusst weggelassen,
+- Fokus auf minimalistische Statuskommunikation.
+
+---
+
+## Animation, Motion und Performance-Optimierung
+
+### Motion-Schichten
+
+- Hintergrundbewegung (Aurora),
+- Card-/Button-Mikroanimationen,
+- sanfte Zustandsübergänge,
+- FLIP-basierte Übergänge (falls verfügbar).
+
+### Performance-Maßnahmen
+
+- `requestAnimationFrame` für visuelle Updates,
+- CSS-Containment und GPU-freundliche Transforms,
+- reduzierte Layout-Neuberechnungen,
+- Debounce bei Resize-/Observer-getriebenen Abläufen,
+- Motion-Reduktion bei Nutzerpräferenz.
+
+---
+
+## Responsive Verhalten, Safe Areas und PWA-Modi
+
+### Viewport-Strategie
+
+- `100dvh` / dynamische Variablen für stabile Höhen,
+- Safe-Area-Unterstützung (`env(safe-area-inset-*)`),
+- robustes Verhalten bei mobilem Browser-Chrome.
+
+### Betriebsarten
+
+- klassischer Browser,
+- installierte PWA (`display-mode: standalone`),
+- expliziter Vollbildmodus.
+
+### Ergebnis
+
+Kontrollen bleiben erreichbar, Dock überlappt Inhalte nicht unkontrolliert, und die Bedienung bleibt auch auf kleinen Displays präzise.
 
 ---
 
 ## Accessibility und ergonomische Details
 
-- Semantische Strukturen (`main`, `nav`, `aside`, Modale).
-- Beschriftete Interaktionselemente (`aria-label`, Rollen, Zustandsattribute).
-- Klar erkennbare Fokus-/Hover-Zustände.
-- Touchfreundliche Controls mit ausreichenden Trefferflächen.
-- Lesbarkeit durch kontrastreiche Typografie und abgestufte Farbrollen.
+- sprechende `aria-label`s,
+- semantische Struktur (`main`, `nav`, `aside`, Modale),
+- klare Fokus- und Hover-Zustände,
+- touchfreundliche Targets,
+- deutliche Farb-/Kontrastrollen,
+- Escape-/Backdrop-/Keyboard-Schließpfade bei Dialogen.
+
+---
+
+## Datei- und Modulübersicht
+
+- `index.html` – Gesamte Struktur, Controls, Modale, SVG-Templates.
+- `style.css` – Designsystem, Layout, States, Animation, Responsive Regeln.
+- `script.js` – Runtime-Logik: State, Rendering, Events, DnD, Sync, Favoriten, Modale.
+- `templates.json` – initiales Datenset.
+- `functions/api/templates.js` – serverlose API-Schicht für Cloud-Persistenz.
+- `manifest.json` – PWA-Metadaten.
+- `browserconfig.xml` – Plattform-Metadaten.
+- `icons/*` – App-Icons/Favicon-Assets.
 
 ---
 
 ## Technischer Stack und externe Bibliotheken
 
-- **Vanilla HTML/CSS/JavaScript** als Kern.
-- **SortableJS** für Sortier-/Organize-Interaktionen.
-- **GSAP + Flip** für fortgeschrittene UI-Transitions.
-- **Vivus** für SVG-Animationsakzente.
-- **Cloudflare Pages Functions + KV** für serverlose Datenpersistenz.
+### Kern
+
+- Vanilla HTML/CSS/JavaScript.
+
+### Bibliotheken
+
+- **SortableJS** für Reorder-/DnD-Verhalten,
+- **GSAP + Flip** für Transition-Qualität,
+- **Vivus** für SVG-Zeichenanimationen.
+
+### Plattform
+
+- Cloudflare Pages Functions + KV für serverloses Storage.
 
 ---
 
-## Datei- und Modulstruktur
+## Betrieb, Deployment und Entwicklung
 
-- `index.html` – App-Struktur und UI-Komponenten.
-- `style.css` – Designsystem, Layout, Responsiveness, Motion.
-- `script.js` – State-Management, Rendering, Events, Sync, Viewportlogik.
-- `templates.json` – initiale Datenbasis.
-- `functions/api/templates.js` – API für Lesen/Schreiben + Konfliktlogik.
-- `manifest.json`, `browserconfig.xml`, `icons/*` – PWA/Plattformintegration.
+### Lokale Ausführung
 
----
+- statisch ausführbar,
+- volle Cloud-Funktionalität bei konfigurierter Function/KV-Bindung.
 
-## Betrieb, Entwicklung und Anpassung
+### Produktionsbetrieb
 
-### Lokaler Betrieb
-- Als statische WebApp mit lokalem/entwicklungsseitigem API-Mock oder vorhandener Function.
-- Für produktiven Cloud-Sync ist KV-Bindung in der Laufzeitumgebung erforderlich.
+- Deployment auf Cloudflare Pages,
+- KV-Binding für persistente Templates,
+- Caching-/Sync-Strategie über App-Logik.
 
-### Typische Anpassungsfelder
-- Corporate Branding (Farben, Icons, Schrift).
-- Datenvalidierung/Schemaerweiterungen.
-- Team-spezifische Rollen-/Freigabelogik.
-- Erweiterte Suche/Filter/Pinning-Mechanismen.
+### Entwicklungsfokus
+
+- strukturelle Klarheit in `script.js`,
+- visuelle Konsistenz in `style.css`,
+- stabile Interaktionspfade vor Feature-Breite.
 
 ---
 
-## Sicherheits- und Qualitätsaspekte
+## Qualität, Robustheit und bekannte Grenzen
 
-- Konfliktschutz reduziert Risiko unbeabsichtigter Überschreibungen.
-- Lokale Fallback-Persistenz erhöht Robustheit bei Störungen.
-- Klare, reversible UI-Aktionen und Feedback vermindern Bedienfehler.
-- Motion- und Viewport-Handling sind auf Stabilität und Gerätevielfalt ausgelegt.
+### Robuste Aspekte
 
----
+- defensive Checks bei Move/Render/Sync,
+- lokale Sicherung,
+- konfliktbewusstes Speichern,
+- explizites Nutzerfeedback.
 
-## Bekannte Grenzen und sinnvolle nächste Ausbaustufen
+### Grenzen (aktueller Stand)
 
-### Potenzielle Erweiterungen
-- Volltextsuche mit Ranking und Highlighting.
-- Tagging/Filter-Framework für große Bibliotheken.
-- Undo/Redo-Historie.
-- Optionales Rechtemodell für Teamkontexte.
-- E2E-Tests für kritische Workflows und Viewport-Regressionen.
-
-### UX-Feinschliff-Ideen
-- Personalisierbare Dichteprofile (kompakt/komfortabel).
-- Konfigurierbare Favoriten-Sortierung.
-- Erweiterte Shortcuts für Power-User.
+- kein dediziertes Rollen-/Rechtesystem,
+- keine Volltextsuche über große Datenmengen,
+- kein eingebautes Versions-/Audit-History-System.
 
 ---
 
-## Zusammenfassung
+## Erweiterungsoptionen
 
-AITemplates ist eine ausgereifte Prompt-Management-Anwendung mit starker Balance aus Designqualität, Interaktionsgeschwindigkeit und technischer Robustheit. Besonders hervorzuheben ist die kombinierte Optimierung für Browser-, Standalone- und Fullscreen-Betrieb inklusive präziser Viewport- und Safe-Area-Behandlung. Dadurch bleibt die Nutzererfahrung konsistent, effizient und hochwertig – unabhängig von Gerät, Auflösung oder Nutzungskontext.
+- Volltextsuche mit Facetten,
+- Tags und mehrdimensionale Klassifikation,
+- Bulk-Operationen,
+- Prompt-Versionierung inkl. Diff,
+- Team- und Rollenmodell,
+- optional verschlüsselte lokale Backups,
+- telemetry-freie Nutzungsmetriken zur UX-Optimierung.
+
+---
+
+## Kurzfazit
+
+AITemplates ist eine auf Prompt-Arbeit spezialisierte, performante WebApp, die **Struktur**, **Geschwindigkeit** und **Zuverlässigkeit** kombiniert. Die Kombination aus kartenbasiertem UI, Organize-Modus, Favoriten-Dock und Cloud-Sync sorgt dafür, dass Prompts nicht nur gespeichert, sondern im Alltag tatsächlich effizient wiederverwendet und laufend verbessert werden können.
