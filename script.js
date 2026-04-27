@@ -1004,6 +1004,7 @@ function handleDragLeave(e) {
 
 function handleDrop(e) {
     if (!containerEl.classList.contains('edit-mode')) return;
+    if (sortableInstance) return;
     e.preventDefault();
     clearTimeout(springLoadTimeout);
 
@@ -1046,6 +1047,50 @@ function handleDragEnd(e) {
     });
     dragSource = null;
     dragTarget = null;
+}
+
+function resolveDropEventCoordinates(originalEvent) {
+    if (!originalEvent) return null;
+
+    if (typeof originalEvent.clientX === 'number' && typeof originalEvent.clientY === 'number') {
+        return { x: originalEvent.clientX, y: originalEvent.clientY };
+    }
+
+    const touchPoint = originalEvent.changedTouches?.[0] || originalEvent.touches?.[0];
+    if (touchPoint && typeof touchPoint.clientX === 'number' && typeof touchPoint.clientY === 'number') {
+        return { x: touchPoint.clientX, y: touchPoint.clientY };
+    }
+
+    return null;
+}
+
+function isPointInsideCombineZone(point, rect) {
+    const minDimension = Math.min(rect.width, rect.height);
+    const inset = Math.min(48, Math.max(14, minDimension * 0.22));
+
+    const zoneLeft = rect.left + inset;
+    const zoneRight = rect.right - inset;
+    const zoneTop = rect.top + inset;
+    const zoneBottom = rect.bottom - inset;
+
+    return point.x >= zoneLeft && point.x <= zoneRight && point.y >= zoneTop && point.y <= zoneBottom;
+}
+
+function resolveCardDropIntent(evt) {
+    const coordinates = resolveDropEventCoordinates(evt.originalEvent);
+    if (!coordinates) {
+        return { targetCard: null, intent: 'reorder' };
+    }
+
+    const elements = document.elementsFromPoint(coordinates.x, coordinates.y);
+    const targetCard = elements.map(el => el.closest('.card')).find(card => card && card !== evt.item) || null;
+    if (!targetCard) {
+        return { targetCard: null, intent: 'reorder' };
+    }
+
+    const rect = targetCard.getBoundingClientRect();
+    const intent = isPointInsideCombineZone(coordinates, rect) ? 'onto-card' : 'reorder';
+    return { targetCard, intent };
 }
 
 function moveNode(sourceId, targetFolderId, newIndex = -1) {
@@ -2354,17 +2399,33 @@ function toggleOrganizeMode() {
                 const sourceNode = findNodeById(jsonData, sourceId);
                 if (!sourceNode) return;
 
-                const pointerTargetCard = evt.originalEvent?.target?.closest?.('.card') || null;
-                const relatedEl = pointerTargetCard && pointerTargetCard !== itemEl
-                    ? pointerTargetCard
-                    : (evt.related && evt.related !== itemEl ? evt.related.closest('.card') : null);
-                const targetFolderId = relatedEl && relatedEl.getAttribute('data-type') === 'folder'
-                    ? relatedEl.getAttribute('data-id')
-                    : null;
+                const { targetCard, intent } = resolveCardDropIntent(evt);
 
-                if (targetFolderId && sourceNode.type === 'prompt' && sourceId !== targetFolderId) {
-                    moveNode(sourceId, targetFolderId);
-                    showNotification('Prompt in Ordner verschoben!', 'success');
+                if (targetCard && intent === 'onto-card') {
+                    const targetId = targetCard.getAttribute('data-id');
+                    if (!targetId || targetId === sourceId) {
+                        renderView(currentNode);
+                        return;
+                    }
+
+                    const targetNode = findNodeById(jsonData, targetId);
+                    if (!targetNode) {
+                        renderView(currentNode);
+                        return;
+                    }
+
+                    if (sourceNode.type === 'prompt' && targetNode.type === 'prompt') {
+                        combineIntoNewFolder(sourceId, targetId);
+                        return;
+                    }
+
+                    if (sourceNode.type === 'prompt' && targetNode.type === 'folder') {
+                        moveNode(sourceId, targetId);
+                        showNotification('Prompt in Ordner verschoben!', 'success');
+                        return;
+                    }
+
+                    renderView(currentNode);
                     return;
                 }
 
