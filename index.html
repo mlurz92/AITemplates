@@ -74,6 +74,12 @@
             </svg>
             Neuer Ordner
           </button>
+          <button class="add-menu-item" data-action="add-prompt-link">
+            <span>🔗</span> Prompt verknüpfen
+          </button>
+          <button class="add-menu-item" data-action="add-folder-link">
+            <span>🗂️</span> Ordner verknüpfen
+          </button>
         </div>
       </div>
       <button id="reset-button" class="btn btn-ghost" aria-label="Änderungen zurücksetzen" style="display: none;">
@@ -158,6 +164,16 @@
         <div class="modal-buttons">
           <button id="create-folder-save-button" class="btn btn-primary">Erstellen</button>
           <button id="create-folder-cancel-button" class="btn btn-ghost">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+    <div id="link-item-modal" class="modal hidden">
+      <div class="modal-content card">
+        <h2 id="link-item-modal-title">Verknüpfung hinzufügen</h2>
+        <div id="link-item-list" class="folder-tree"></div>
+        <div class="modal-buttons">
+          <button id="link-item-confirm-button" class="btn btn-primary" disabled>Verknüpfen</button>
+          <button id="link-item-cancel-button" class="btn btn-ghost">Abbrechen</button>
         </div>
       </div>
     </div>
