@@ -233,15 +233,33 @@ function createContextMenu() {
         
         const action = menuItem.getAttribute('data-action');
         const elementId = contextMenu.getAttribute('data-id');
+        const favoriteTargetId = contextMenu.getAttribute('data-favorite-target-id');
         const card = document.querySelector(`.card[data-id="${elementId}"]`);
         
         if (action === 'rename') startRenamingCard(card);
         else if (action === 'delete') handleDeleteClick(elementId, card);
         else if (action === 'move') openMoveItemModal(elementId);
-        else if (action === 'toggle-favorite') toggleFavoriteStatus(elementId);
+        else if (action === 'toggle-favorite' && favoriteTargetId) toggleFavoriteStatus(favoriteTargetId);
         
         hideContextMenu();
     });
+}
+
+function getFavoriteTargetIdForElement(targetElement) {
+    if (!targetElement || !jsonData) return null;
+
+    if (targetElement.classList.contains('favorite-chip')) {
+        return targetElement.dataset.id || null;
+    }
+
+    const id = targetElement.dataset.id;
+    if (!id) return null;
+
+    const node = findNodeById(jsonData, id);
+    const resolvedNode = resolveLinkedNode(node);
+    if (!resolvedNode || resolvedNode.type !== 'prompt') return null;
+
+    return resolvedNode.id || null;
 }
 
 function showContextMenu(x, y, targetElement) {
@@ -249,7 +267,8 @@ function showContextMenu(x, y, targetElement) {
     const type = targetElement.dataset.type || (targetElement.classList.contains('favorite-chip') ? 'favorite' : null);
     if (!id || !type) return;
 
-    const isFavorite = favoritePrompts.includes(id);
+    const favoriteTargetId = getFavoriteTargetIdForElement(targetElement);
+    const isFavorite = favoriteTargetId ? favoritePrompts.includes(favoriteTargetId) : false;
 
     const renameItem = contextMenu.querySelector('[data-action="rename"]');
     const moveItem = contextMenu.querySelector('[data-action="move"]');
@@ -263,7 +282,7 @@ function showContextMenu(x, y, targetElement) {
     deleteItem.classList.toggle('hidden', type !== 'folder' && type !== 'prompt');
     dividers[1].classList.toggle('hidden', type === 'favorite');
 
-    if (type === 'prompt' || type === 'favorite') {
+    if (favoriteTargetId) {
         favoriteItem.classList.remove('hidden');
         favoriteText.textContent = isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen';
     } else {
@@ -277,6 +296,7 @@ function showContextMenu(x, y, targetElement) {
     }
 
     contextMenu.setAttribute('data-id', id);
+    contextMenu.setAttribute('data-favorite-target-id', favoriteTargetId || '');
     contextMenu.classList.add('visible');
 
     const menuWidth = contextMenu.offsetWidth;
@@ -1436,7 +1456,7 @@ function handleCardContainerClick(e) {
         if (resolvedNode.type === 'folder') {
             navigateToNode(resolvedNode);
         } else if (resolvedNode.type === 'prompt') {
-            openPromptModal(resolvedNode);
+            copyPromptTextForCard(resolvedNode, card);
         }
     }
 }
