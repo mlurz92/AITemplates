@@ -27,8 +27,9 @@ let tiltPending = false;
 let modalEl, breadcrumbEl, containerEl, promptFullTextEl, notificationAreaEl, promptTitleInputEl;
 let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCancelBtn;
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
+let uploadJsonModalEl, uploadDropZoneEl, uploadJsonInputEl, uploadJsonSelectBtn, uploadJsonCancelBtn;
 let linkItemModalEl, linkItemListEl, linkItemConfirmBtn, linkItemCancelBtn, linkItemModalTitleEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn, storageSourceBtn;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, downloadMenu, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn, storageSourceBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
 let favoritesDockEl, favoritesListEl, favoritesScrollAreaEl, favoritesToggleBtn, auroraContainerEl;
 let favoritesChipResizeObserver = null;
@@ -120,11 +121,18 @@ function initApp() {
     moveItemConfirmBtn = document.getElementById('move-item-confirm-button');
     moveItemCancelBtn = document.getElementById('move-item-cancel-button');
 
+    uploadJsonModalEl = document.getElementById('upload-json-modal');
+    uploadDropZoneEl = document.getElementById('upload-drop-zone');
+    uploadJsonInputEl = document.getElementById('upload-json-input');
+    uploadJsonSelectBtn = document.getElementById('upload-json-select-button');
+    uploadJsonCancelBtn = document.getElementById('upload-json-cancel-button');
+
     topBarEl = document.getElementById('top-bar');
     topbarBackBtn = document.getElementById('topbar-back-button');
     fixedBackBtn = document.getElementById('fixed-back');
     fullscreenBtn = document.getElementById('fullscreen-button');
     downloadBtn = document.getElementById('download-button');
+    downloadMenu = document.getElementById('download-menu');
     resetBtn = document.getElementById('reset-button');
     addBtn = document.getElementById('add-button');
     addMenu = document.getElementById('add-menu');
@@ -749,9 +757,8 @@ function setupEventListeners() {
     });
 
     document.addEventListener('click', (e) => {
-        if (!addBtn.contains(e.target) && !addMenu.contains(e.target)) {
-            addMenu.classList.add('hidden');
-        }
+        if (!addBtn.contains(e.target) && !addMenu.contains(e.target)) { addMenu.classList.add('hidden'); }
+        if (downloadMenu && !downloadBtn.contains(e.target) && !downloadMenu.contains(e.target)) { downloadMenu.classList.add('hidden'); }
     });
 
     addMenu.addEventListener('click', (e) => {
@@ -770,7 +777,16 @@ function setupEventListeners() {
         addMenu.classList.add('hidden');
     });
 
-    downloadBtn.addEventListener('click', downloadCustomJson);
+    downloadBtn.addEventListener('click', (e) => { e.stopPropagation(); downloadMenu.classList.toggle('hidden'); });
+    if (downloadMenu) {
+        downloadMenu.addEventListener('click', (e) => {
+            const item = e.target.closest('.add-menu-item');
+            if (!item) return;
+            if (item.dataset.action === 'download-json') downloadCustomJson();
+            if (item.dataset.action === 'upload-json') openUploadJsonModal();
+            downloadMenu.classList.add('hidden');
+        });
+    }
     resetBtn.addEventListener('click', resetLocalStorage);
     if (storageSourceBtn) storageSourceBtn.disabled = true;
     
@@ -827,6 +843,16 @@ function setupEventListeners() {
     moveItemModalEl.addEventListener('click', (e) => {
         if (e.target === moveItemModalEl) closeModal(moveItemModalEl);
     });
+
+    if (uploadJsonCancelBtn) uploadJsonCancelBtn.addEventListener('click', () => closeModal(uploadJsonModalEl));
+    if (uploadJsonSelectBtn) uploadJsonSelectBtn.addEventListener('click', () => uploadJsonInputEl.click());
+    if (uploadJsonInputEl) uploadJsonInputEl.addEventListener('change', () => handleUploadJsonFile(uploadJsonInputEl.files && uploadJsonInputEl.files[0]));
+    if (uploadDropZoneEl) {
+        uploadDropZoneEl.addEventListener('dragover', (e) => { e.preventDefault(); uploadDropZoneEl.classList.add('is-dragover'); });
+        uploadDropZoneEl.addEventListener('dragleave', () => uploadDropZoneEl.classList.remove('is-dragover'));
+        uploadDropZoneEl.addEventListener('drop', (e) => { e.preventDefault(); uploadDropZoneEl.classList.remove('is-dragover'); const f=e.dataTransfer?.files?.[0]; handleUploadJsonFile(f); });
+    }
+
 
     containerEl.addEventListener('click', handleCardContainerClick);
     containerEl.addEventListener('contextmenu', handleContextMenu);
@@ -980,7 +1006,10 @@ function handleContextMenu(e) {
     }
     
     const targetElement = e.target.closest('.card, .favorite-chip');
-    if (!targetElement) return;
+    if (!targetElement) {
+        showContextMenuForEmptyArea(e);
+        return;
+    }
     
     e.preventDefault();
     showContextMenu(e.pageX, e.pageY, targetElement);
@@ -2366,6 +2395,57 @@ function downloadCustomJson() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+
+function openUploadJsonModal() {
+    if (uploadJsonInputEl) uploadJsonInputEl.value = '';
+    openModal(uploadJsonModalEl);
+}
+
+function validateTemplateSchema(data) {
+    return data && data.type === 'folder' && Array.isArray(data.items);
+}
+
+function handleUploadJsonFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+        try {
+            const parsed = JSON.parse(String(reader.result || '{}'));
+            if (!validateTemplateSchema(parsed)) throw new Error('Schema ungültig');
+            processJson(parsed);
+            await persistJsonData('JSON importiert und Cloud überschrieben.', 'success');
+            closeModal(uploadJsonModalEl);
+        } catch (err) {
+            showNotification('Upload fehlgeschlagen: ungültige JSON-Struktur.', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+function showContextMenuForEmptyArea(e) {
+    e.preventDefault();
+    contextMenu.innerHTML = `
+      <div class="context-menu-item" data-action="toggle-organize">Bearbeiten/Verschieben umschalten</div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item" data-action="add-prompt">Neuer Prompt</div>
+      <div class="context-menu-item" data-action="add-folder">Neuer Ordner</div>
+      <div class="context-menu-item" data-action="add-prompt-link">Prompt verknüpfen</div>
+      <div class="context-menu-item" data-action="add-folder-link">Ordner verknüpfen</div>`;
+    contextMenu.style.left = `${e.pageX}px`;
+    contextMenu.style.top = `${e.pageY}px`;
+    contextMenu.classList.add('visible');
+    contextMenu.onclick = (evt) => {
+      const action = evt.target.closest('.context-menu-item')?.dataset.action;
+      if (!action) return;
+      if (action === 'toggle-organize') toggleOrganizeMode();
+      if (action === 'add-prompt') openNewPromptModal();
+      if (action === 'add-folder') openCreateFolderModal();
+      if (action === 'add-prompt-link') openLinkItemModal('prompt');
+      if (action === 'add-folder-link') openLinkItemModal('folder');
+      hideContextMenu();
+    };
 }
 
 function resetLocalStorage() {

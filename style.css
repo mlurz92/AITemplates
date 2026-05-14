@@ -2140,3 +2140,5 @@ body.favorites-dock-visible .favorites-dock {
     display: none;
   }
 }
+
+.download-container{position:relative;display:inline-flex}.upload-drop-zone{border:1px dashed rgba(255,255,255,.4);padding:1rem;border-radius:12px;text-align:center;margin:.75rem 0}.upload-drop-zone.is-dragover{background:rgba(255,255,255,.08)}

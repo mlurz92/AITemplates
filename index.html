@@ -89,13 +89,19 @@
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
         </svg>
       </button>
-      <button id="download-button" class="btn btn-ghost" aria-label="templates.json exportieren" style="display: none;">
+      <div class="download-container">
+      <button id="download-button" class="btn btn-ghost" aria-label="JSON Optionen" style="display: none;">
         <svg class="icon icon-download" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="7 10 12 15 17 10"></polyline>
           <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
       </button>
+      <div id="download-menu" class="add-menu hidden">
+        <button class="add-menu-item" data-action="download-json">Download JSON</button>
+        <button class="add-menu-item" data-action="upload-json">Upload JSON</button>
+      </div>
+      </div>
       <button id="storage-source-button" class="btn btn-ghost source-toggle" aria-label="Cloudflare KV Live-Synchronisierung aktiv">
       </button>
       <button id="clear-favorites-button" class="btn btn-ghost" aria-label="Alle Favoriten löschen" style="display: none;">
@@ -187,6 +193,19 @@
         </div>
       </div>
     </div>
+    
+    <div id="upload-json-modal" class="modal hidden">
+      <div class="modal-content card">
+        <h2>JSON importieren</h2>
+        <div id="upload-drop-zone" class="upload-drop-zone">JSON hier ablegen oder Datei auswählen</div>
+        <input id="upload-json-input" type="file" accept="application/json" hidden>
+        <div class="modal-buttons">
+          <button id="upload-json-select-button" class="btn btn-primary">Datei auswählen</button>
+          <button id="upload-json-cancel-button" class="btn btn-ghost">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+
     <button id="fixed-back" class="fixed-back hidden" aria-label="Zurück zur Home">
       <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="15 18 9 12 15 6"></polyline>
