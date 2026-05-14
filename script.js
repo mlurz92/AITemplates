@@ -353,6 +353,11 @@ function showContextMenu(x, y, targetElement) {
 function hideContextMenu() {
     contextMenu.classList.remove('visible');
     contextMenu.removeAttribute('data-menu-scope');
+    if (contextMenu._hideHandler) {
+        document.removeEventListener('click', contextMenu._hideHandler, true);
+        document.removeEventListener('contextmenu', contextMenu._hideHandler, true);
+        contextMenu._hideHandler = null;
+    }
 }
 
 function collapseFavoritesBar() {
