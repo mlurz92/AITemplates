@@ -265,7 +265,7 @@ function getFavoriteTargetIdForElement(targetElement) {
 
     const node = findNodeById(jsonData, id);
     const resolvedNode = resolveLinkedNode(node);
-    if (!resolvedNode || resolvedNode.type !== 'prompt') return null;
+    if (!resolvedNode || (resolvedNode.type !== 'prompt' && resolvedNode.type !== 'folder')) return null;
 
     return resolvedNode.id || null;
 }
@@ -306,6 +306,7 @@ function showContextMenu(x, y, targetElement) {
     contextMenu.setAttribute('data-id', id);
     contextMenu.setAttribute('data-favorite-target-id', favoriteTargetId || '');
     contextMenu.classList.add('visible');
+    contextMenu.dataset.menuScope = targetElement ? 'item' : 'empty';
 
     const menuWidth = contextMenu.offsetWidth;
     const menuHeight = contextMenu.offsetHeight;
@@ -333,7 +334,13 @@ function showContextMenu(x, y, targetElement) {
     setTimeout(() => {
         const hideMenu = (e) => {
             if (!contextMenu.contains(e.target)) {
+                const menuScope = contextMenu.dataset.menuScope;
                 hideContextMenu();
+                if (menuScope === 'empty' && e.type === 'click') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                }
                 document.removeEventListener('click', hideMenu, true);
                 document.removeEventListener('contextmenu', hideMenu, true);
             }
@@ -345,6 +352,12 @@ function showContextMenu(x, y, targetElement) {
 
 function hideContextMenu() {
     contextMenu.classList.remove('visible');
+    contextMenu.removeAttribute('data-menu-scope');
+    if (contextMenu._hideHandler) {
+        document.removeEventListener('click', contextMenu._hideHandler, true);
+        document.removeEventListener('contextmenu', contextMenu._hideHandler, true);
+        contextMenu._hideHandler = null;
+    }
 }
 
 function collapseFavoritesBar() {
@@ -1001,17 +1014,18 @@ function handleKeyDown(e) {
 }
 
 function handleContextMenu(e) {
+    e.preventDefault();
+
     if (modalEl.classList.contains('visible') || containerEl.classList.contains('edit-mode')) {
         return;
     }
-    
+
     const targetElement = e.target.closest('.card, .favorite-chip');
     if (!targetElement) {
         showContextMenuForEmptyArea(e);
         return;
     }
-    
-    e.preventDefault();
+
     showContextMenu(e.pageX, e.pageY, targetElement);
 }
 
@@ -2436,6 +2450,7 @@ function showContextMenuForEmptyArea(e) {
     contextMenu.style.left = `${e.pageX}px`;
     contextMenu.style.top = `${e.pageY}px`;
     contextMenu.classList.add('visible');
+    contextMenu.dataset.menuScope = 'empty';
     contextMenu.onclick = (evt) => {
       const action = evt.target.closest('.context-menu-item')?.dataset.action;
       if (!action) return;
@@ -3152,9 +3167,9 @@ function renderFavoritesDock() {
     favoritesListEl.innerHTML = '';
 
     const favoritesWithNodes = favoritePrompts
-        .map((promptId) => {
-            const node = findNodeById(jsonData, promptId);
-            return node && node.type === 'prompt' ? { id: promptId, node } : null;
+        .map((favoriteId) => {
+            const node = findNodeById(jsonData, favoriteId);
+            return node && (node.type === 'prompt' || node.type === 'folder') ? { id: favoriteId, node } : null;
         })
         .filter(Boolean);
 
@@ -3208,7 +3223,7 @@ function renderFavoritesDock() {
         button.className = 'favorite-chip';
         button.dataset.id = id;
         button.dataset.type = 'favorite';
-        button.setAttribute('aria-label', `Kopiere: ${node.title}`);
+        button.setAttribute('aria-label', node.type === 'folder' ? `Öffne: ${node.title}` : `Kopiere: ${node.title}`);
         button.dataset.titleFull = node.title || '';
 
         const accent = FAVORITE_ACCENTS[index % FAVORITE_ACCENTS.length];
@@ -3233,7 +3248,7 @@ function renderFavoritesDock() {
         titleEl.className = 'favorite-chip-title';
         titleEl.textContent = node.title || '';
 
-        const previewText = getFavoritePreviewText(node.content);
+        const previewText = node.type === 'prompt' ? getFavoritePreviewText(node.content) : '';
         button.dataset.previewFull = previewText || '';
         button.dataset.previewLines = '0';
         button.dataset.layout = 'title';
@@ -3253,6 +3268,10 @@ function renderFavoritesDock() {
         button.append(badge, textWrap);
 
         button.addEventListener('click', () => {
+            if (node.type === 'folder') {
+                navigateToNode(node);
+                return;
+            }
             copyToClipboard(node.content || '', button, node);
         });
         
