@@ -22,7 +22,7 @@ Kurz: Die Anwendung ist ein High-Speed Prompt-Cockpit, in dem Suchen durch Navig
 
 ### 2.1 Datenmodell
 - **`prompt`**: Titel + Volltextinhalt; kopierbar per Karte, Modal und Favoriten-Dock.
-- **`folder`**: Enthält `children` (Prompts, Ordner, ggf. Links).
+- **`folder`**: Enthält `items` (Prompts, Ordner, ggf. Links).
 - **Verknüpfungselemente**: Prompt- oder Ordner-Links für kuratierte Querverweise.
 
 ### 2.2 Navigation
