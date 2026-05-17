@@ -3163,7 +3163,7 @@ function collectPromptsFromFolder(folderNode, seen = new Set()) {
     seen.add(folderNode.id);
 
     const prompts = [];
-    const children = Array.isArray(folderNode.children) ? folderNode.children : [];
+    const children = Array.isArray(folderNode.items) ? folderNode.items : [];
 
     children.forEach((child) => {
         const resolvedChild = resolveLinkedNode(child);
