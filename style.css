@@ -1151,7 +1151,7 @@ body.favorites-dock-visible .favorites-dock {
     position: relative;
     width: 100%;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible;
     scrollbar-width: none;
     scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
     overscroll-behavior-x: contain;
@@ -1210,7 +1210,7 @@ body.favorites-dock-visible .favorites-dock {
 
 .favorites-dock.expanded .favorites-scroll-area {
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: visible;
     max-height: clamp(14rem, 56vh, 26rem);
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
