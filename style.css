@@ -1151,7 +1151,7 @@ body.favorites-dock-visible .favorites-dock {
     position: relative;
     width: 100%;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: visible;
     scrollbar-width: none;
     scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
     overscroll-behavior-x: contain;
@@ -1210,7 +1210,7 @@ body.favorites-dock-visible .favorites-dock {
 
 .favorites-dock.expanded .favorites-scroll-area {
     overflow-x: hidden;
-    overflow-y: auto;
+    overflow-y: visible;
     max-height: clamp(14rem, 56vh, 26rem);
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
@@ -1413,6 +1413,68 @@ body.favorites-dock-visible .favorites-dock {
 
 .favorite-chip.copy-success .favorite-chip-title {
     color: rgba(255, 255, 255, 0.92);
+}
+
+.favorite-chip.has-hover-folder-menu {
+    overflow: visible;
+}
+
+.favorite-folder-hover-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 0.42rem);
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 0.34rem;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    transform-origin: bottom center;
+    transition: opacity var(--duration-2) var(--ease-smooth),
+        transform var(--duration-2) var(--ease-smooth);
+    z-index: 30;
+}
+
+.favorite-chip.has-hover-folder-menu.is-folder-menu-open .favorite-folder-hover-menu {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+}
+
+.favorite-folder-hover-item {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(145deg, rgba(16, 22, 38, 0.96), rgba(18, 28, 48, 0.9));
+    color: var(--fg-1);
+    border-radius: 11px;
+    padding: 0.42rem 0.58rem;
+    font-size: clamp(0.7rem, 1.08vw, 0.8rem);
+    line-height: 1.2;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+    transform: translateY(6px);
+    opacity: 0;
+    transition: transform 240ms var(--ease-smooth),
+        opacity 200ms var(--ease-smooth),
+        border-color var(--duration-2) var(--ease-smooth),
+        background var(--duration-2) var(--ease-smooth);
+    transition-delay: calc(var(--folder-item-index, 0) * 32ms);
+}
+
+.favorite-chip.has-hover-folder-menu.is-folder-menu-open .favorite-folder-hover-item {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.favorite-folder-hover-item:hover,
+.favorite-folder-hover-item:focus-visible {
+    border-color: rgba(0, 230, 255, 0.58);
+    background: linear-gradient(145deg, rgba(20, 34, 58, 0.98), rgba(24, 42, 66, 0.94));
+    outline: none;
 }
 @keyframes favorite-chip-enter {
     0% {

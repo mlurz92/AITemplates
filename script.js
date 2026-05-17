@@ -45,6 +45,7 @@ let lastFavoriteChipWidthValue = null;
 let lastFavoriteChipBaseHeightValue = null;
 let lastFavoriteChipHeightValue = null;
 let lastFavoritesFootprintHeight = null;
+let activeFavoriteFolderMenuChip = null;
 let motionMediaQuery = null;
 let prefersReducedMotion = false;
 let auroraParallaxOffset = 0;
@@ -548,7 +549,8 @@ function handleFavoritesTouchEnd() {
         if (deltaY < -threshold && !expanded) {
             setFavoritesExpanded(true);
         } else if (deltaY > threshold && expanded) {
-            setFavoritesExpanded(false);
+            closeFavoriteFolderMenu();
+        setFavoritesExpanded(false);
         }
     }
 
@@ -895,6 +897,7 @@ function setupEventListeners() {
     promptFullTextEl.addEventListener('input', () => adjustTextareaHeight(promptFullTextEl));
     
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handleGlobalPointerDown, true);
 
     containerEl.addEventListener('scroll', () => {
         lastScrollY = containerEl.scrollTop;
@@ -1001,6 +1004,8 @@ function handleKeyDown(e) {
             hideContextMenu();
         } else if (document.activeElement.classList.contains('rename-input')) {
             exitRenameMode(document.activeElement.closest('.card'));
+        } else if (activeFavoriteFolderMenuChip) {
+            closeFavoriteFolderMenu();
         } else if (favoritesDockEl && favoritesDockEl.classList.contains('expanded')) {
             collapseFavoritesBar();
         } else if (modalEl.classList.contains('visible')) {
@@ -3157,6 +3162,96 @@ function getFavoritePreviewText(content) {
     return `${condensed.slice(0, 137).trim()}…`;
 }
 
+
+function collectPromptsFromFolder(folderNode, seen = new Set()) {
+    if (!folderNode || folderNode.type !== 'folder' || seen.has(folderNode.id)) return [];
+    seen.add(folderNode.id);
+
+    const prompts = [];
+    const children = Array.isArray(folderNode.children) ? folderNode.children : [];
+
+    children.forEach((child) => {
+        const resolvedChild = resolveLinkedNode(child);
+        if (!resolvedChild) return;
+
+        if (resolvedChild.type === 'prompt') {
+            prompts.push(resolvedChild);
+            return;
+        }
+
+        if (resolvedChild.type === 'folder') {
+            prompts.push(...collectPromptsFromFolder(resolvedChild, seen));
+        }
+    });
+
+    return prompts;
+}
+
+function createFavoriteFolderHoverMenu(folderNode, chipButton) {
+    const prompts = collectPromptsFromFolder(folderNode);
+    if (!prompts.length) return null;
+
+    const menu = document.createElement('div');
+    menu.className = 'favorite-folder-hover-menu';
+    menu.setAttribute('role', 'list');
+    menu.setAttribute('aria-label', `Prompts in ${folderNode.title || 'Ordner'}`);
+
+    const fragment = document.createDocumentFragment();
+    prompts.forEach((promptNode, index) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'favorite-folder-hover-item';
+        item.setAttribute('role', 'listitem');
+        item.style.setProperty('--folder-item-index', String(index));
+        item.textContent = promptNode.title || 'Unbenannter Prompt';
+
+        item.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            copyToClipboard(promptNode.content || '', chipButton, promptNode);
+            closeFavoriteFolderMenu();
+        });
+
+        fragment.appendChild(item);
+    });
+
+    menu.appendChild(fragment);
+    return menu;
+}
+
+
+function closeFavoriteFolderMenu() {
+    if (!activeFavoriteFolderMenuChip) return;
+    activeFavoriteFolderMenuChip.classList.remove('is-folder-menu-open');
+    activeFavoriteFolderMenuChip.setAttribute('aria-expanded', 'false');
+    activeFavoriteFolderMenuChip = null;
+}
+
+function openFavoriteFolderMenu(chipButton) {
+    if (!chipButton) return;
+    if (activeFavoriteFolderMenuChip && activeFavoriteFolderMenuChip !== chipButton) {
+        closeFavoriteFolderMenu();
+    }
+    chipButton.classList.add('is-folder-menu-open');
+    chipButton.setAttribute('aria-expanded', 'true');
+    activeFavoriteFolderMenuChip = chipButton;
+}
+
+function toggleFavoriteFolderMenu(chipButton) {
+    if (!chipButton) return;
+    if (activeFavoriteFolderMenuChip === chipButton && chipButton.classList.contains('is-folder-menu-open')) {
+        closeFavoriteFolderMenu();
+        return;
+    }
+    openFavoriteFolderMenu(chipButton);
+}
+
+function handleGlobalPointerDown(event) {
+    if (!activeFavoriteFolderMenuChip) return;
+    if (activeFavoriteFolderMenuChip.contains(event.target)) return;
+    closeFavoriteFolderMenu();
+}
+
 function renderFavoritesDock() {
     if (!favoritesDockEl || !favoritesListEl) return;
 
@@ -3190,6 +3285,7 @@ function renderFavoritesDock() {
             favoritesScrollAreaEl.classList.remove('show-scrollbar');
         }
         document.body.style.removeProperty('--favorites-footprint');
+        closeFavoriteFolderMenu();
         setFavoritesExpanded(false);
         if (favoritesToggleBtn) {
             favoritesToggleBtn.hidden = true;
@@ -3267,11 +3363,26 @@ function renderFavoritesDock() {
 
         button.append(badge, textWrap);
 
+        if (node.type === 'folder') {
+            const hoverMenu = createFavoriteFolderHoverMenu(node, button);
+            if (hoverMenu) {
+                button.classList.add('has-hover-folder-menu');
+                button.setAttribute('aria-haspopup', 'true');
+                button.setAttribute('aria-expanded', 'false');
+                button.appendChild(hoverMenu);
+            }
+        }
+
         button.addEventListener('click', () => {
             if (node.type === 'folder') {
+                if (button.classList.contains('has-hover-folder-menu')) {
+                    toggleFavoriteFolderMenu(button);
+                    return;
+                }
                 navigateToNode(node);
                 return;
             }
+            closeFavoriteFolderMenu();
             copyToClipboard(node.content || '', button, node);
         });
         
