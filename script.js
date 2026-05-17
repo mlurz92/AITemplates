@@ -45,6 +45,7 @@ let lastFavoriteChipWidthValue = null;
 let lastFavoriteChipBaseHeightValue = null;
 let lastFavoriteChipHeightValue = null;
 let lastFavoritesFootprintHeight = null;
+let activeFavoriteFolderMenuChip = null;
 let motionMediaQuery = null;
 let prefersReducedMotion = false;
 let auroraParallaxOffset = 0;
@@ -548,7 +549,8 @@ function handleFavoritesTouchEnd() {
         if (deltaY < -threshold && !expanded) {
             setFavoritesExpanded(true);
         } else if (deltaY > threshold && expanded) {
-            setFavoritesExpanded(false);
+            closeFavoriteFolderMenu();
+        setFavoritesExpanded(false);
         }
     }
 
@@ -895,6 +897,7 @@ function setupEventListeners() {
     promptFullTextEl.addEventListener('input', () => adjustTextareaHeight(promptFullTextEl));
     
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handleGlobalPointerDown, true);
 
     containerEl.addEventListener('scroll', () => {
         lastScrollY = containerEl.scrollTop;
@@ -1001,6 +1004,8 @@ function handleKeyDown(e) {
             hideContextMenu();
         } else if (document.activeElement.classList.contains('rename-input')) {
             exitRenameMode(document.activeElement.closest('.card'));
+        } else if (activeFavoriteFolderMenuChip) {
+            closeFavoriteFolderMenu();
         } else if (favoritesDockEl && favoritesDockEl.classList.contains('expanded')) {
             collapseFavoritesBar();
         } else if (modalEl.classList.contains('visible')) {
@@ -3163,7 +3168,7 @@ function collectPromptsFromFolder(folderNode, seen = new Set()) {
     seen.add(folderNode.id);
 
     const prompts = [];
-    const children = Array.isArray(folderNode.children) ? folderNode.children : [];
+    const children = Array.isArray(folderNode.items) ? folderNode.items : [];
 
     children.forEach((child) => {
         const resolvedChild = resolveLinkedNode(child);
@@ -3204,6 +3209,7 @@ function createFavoriteFolderHoverMenu(folderNode, chipButton) {
             event.preventDefault();
             event.stopPropagation();
             copyToClipboard(promptNode.content || '', chipButton, promptNode);
+            closeFavoriteFolderMenu();
         });
 
         fragment.appendChild(item);
@@ -3211,6 +3217,39 @@ function createFavoriteFolderHoverMenu(folderNode, chipButton) {
 
     menu.appendChild(fragment);
     return menu;
+}
+
+
+function closeFavoriteFolderMenu() {
+    if (!activeFavoriteFolderMenuChip) return;
+    activeFavoriteFolderMenuChip.classList.remove('is-folder-menu-open');
+    activeFavoriteFolderMenuChip.setAttribute('aria-expanded', 'false');
+    activeFavoriteFolderMenuChip = null;
+}
+
+function openFavoriteFolderMenu(chipButton) {
+    if (!chipButton) return;
+    if (activeFavoriteFolderMenuChip && activeFavoriteFolderMenuChip !== chipButton) {
+        closeFavoriteFolderMenu();
+    }
+    chipButton.classList.add('is-folder-menu-open');
+    chipButton.setAttribute('aria-expanded', 'true');
+    activeFavoriteFolderMenuChip = chipButton;
+}
+
+function toggleFavoriteFolderMenu(chipButton) {
+    if (!chipButton) return;
+    if (activeFavoriteFolderMenuChip === chipButton && chipButton.classList.contains('is-folder-menu-open')) {
+        closeFavoriteFolderMenu();
+        return;
+    }
+    openFavoriteFolderMenu(chipButton);
+}
+
+function handleGlobalPointerDown(event) {
+    if (!activeFavoriteFolderMenuChip) return;
+    if (activeFavoriteFolderMenuChip.contains(event.target)) return;
+    closeFavoriteFolderMenu();
 }
 
 function renderFavoritesDock() {
@@ -3246,6 +3285,7 @@ function renderFavoritesDock() {
             favoritesScrollAreaEl.classList.remove('show-scrollbar');
         }
         document.body.style.removeProperty('--favorites-footprint');
+        closeFavoriteFolderMenu();
         setFavoritesExpanded(false);
         if (favoritesToggleBtn) {
             favoritesToggleBtn.hidden = true;
@@ -3327,15 +3367,22 @@ function renderFavoritesDock() {
             const hoverMenu = createFavoriteFolderHoverMenu(node, button);
             if (hoverMenu) {
                 button.classList.add('has-hover-folder-menu');
+                button.setAttribute('aria-haspopup', 'true');
+                button.setAttribute('aria-expanded', 'false');
                 button.appendChild(hoverMenu);
             }
         }
 
         button.addEventListener('click', () => {
             if (node.type === 'folder') {
+                if (button.classList.contains('has-hover-folder-menu')) {
+                    toggleFavoriteFolderMenu(button);
+                    return;
+                }
                 navigateToNode(node);
                 return;
             }
+            closeFavoriteFolderMenu();
             copyToClipboard(node.content || '', button, node);
         });
         

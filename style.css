@@ -1436,9 +1436,7 @@ body.favorites-dock-visible .favorites-dock {
     z-index: 30;
 }
 
-.favorite-chip.has-hover-folder-menu:hover .favorite-folder-hover-menu,
-.favorite-chip.has-hover-folder-menu:focus-visible .favorite-folder-hover-menu,
-.favorite-chip.has-hover-folder-menu:focus-within .favorite-folder-hover-menu {
+.favorite-chip.has-hover-folder-menu.is-folder-menu-open .favorite-folder-hover-menu {
     opacity: 1;
     pointer-events: auto;
     transform: translateY(0) scale(1);
@@ -1467,9 +1465,7 @@ body.favorites-dock-visible .favorites-dock {
     transition-delay: calc(var(--folder-item-index, 0) * 32ms);
 }
 
-.favorite-chip.has-hover-folder-menu:hover .favorite-folder-hover-item,
-.favorite-chip.has-hover-folder-menu:focus-visible .favorite-folder-hover-item,
-.favorite-chip.has-hover-folder-menu:focus-within .favorite-folder-hover-item {
+.favorite-chip.has-hover-folder-menu.is-folder-menu-open .favorite-folder-hover-item {
     transform: translateY(0);
     opacity: 1;
 }
