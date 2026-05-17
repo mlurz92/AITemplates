@@ -3157,6 +3157,62 @@ function getFavoritePreviewText(content) {
     return `${condensed.slice(0, 137).trim()}…`;
 }
 
+
+function collectPromptsFromFolder(folderNode, seen = new Set()) {
+    if (!folderNode || folderNode.type !== 'folder' || seen.has(folderNode.id)) return [];
+    seen.add(folderNode.id);
+
+    const prompts = [];
+    const children = Array.isArray(folderNode.children) ? folderNode.children : [];
+
+    children.forEach((child) => {
+        const resolvedChild = resolveLinkedNode(child);
+        if (!resolvedChild) return;
+
+        if (resolvedChild.type === 'prompt') {
+            prompts.push(resolvedChild);
+            return;
+        }
+
+        if (resolvedChild.type === 'folder') {
+            prompts.push(...collectPromptsFromFolder(resolvedChild, seen));
+        }
+    });
+
+    return prompts;
+}
+
+function createFavoriteFolderHoverMenu(folderNode, chipButton) {
+    const prompts = collectPromptsFromFolder(folderNode);
+    if (!prompts.length) return null;
+
+    const menu = document.createElement('div');
+    menu.className = 'favorite-folder-hover-menu';
+    menu.setAttribute('role', 'list');
+    menu.setAttribute('aria-label', `Prompts in ${folderNode.title || 'Ordner'}`);
+
+    const fragment = document.createDocumentFragment();
+    prompts.forEach((promptNode, index) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'favorite-folder-hover-item';
+        item.setAttribute('role', 'listitem');
+        item.style.setProperty('--folder-item-index', String(index));
+        item.textContent = promptNode.title || 'Unbenannter Prompt';
+
+        item.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            copyToClipboard(promptNode.content || '', chipButton, promptNode);
+        });
+
+        fragment.appendChild(item);
+    });
+
+    menu.appendChild(fragment);
+    return menu;
+}
+
 function renderFavoritesDock() {
     if (!favoritesDockEl || !favoritesListEl) return;
 
@@ -3266,6 +3322,14 @@ function renderFavoritesDock() {
         }
 
         button.append(badge, textWrap);
+
+        if (node.type === 'folder') {
+            const hoverMenu = createFavoriteFolderHoverMenu(node, button);
+            if (hoverMenu) {
+                button.classList.add('has-hover-folder-menu');
+                button.appendChild(hoverMenu);
+            }
+        }
 
         button.addEventListener('click', () => {
             if (node.type === 'folder') {
