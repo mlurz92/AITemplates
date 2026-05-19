@@ -51,7 +51,7 @@ Die App ist für ein klares Szenario ausgelegt: Du möchtest eine große Menge h
 - Vollständiges Modal für Lesen, Editieren, Speichern und Kopieren.
 - Kontextmenü mit Favorisieren, Umbenennen, Verschieben, Löschen.
 - Favoriten-Dock mit komprimierter und erweiterter Ansicht.
-- Ordner-Favoriten mit Hover-/Tap-Dropout zum Direktkopieren enthaltenen Prompt-Contents.
+- Ordner-Favoriten mit Hover-/Tap-Dropout zum Direktkopieren des enthaltenen Prompt-Inhalts.
 - JSON Download/Upload für Backups und Migration.
 - Cloudflare-KV GET/POST Sync inkl. Konflikterkennung über Zeitstempel.
 - PWA Installierbarkeit inklusive App-Manifest, Icons und Mobile-Meta.
