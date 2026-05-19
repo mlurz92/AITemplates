@@ -2204,3 +2204,34 @@ body.favorites-dock-visible .favorites-dock {
 }
 
 .download-container{position:relative;display:inline-flex}.upload-drop-zone{border:1px dashed rgba(255,255,255,.4);padding:1rem;border-radius:12px;text-align:center;margin:.75rem 0}.upload-drop-zone.is-dragover{background:rgba(255,255,255,.08)}
+
+/* --- 2026 UI refinement: quick access toolbar --- */
+.view-toolbar {
+  position: sticky;
+  top: calc(var(--safe-area-inset-top) + var(--top-bar-height) + 8px);
+  z-index: 120;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  margin: calc(var(--safe-area-inset-top) + var(--top-bar-height) + 10px) clamp(12px, 2.5vw, 28px) 10px;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-stroke);
+  background: linear-gradient(140deg, rgba(20,24,42,.82), rgba(14,18,34,.72));
+  backdrop-filter: blur(10px) saturate(160%);
+}
+.toolbar-search, .toolbar-sort {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(6, 12, 22, 0.62);
+  color: var(--fg-1);
+  border-radius: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+.toolbar-search:focus, .toolbar-sort:focus { outline: 2px solid rgba(6,214,214,.6); outline-offset: 1px; }
+body.has-toolbar .cards-container { padding-top: 10px; }
+@media (max-width: 760px) {
+  .view-toolbar { grid-template-columns: 1fr; top: calc(var(--safe-area-inset-top) + var(--top-bar-height) + 4px); }
+}

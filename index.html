@@ -129,6 +129,17 @@
         <img id="app-logo-svg" src="icons/favicon.svg" alt="App Logo" width="30" height="30">
       </button>
     </header>
+        <section id="view-toolbar" class="view-toolbar" aria-label="Filter und Sortierung">
+      <div class="toolbar-search-wrap">
+        <input id="search-input" class="toolbar-search" type="search" placeholder="Prompts & Ordner suchen …" aria-label="Suche in aktuellem Ordner">
+      </div>
+      <select id="sort-select" class="toolbar-sort" aria-label="Sortierung">
+        <option value="manual">Sortierung: Manuell</option>
+        <option value="title-asc">Titel: A → Z</option>
+        <option value="title-desc">Titel: Z → A</option>
+        <option value="type">Typ: Ordner zuerst</option>
+      </select>
+    </section>
     <main id="cards-container" class="cards-container"></main>
     <div id="prompt-modal" class="modal hidden">
       <div class="modal-content card">

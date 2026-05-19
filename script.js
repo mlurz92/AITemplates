@@ -57,6 +57,10 @@ let visualViewportHandlersBound = false;
 let displayModeMediaQuery = null;
 let installAppBtn = null;
 let deferredInstallPrompt = null;
+let searchInputEl = null;
+let sortSelectEl = null;
+let currentSearchQuery = '';
+let currentSortMode = 'manual';
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -145,6 +149,8 @@ function initApp() {
     clearFavoritesBtn = document.getElementById('clear-favorites-button');
     storageSourceBtn = document.getElementById('storage-source-button');
     installAppBtn = document.getElementById('install-app-button');
+    searchInputEl = document.getElementById('search-input');
+    sortSelectEl = document.getElementById('sort-select');
 
     favoritesDockEl = document.getElementById('favorites-dock');
     favoritesListEl = document.getElementById('favorites-list');
@@ -182,6 +188,7 @@ function initApp() {
 
     updateViewportMetrics();
     updateDockPositioning();
+    setupViewToolbar();
     setupEventListeners();
     setupPwaInstallPrompt();
     checkFullscreenSupport();
@@ -1901,6 +1908,45 @@ function adjustCardTitleFontSize(card) {
     }
 }
 
+
+function setupViewToolbar() {
+    if (!searchInputEl || !sortSelectEl) return;
+    document.body.classList.add('has-toolbar');
+    searchInputEl.addEventListener('input', (event) => {
+        currentSearchQuery = (event.target.value || '').trim().toLowerCase();
+        renderView(currentNode);
+    });
+    sortSelectEl.addEventListener('change', (event) => {
+        currentSortMode = event.target.value || 'manual';
+        renderView(currentNode);
+    });
+}
+
+function getVisibleNodesForCurrentView(childNodes) {
+    let list = [...childNodes];
+    if (currentSearchQuery) {
+        list = list.filter((item) => {
+            const title = (item.title || '').toLowerCase();
+            const content = (item.content || '').toLowerCase();
+            return title.includes(currentSearchQuery) || content.includes(currentSearchQuery);
+        });
+    }
+
+    if (currentSortMode === 'title-asc') {
+        list.sort((a, b) => (a.title || '').localeCompare((b.title || ''), 'de', { sensitivity: 'base' }));
+    } else if (currentSortMode === 'title-desc') {
+        list.sort((a, b) => (b.title || '').localeCompare((a.title || ''), 'de', { sensitivity: 'base' }));
+    } else if (currentSortMode === 'type') {
+        list.sort((a, b) => {
+            const aFolder = (a.type || '').includes('folder') ? 0 : 1;
+            const bFolder = (b.type || '').includes('folder') ? 0 : 1;
+            return aFolder - bFolder || (a.title || '').localeCompare((b.title || ''), 'de', { sensitivity: 'base' });
+        });
+    }
+
+    return list;
+}
+
 function renderView(node) {
     exitOrganizeMode();
     const currentScroll = containerEl.scrollTop;
@@ -1911,8 +1957,9 @@ function renderView(node) {
     }
 
     const childNodes = node.items || [];
-    const maxItems = 36; 
-    const nodesToRender = childNodes.slice(0, maxItems);
+    const visibleNodes = getVisibleNodesForCurrentView(childNodes);
+    const maxItems = 120;
+    const nodesToRender = visibleNodes.slice(0, maxItems);
     const vivusSetups = [];
     const renderedCards = [];
 
@@ -2008,8 +2055,11 @@ function renderView(node) {
                 adjustCardTitleFontSize(c);
             });
         });
-    } else if (childNodes.length === 0 && containerEl.innerHTML === '') {
-        containerEl.innerHTML = '<p style="text-align:center; padding:2rem; opacity:0.7;">Dieser Ordner ist leer.</p>';
+    } else if (containerEl.innerHTML === '') {
+        const emptyMessage = childNodes.length === 0
+            ? 'Dieser Ordner ist leer.'
+            : 'Keine Treffer für die aktuelle Suche.';
+        containerEl.innerHTML = `<p style="text-align:center; padding:2rem; opacity:0.7;">${emptyMessage}</p>`;
     }
 }
 
