@@ -3418,7 +3418,7 @@ function renderFavoritesDock() {
                     if (isTouchLike) {
                         toggleFavoriteFolderMenu(button);
                     } else {
-                        navigateToNode(node);
+                        openFavoriteFolderMenu(button);
                     }
                     return;
                 }
