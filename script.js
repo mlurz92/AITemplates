@@ -750,7 +750,7 @@ function updateStorageSourceButton() {
 
 function updatePersistenceButtonsVisibility() {
     if (!downloadBtn || !resetBtn) return;
-    const hasLocalData = false;
+    const hasLocalData = Boolean(jsonData);
     downloadBtn.style.display = hasLocalData ? 'inline-flex' : 'none';
     resetBtn.style.display = hasLocalData ? 'inline-flex' : 'none';
 }
