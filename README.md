@@ -290,7 +290,7 @@ Die Kombination aus schneller Navigation, direktem Copy-Flow, präzisem Feedback
 - Aurora-Hintergrund mit animierten Shapes
 - Partikel-, Glow- und Tilt-Effekte
 - Mikrointeraktionen auf Buttons, Karten und Favoritenchips
-- `prefers-reduced-motion`-freundliche Verhalten
+- prefers-reduced-motion-freundliches Verhalten
 - Renderoptimierungen (z. B. observer-gesteuerte Aktivität, content-visibility)
 
 Ziel ist ein hochwertiger visueller Eindruck ohne Produktivitätsverlust.
