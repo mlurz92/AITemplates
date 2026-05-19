@@ -55,6 +55,8 @@ let auroraVisibilityObserver = null;
 let isAuroraVisible = true;
 let visualViewportHandlersBound = false;
 let displayModeMediaQuery = null;
+let installAppBtn = null;
+let deferredInstallPrompt = null;
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -142,6 +144,7 @@ function initApp() {
     appLogoBtn = document.getElementById('app-logo-button');
     clearFavoritesBtn = document.getElementById('clear-favorites-button');
     storageSourceBtn = document.getElementById('storage-source-button');
+    installAppBtn = document.getElementById('install-app-button');
 
     favoritesDockEl = document.getElementById('favorites-dock');
     favoritesListEl = document.getElementById('favorites-list');
@@ -180,6 +183,7 @@ function initApp() {
     updateViewportMetrics();
     updateDockPositioning();
     setupEventListeners();
+    setupPwaInstallPrompt();
     checkFullscreenSupport();
     createContextMenu();
     loadFavorites();
@@ -746,7 +750,7 @@ function updateStorageSourceButton() {
 
 function updatePersistenceButtonsVisibility() {
     if (!downloadBtn || !resetBtn) return;
-    const hasLocalData = Boolean(localStorage.getItem(cloudStorageKey));
+    const hasLocalData = Boolean(jsonData);
     downloadBtn.style.display = hasLocalData ? 'inline-flex' : 'none';
     resetBtn.style.display = hasLocalData ? 'inline-flex' : 'none';
 }
@@ -1766,8 +1770,6 @@ async function syncFromCloud({ silent = false, reason = 'manual' } = {}) {
             serverSyncTimestamp = incomingTimestamp;
             lastSuccessfulSyncAt = Date.now();
             processJson(dataResponse.data);
-            localStorage.setItem(cloudStorageKey, JSON.stringify(dataResponse.data));
-            if (serverSyncTimestamp) localStorage.setItem(cloudSyncTimestampKey, serverSyncTimestamp.toString());
             updatePersistenceButtonsVisibility();
             if (!silent && !isFirstLoad) {
                 showNotification('Cloud-Änderungen synchronisiert.', 'info');
@@ -2359,7 +2361,6 @@ async function persistJsonData(successMsg, type) {
         const jsonString = JSON.stringify(jsonData, null, 2);
         
         // Zunächst optimistisch im Browser speichern (damit UI nicht blockiert)
-        localStorage.setItem(cloudStorageKey, jsonString);
         
         const payload = {
             data: jsonData,
@@ -2385,7 +2386,6 @@ async function persistJsonData(successMsg, type) {
         }
         const responseData = await req.json();
         serverSyncTimestamp = responseData.lastUpdated;
-        if (serverSyncTimestamp) localStorage.setItem(cloudSyncTimestampKey, serverSyncTimestamp.toString());
         lastSuccessfulSyncAt = Date.now();
         showNotification(successMsg, type);
         if (syncBroadcastChannel) {
@@ -2472,8 +2472,6 @@ function showContextMenuForEmptyArea(e) {
 function resetLocalStorage() {
     const confirmation = confirm("Möchten Sie den lokalen Cache verwerfen und den aktuellen Cloud-Stand neu laden? (Dies löscht keine globalen Daten im KV-Speicher).");
     if (confirmation) {
-        localStorage.removeItem(cloudStorageKey);
-        localStorage.removeItem(cloudSyncTimestampKey);
         localStorage.removeItem(favoritesKey);
         showNotification('Lokaler Cache geleert. Lade Cloud-Daten...', 'info');
         setTimeout(() => {
@@ -3418,7 +3416,7 @@ function renderFavoritesDock() {
                     if (isTouchLike) {
                         toggleFavoriteFolderMenu(button);
                     } else {
-                        navigateToNode(node);
+                        openFavoriteFolderMenu(button);
                     }
                     return;
                 }
@@ -3743,4 +3741,37 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initApp);
 } else {
     initApp();
+}
+
+function setupPwaInstallPrompt() {
+    if (!installAppBtn) return;
+
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    installAppBtn.style.display = isStandalone ? 'none' : 'inline-flex';
+    installAppBtn.addEventListener('click', handleInstallAppClick);
+    window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        installAppBtn.style.display = 'inline-flex';
+    });
+
+    window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        installAppBtn.style.display = 'none';
+        showNotification('Web-App installiert und im System integriert.', 'success');
+    });
+}
+
+async function handleInstallAppClick() {
+    if (!deferredInstallPrompt) {
+        showNotification('Installation über Browser-Menü: "App installieren".', 'info');
+        return;
+    }
+
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    if (choice && choice.outcome === 'accepted') {
+        showNotification('Installationsdialog bestätigt.', 'success');
+    }
+    deferredInstallPrompt = null;
 }

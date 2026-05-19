@@ -191,19 +191,24 @@ Die App ist damit sowohl kuratierbar als auch skalierbar für große Prompt-Samm
 
 ---
 
-## 10. Import/Export, lokale Speicherung & Cloud-Sync
+## 10. Import/Export, Cloud-Sync & Installierbarkeit
 
 ### 10.1 JSON Export/Import
 - Download des aktuellen Datenstands als JSON.
 - Upload via Dateidialog oder Drag-and-Drop.
 
-### 10.2 Lokaler Zustand
-- Favoriten und Arbeitsstand in LocalStorage.
+### 10.2 Cloudflare KV als einzige Schreibquelle
+- Änderungen am Templates-Datenbestand werden ausschließlich über `/api/templates` in Cloudflare KV persistiert.
+- Kein lokaler Datenbestand als Schreib- oder Konflikt-Zwischenpuffer für Prompt-/Ordnerdaten.
 
 ### 10.3 Cloudflare KV Sync
 - API-basierter Abruf/Speicherung.
 - Polling/Refresh-Mechanismen.
 - Zeitstempel-Logik zur Konfliktminderung.
+
+### 10.4 Web-App Installation (Desktop/Startmenü)
+- Die App kann als PWA installiert werden (Browser-Installprompt oder In-App-Installbutton).
+- Nach Installation erscheint sie als eigenständige App im jeweiligen Betriebssystem (z. B. Startmenü/Launcher).
 
 ---
 
