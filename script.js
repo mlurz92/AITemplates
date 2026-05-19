@@ -3748,7 +3748,7 @@ function setupPwaInstallPrompt() {
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
     installAppBtn.style.display = isStandalone ? 'none' : 'inline-flex';
-
+    installAppBtn.addEventListener('click', handleInstallAppClick);
     window.addEventListener('beforeinstallprompt', (event) => {
         event.preventDefault();
         deferredInstallPrompt = event;
