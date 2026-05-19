@@ -1,192 +1,280 @@
 # Prompt-Templates
 
-Eine progressive Web-App (PWA) für das strukturierte Sammeln, Navigieren, Bearbeiten, Verknüpfen, Favorisieren und ultraschnelle Kopieren von Prompt-Bausteinen in verschachtelten Ordnerstrukturen.
+Prompt-Templates ist eine progressive Web-App (PWA) für Teams und Einzelanwender:innen, die große Prompt-Sammlungen nicht nur speichern, sondern **operativ schnell benutzen, strukturieren, umorganisieren und synchron halten** möchten. Die Anwendung verbindet ein visuell ruhiges, hochwertiges Interface mit sehr direkter Interaktion: kurze Wege, klare Zustände, sofortiges Feedback, robuste Datenhaltung.
 
 ---
 
-## 1) Zielbild der Anwendung
+## Inhaltsverzeichnis
 
-Prompt-Templates ist darauf ausgelegt, große Prompt-Bibliotheken effizient bedienbar zu machen. Die App kombiniert:
-
-- **Ordnerbasierte Informationsarchitektur** für thematische Ordnung.
-- **Direktzugriff über Favoriten-Dock** mit Ein-Klick-Kopie.
-- **Bearbeitungs- und Organisationswerkzeuge** direkt in der Oberfläche (Rename, Move, Delete, Links).
-- **Synchronisationsoptionen** zwischen lokalem Zustand und Cloudflare-KV-gestützter Live-Datenhaltung.
-- **Glasmorphisches, animiertes UI** mit Fokus auf Lesbarkeit, Touch-Komfort und visueller Orientierung.
-
-Kurz: Die Anwendung ist ein High-Speed Prompt-Cockpit, in dem Suchen durch Navigieren + Favorisieren ersetzt oder stark reduziert wird.
-
----
-
-## 2) Kernfunktionen im Überblick
-
-### 2.1 Datenmodell
-- **`prompt`**: Titel + Volltextinhalt; kopierbar per Karte, Modal und Favoriten-Dock.
-- **`folder`**: Enthält `items` (Prompts, Ordner, ggf. Links).
-- **Verknüpfungselemente**: Prompt- oder Ordner-Links für kuratierte Querverweise.
-
-### 2.2 Navigation
-- Breadcrumb-Navigation in der Top-Bar.
-- Zurück-Buttons (Top-Bar + fixer Back-Button) für schnelle Ebenenwechsel.
-- Direktes Öffnen von Ordnerkarten.
-
-### 2.3 Prompt-Kopie
-- **Kartenebene**: Kopieren direkt aus der Grid-Ansicht.
-- **Modalebene**: Kopieren aus Detailansicht.
-- **Favoriten-Dock**: Ein Klick auf Prompt-Favorit kopiert sofort.
-- **Fallback-Support** für Clipboard-Zugriff (moderne API + Legacy-`execCommand`).
-
-### 2.4 Favoriten-Dock (Bottom Quick Access)
-- Sichtbar, sobald Favoriten existieren.
-- Horizontaler, responsiver Chip-Stream mit adaptiven Höhen-/Breitenmechanismen.
-- Expand/Collapse-Mechanik inkl. Overflow-Indikatoren, Scrollbar-Reveal und Touch-Gesten.
-- Kontextmenü-Support (inkl. Favorit umschalten).
-
-### 2.5 **Neu: Hover-Aufklappmenü für Favoriten-Ordner**
-Wenn ein **Ordner** in der Favoritenleiste liegt:
-- Bei **Mouse-Over** (oder Fokus per Tastatur) erscheint oberhalb des Chips ein sanft animiertes Zusatzmenü.
-- Dieses Menü listet die im Ordner enthaltenen Prompts listenartig auf (rekursiv aus Unterordnern gesammelt).
-- Ein Klick auf einen Eintrag kopiert den Prompt-Inhalt direkt in die Zwischenablage.
-- Verlässt der Fokus/Pointer den Bereich, klappt das Menü wieder ein.
-- Die Standardfunktion des Ordner-Chips (Ordner öffnen per Klick) bleibt erhalten.
-
-### 2.6 CRUD & Organisation
-- Neue Prompts erstellen.
-- Neue Ordner erstellen.
-- Umbenennen von Karten.
-- Löschen von Prompts/Ordnern.
-- Verschieben via Move-Dialog.
-- Organize-Modus mit Sortier-/Anordnungsworkflow.
-
-### 2.7 JSON Import/Export
-- Download des aktuellen Datenbestands als JSON.
-- Upload neuer JSON-Datei via Datei-Dialog oder Drop-Zone.
-
-### 2.8 Synchronisation
-- Live-Modus über Server-Endpunkt (`functions/api/templates.js`) mit Zeitstempelabgleich.
-- Lokale Persistenz inkl. Favoriten im `localStorage`.
-- UI-Status für aktive Storage-Quelle.
-
-### 2.9 UX-Feinschliff
-- Benachrichtigungssystem für Aktionen und Feedback.
-- Kontextmenüs für schnellere Sekundäraktionen.
-- Touch-spezifische Bedienpfade.
-- Motion-Handling inkl. Reduced-Motion-Pfade.
-- Fullscreen-Option, responsive Safe-Area-Strategie und mobile Viewport-Offsets.
+1. [Produktidee & Kernnutzen](#1-produktidee--kernnutzen)
+2. [Anwendungsfälle (Praxisperspektive)](#2-anwendungsfälle-praxisperspektive)
+3. [Domänenmodell & Datenstruktur](#3-domänenmodell--datenstruktur)
+4. [Informationsarchitektur & Navigation](#4-informationsarchitektur--navigation)
+5. [UI-System im Detail](#5-ui-system-im-detail)
+6. [Favoritenleiste (Dock) – Verhaltensmodell](#6-favoritenleiste-dock--verhaltensmodell)
+7. [Neu: Favoriten-Ordner mit Hover/Touch-Aufklappmenü](#7-neu-favoriten-ordner-mit-hovertouch-aufklappmenü)
+8. [Prompt-Lebenszyklus (Erstellen bis Kopieren)](#8-prompt-lebenszyklus-erstellen-bis-kopieren)
+9. [Bearbeiten, Organisieren, Verknüpfen](#9-bearbeiten-organisieren-verknüpfen)
+10. [Import/Export & Persistenz](#10-importexport--persistenz)
+11. [Cloud-Sync & Laufzeitkonsistenz](#11-cloud-sync--laufzeitkonsistenz)
+12. [Interaktion, Gesten, Motion & Feedback](#12-interaktion-gesten-motion--feedback)
+13. [Accessibility & Resilienz](#13-accessibility--resilienz)
+14. [Design-Philosophie (Look & Feel)](#14-design-philosophie-look--feel)
+15. [Technische Architektur](#15-technische-architektur)
+16. [Dateiübersicht](#16-dateiübersicht)
+17. [Betrieb, lokale Entwicklung, Deployment](#17-betrieb-lokale-entwicklung-deployment)
+18. [Zusammenfassung](#18-zusammenfassung)
 
 ---
 
-## 3) UI-/UX-Philosophie im Detail
+## 1. Produktidee & Kernnutzen
 
-### 3.1 Bediengeschwindigkeit vor Klicktiefe
-Die App reduziert Kontextwechsel: häufige Aufgaben (Kopie, Navigation, Favoritenzugriff) sind mit minimaler Interaktion erreichbar.
+Die App löst ein typisches Produktivitätsproblem: Prompt-Sammlungen wachsen schnell, aber das Wiederfinden und Wiederverwenden kostet überproportional viel Zeit. Prompt-Templates reduziert diese Reibung durch:
 
-### 3.2 Visuelle Hierarchie
-- Header als persistenter Kontrollraum.
-- Karten-Grid als Primärarbeitsfläche.
-- Favoriten-Dock als sekundärer, aber permanent erreichbarer Schnellkanal.
+- **Hierarchische Ordnung** (Ordner/Unterordner) für semantische Struktur.
+- **Direkten Zugriff** über Favoriten für High-Frequency-Prompts.
+- **Sofortkopie** aus mehreren Interaktionspunkten.
+- **Bearbeitbarkeit im laufenden Betrieb** ohne Toolwechsel.
+- **Cloud-/Local-Hybridpersistenz** mit Realtime-Sync-Mechanik.
 
-### 3.3 Motion mit Funktion statt Deko
-Animationen signalisieren Zustandswechsel (enter/copy-success/expand) und verbessern Orientierung. Bei Nutzerwunsch wird Bewegung reduziert.
-
-### 3.4 Hover-Folder-Menü als Mikro-Informationsarchitektur
-Die neue Hover-Liste adressiert einen realen Workflow: „Ordner merken, Prompt ohne Ordnerwechsel kopieren“. Damit bleibt die Struktur tief, der Zugriff aber flach.
+Leitprinzip: **Maximale Arbeitsgeschwindigkeit bei minimaler kognitiver Last**.
 
 ---
 
-## 4) Technische Architektur
+## 2. Anwendungsfälle (Praxisperspektive)
 
-## 4.1 Frontend-Schichten
-- **`index.html`**: Struktur, Modals, Dock, Top-Bar, SVG-Templates.
-- **`style.css`**: Designsystem, Layout, States, Animationen, responsive Regeln.
-- **`script.js`**: Datenlogik, Rendering, Eventing, Clipboard, Navigation, Sync, UI-State.
+- AI-Workflow für Content-Teams (Briefing-, Struktur-, Rewrite-, SEO- und QA-Prompts).
+- Entwicklungsteams mit wiederkehrenden Debug-, Review-, Refactor- oder Architekturprompts.
+- Beratung/Agentur-Setups mit kundenspezifischen Prompt-Sets.
+- Persönliche Wissenssammlung mit schnell kopierbaren Bausteinen.
 
-## 4.2 Backend-/API-Schicht
-- **`functions/api/templates.js`**: API-Entry für Template-Daten (Cloudflare-Functions-Kontext).
-
-## 4.3 Datenquellen
-- **`templates.json`** als lokale Basisdaten.
-- Cloud-Storage-Flow mit Polling/Sync-Timestamp.
+Zentral ist immer derselbe Hebel: **Prompt finden → prompt kopieren → direkt nutzen**.
 
 ---
 
-## 5) Neue Implementierung: Favoriten-Ordner Hover-Menü
+## 3. Domänenmodell & Datenstruktur
 
-### 5.1 Logik
-- Neue rekursive Sammelfunktion für Prompts aus Ordnern.
-- Beim Rendern jedes Favoriten-Chips wird bei `folder` ein Menü erzeugt, sofern Prompts vorhanden sind.
-- Menüeinträge sind Buttons; Klick stoppt Event-Bubbling und löst Copy-Flow aus.
+### 3.1 Elementtypen
 
-### 5.2 Interaktionsregeln
-- Sichtbar nur auf `:hover`, `:focus-visible`, `:focus-within` des jeweiligen Ordner-Chips.
-- Default-Zustand: unsichtbar, pointer-inert, leicht versetzt.
-- Aktivzustand: opacity/transform animiert, pointer-events aktiv.
+- **`prompt`**
+  - Eigenschaften: `id`, `title`, `content`
+  - Verhalten: anzeigen, bearbeiten, kopieren, favorisieren, verschieben, verlinken
 
-### 5.3 Ergebnis
-- Schnelleres Arbeiten aus dem Favoriten-Dock.
-- Kein erzwungener Navigationswechsel zum Kopieren von Unterelementen.
-- Saubere Tastaturbedienbarkeit via Fokuszuständen.
+- **`folder`**
+  - Eigenschaften: `id`, `title`, `items[]`
+  - Verhalten: navigieren, strukturieren, favorisieren, verschieben, verlinken
 
----
+- **`prompt-link` / `folder-link`**
+  - Eigenschaften: `id`, `targetId`, `title`
+  - Verhalten: referenziert vorhandene Knoten statt Duplikate
 
-## 6) Komponenteninventar (vollständig)
+### 3.2 Graph-Auflösung
 
-- **Top-Bar**: Back, Breadcrumb, Organize, Add-Menü, Reset, JSON-Menü, Storage-Source-Toggle, Favorites-Clear, Fullscreen, App-Logo/Home.
-- **Cards Container**: Prompt-/Ordnerkarten inkl. Aktionsbuttons.
-- **Prompt-Modal**: Anzeigen, Kopieren, Bearbeiten/Speichern, Favorisieren, Schließen.
-- **Create-Folder-Modal**.
-- **Link-Item-Modal** (Prompt-/Ordner-Verknüpfungen).
-- **Move-Item-Modal**.
-- **Upload-JSON-Modal** mit Drop-Zone.
-- **Context-Menu-System** für Karten/Favoriten.
-- **Favorites Dock**: Toggle, Scroll-Area, Chips, Hover-Folder-Menü.
-- **Notification Area**.
-- **Aurora-/Particle-/Glow-/Tilt-Visual-Systeme**.
+Verknüpfte Elemente werden über Ziel-IDs aufgelöst. Damit bleibt die Quelle eindeutig, und Änderungen am Original propagieren logisch in alle Verweise.
+
+### 3.3 Favoritenmodell
+
+Favoriten sind als ID-Liste (`favoritePrompts`) gespeichert. Zulässig sind Prompt- und Ordner-IDs. Beim Rendern werden ungültige/verwaiste IDs bereinigt.
 
 ---
 
-## 7) Bedienabläufe (typische Journeys)
+## 4. Informationsarchitektur & Navigation
 
-1. **Prompt öffnen und kopieren**: Karte klicken → Modal → Copy.
-2. **Sofortkopie via Favoriten**: Favorit-Prompt im Dock klicken.
-3. **Ordnerfavorit mit Hover-Liste**: Maus auf Favoriten-Ordner → gewünschte Prompt-Zeile klicken → Inhalt kopiert.
-4. **Strukturpflege**: Organize + Kontextmenü (Move/Rename/Delete).
-5. **Datenpflege**: JSON importieren/exportieren.
-6. **Geräteoptimierung**: Fullscreen, Touch-Gesten, reduzierte Motion je Präferenz.
+- Root-Ebene als Einstieg in die gesamte Bibliothek.
+- Breadcrumb-Navigation für Positionsklarheit.
+- Rücknavigation (Topbar + Fixed Back) für schnelle Ebenenwechsel.
+- App-Logo als deterministische Rückkehr zur Startansicht.
 
----
-
-## 8) Setup & Betrieb
-
-### 8.1 Lokal starten
-Da es sich um eine statische Frontend-Anwendung mit optionaler Functions-Integration handelt, genügt ein lokaler Static-Server (z. B. via VSCode Live Server oder beliebiger HTTP-Server).
-
-### 8.2 Deployment
-- Frontend-Dateien deployen.
-- Bei Cloud-Sync den Functions-Endpunkt und KV-Bindings korrekt konfigurieren.
-- Manifest/Icons für PWA unverändert mit ausrollen.
+Die Navigation ist bewusst **strukturerhaltend**: Der Nutzer bleibt im mentalen Modell eines Dateisystems.
 
 ---
 
-## 9) Accessibility & Robustheit
+## 5. UI-System im Detail
 
-- Aria-Labels für zentrale Bedienelemente.
-- Fokuszustände und Tastaturzugänglichkeit für interaktive Controls.
-- Reduced-Motion-Strategien.
-- Defensive Fallbacks für Clipboard-Funktionen.
+### 5.1 Top-Bar als Control Center
+
+Enthält zentrale Aktionen:
+- Zurück
+- Breadcrumb
+- Organize-Modus
+- Add-Menü (Prompt, Ordner, Links)
+- JSON-Menü (Download/Upload)
+- Reset lokaler Cache
+- Cloud-Quellenindikator
+- Favoriten leeren
+- Fullscreen
+- Home über App-Logo
+
+### 5.2 Kartenfläche (Grid)
+
+- Responsives Kartensystem für Prompts/Ordner.
+- Direkte Kontextaktionen via Kontextmenü und Organisationsmodus.
+- Visuelle Rückmeldung bei Interaktion (Hover, Focus, Drag, Copy).
+
+### 5.3 Modals
+
+- Prompt-Modal (Lesen/Bearbeiten/Speichern/Favorisieren/Kopieren).
+- Ordner-Erstellung.
+- Verknüpfungsdialoge.
+- Move-Dialog.
+- Upload-Dialog mit Drop-Zone.
+
+### 5.4 Notifications
+
+Jede relevante Aktion erzeugt klares Feedback (Erfolg/Info/Fehler), inkl. Auto-Dismiss und Übergangsanimation.
 
 ---
 
-## 10) Design-Tokens & visuelle Sprache
+## 6. Favoritenleiste (Dock) – Verhaltensmodell
 
-- Dunkles Aurora-Farbsystem mit klaren Kontrasten.
-- Glas-/Glow-Layering für Tiefenwirkung.
-- Semantische Aktionsfarben (Favorit/Löschen/Edit/Move).
-- Konsistente Radius-, Schatten- und Übergangssystematik.
+Das Dock ist der produktive Schnellzugriff:
+
+- Sichtbar nur, wenn Favoriten existieren.
+- Chips mit adaptiver Breite/Höhe abhängig von Viewport und Anzahl.
+- Overflow-Indikatoren, Scrollbereich, Expand/Collapse.
+- Touch-/Wheel-Handling für natürliche horizontale Bewegung.
+- Kontextmenüfähig.
+
+Jeder Chip enthält:
+- Badge (Initial)
+- Titel
+- optionalen Prompt-Preview-Text
+- Farb-/Glow-Akzent über vordefinierte Accent-Palette
 
 ---
 
-## 11) Dateien im Projekt
+## 7. Neu: Favoriten-Ordner mit Hover/Touch-Aufklappmenü
+
+Dieses Verhalten ist jetzt gezielt für Ordner-Favoriten umgesetzt.
+
+### 7.1 Ziel
+
+Wenn ein Ordner in der Favoritenleiste liegt, soll ein schneller Zugriff auf enthaltene Promptkarten möglich sein, **ohne den Ordner zuerst zu öffnen**.
+
+### 7.2 Öffnen (Desktop / Maus / Fokus)
+
+- **Mouse Over (`mouseenter`)** auf den Ordner-Chip öffnet ein Aufklappmenü oberhalb des Chips.
+- **Keyboard-Fokus (`focusin`)** öffnet das Menü ebenfalls.
+- Menüeinträge erscheinen gestaffelt animiert und bleiben logisch im Chip-Kontext.
+
+### 7.3 Schließen (Desktop)
+
+- **Mouse Leave (`mouseleave`)** schließt verzögert (kurzer Intent-Delay), damit kleine Zeigerbewegungen nicht sofort „abbrechen“.
+- **Focus Out (`focusout`)** schließt, sobald Fokus den Chip-/Menübereich verlässt.
+- Klick außerhalb schließt global zuverlässig.
+
+### 7.4 Touch-Verhalten (Mobile/Tablets)
+
+- Touch-ähnliche Eingaben behandeln den Ordner-Chip als Toggle:
+  - erster Tap öffnet/schließt das Aufklappmenü,
+  - weiterer Tap auf einen Eintrag kopiert den Prompt.
+- Das Verhalten entspricht klassischen Touch-Erwartungen: explizites Öffnen, dann gezielte Auswahl.
+
+### 7.5 Listeninhalt
+
+- Die Liste zeigt Prompt-Titel aus dem Ordner **rekursiv** (inkl. Unterordner, mit Schutz gegen Zyklen via `seen`-Set).
+- Jeder Eintrag ist ein klickbares Button-Element.
+- Klick auf Eintrag:
+  1. Prompt-Inhalt wird in Zwischenablage kopiert,
+  2. Erfolg wird visuell/haptisch bestätigt,
+  3. Menü wird geschlossen.
+
+### 7.6 UX-Effekt
+
+- Drastisch weniger Navigationssprünge für häufige Unterprompts.
+- Favoritenordner werden zu „Micro-Launchern“ für Prompt-Sets.
+- Maus- und Touch-Logik bleiben konsistent mit Plattformkonventionen.
+
+---
+
+## 8. Prompt-Lebenszyklus (Erstellen bis Kopieren)
+
+1. Prompt anlegen (Add-Menü).
+2. Titel/Inhalt definieren.
+3. In Ordnerstruktur einordnen.
+4. Optional favorisieren.
+5. Später über Karte, Modal oder Favoritenchip kopieren.
+6. Bei Bedarf bearbeiten/verschieben/verknüpfen.
+
+Die Anwendung unterstützt diesen Zyklus ohne Medienbruch.
+
+---
+
+## 9. Bearbeiten, Organisieren, Verknüpfen
+
+- **Umbenennen** direkt über UI-Flows.
+- **Verschieben** über dedizierten Zielordnerdialog.
+- **Löschen** mit expliziten Schutzabfragen.
+- **Organize-Modus** inkl. Sortierung und strukturierter Reorder-Logik.
+- **Verknüpfungen** erlauben kuratierte Querverbindungen ohne Datenkopie.
+
+---
+
+## 10. Import/Export & Persistenz
+
+- **Download JSON** exportiert den aktuellen Stand.
+- **Upload JSON** importiert über Dateiauswahl oder Drag-and-Drop.
+- Lokale Daten und Favoriten liegen in `localStorage`.
+
+Die App bietet damit sowohl einfache Sicherung als auch schnelle Migration.
+
+---
+
+## 11. Cloud-Sync & Laufzeitkonsistenz
+
+- Cloudflare-KV-basierte Datenquelle via Functions-Endpunkt.
+- Zeitstempelgestütztes Sync-Verhalten zur Konfliktreduktion.
+- Re-Sync bei Fokus/Visibility-Wechsel.
+- Lokaler Cache kann gezielt verworfen und aus Cloud neu geladen werden.
+
+---
+
+## 12. Interaktion, Gesten, Motion & Feedback
+
+- Hover-, Focus-, Active-Zustände entlang aller primären Controls.
+- Touch-Gesten im Favoritenbereich (u. a. Expand/Collapse-Intention).
+- Aurora-, Sparkle-, Glow- und Tilt-Effekte mit `prefers-reduced-motion`-Rücksicht.
+- Copy-Feedback visuell + (mobil) optional haptisch per Vibration.
+
+---
+
+## 13. Accessibility & Resilienz
+
+- Aria-Labels für wichtige Bedienelemente.
+- Fokusbasierte Nutzbarkeit zentraler Aktionen.
+- Reduced-Motion-Unterstützung.
+- Clipboard-Fallback (`execCommand`) für ältere/limitierte Umgebungen.
+- Defensive Behandlung ungültiger Favoriten-/Linkzustände.
+
+---
+
+## 14. Design-Philosophie (Look & Feel)
+
+- Dunkles Aurora-Farbsystem für ruhige Langnutzung.
+- Glassmorphism-Layer für räumliche Tiefe.
+- Semantische Aktionsfarben (Favorit/Move/Edit/Delete).
+- Mikroanimationen zur Statuskommunikation statt reiner Dekoration.
+
+Designziel: **Premium-Haptik mit klarer Funktionalität**.
+
+---
+
+## 15. Technische Architektur
+
+### Frontend
+- `index.html`: semantische Grundstruktur, Modals, Dock, SVG-Templates.
+- `style.css`: Tokens, Layout, States, Animationen, responsive Regeln.
+- `script.js`: State, Rendering, Eventing, Clipboard, Sync, Navigation, Gesten.
+
+### Backend/Functions
+- `functions/api/templates.js`: API-Zugriff für Datenquelle/Sync.
+
+### Statische Konfiguration
+- `templates.json`, `manifest.json`, `browserconfig.xml`, `icons/*`.
+
+---
+
+## 16. Dateiübersicht
 
 - `index.html`
 - `style.css`
@@ -199,6 +287,21 @@ Da es sich um eine statische Frontend-Anwendung mit optionaler Functions-Integra
 
 ---
 
-## 12) Zusammenfassung
+## 17. Betrieb, lokale Entwicklung, Deployment
 
-Die Anwendung liefert eine vollständig auf Prompt-Operations optimierte UX: strukturierte Ablage, blitzschnelles Kopieren, starke Favoriten-Mechanik und kontrollierbare Datenhaltung. Mit dem neuen Hover-Aufklappmenü für Favoriten-Ordner wird die Bedienung nochmals verdichtet: Inhalte tiefer Strukturen sind direkt erreichbar, ohne den Navigationskontext zu verlassen.
+### Lokal
+App über statischen HTTP-Server starten (z. B. lokale Dev-Server-Lösung).
+
+### Deployment
+- Frontend-Dateien ausrollen.
+- Functions-Endpunkt bereitstellen.
+- KV-Bindings/Umgebungsvariablen korrekt setzen.
+- PWA-Artefakte (`manifest`, Icons) mitdeployen.
+
+---
+
+## 18. Zusammenfassung
+
+Prompt-Templates ist eine durchdachte, auf Geschwindigkeit optimierte Prompt-Operations-App: strukturierte Ablage, starke Favoritenmechanik, robuste Bearbeitungs- und Sync-Funktionen, sauberes visuelles Feedback. 
+
+Mit dem erweiterten Favoriten-Ordner-Verhalten (Hover/Focus/Tap-Aufklappen mit direkter Eintragskopie) wird die letzte häufige Reibung im Alltag eliminiert: **Prompts aus tiefen Ordnern sind jetzt aus der Favoritenleiste direkt kopierbar – plattformlogisch für Maus und Touch.**

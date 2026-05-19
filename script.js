@@ -46,6 +46,7 @@ let lastFavoriteChipBaseHeightValue = null;
 let lastFavoriteChipHeightValue = null;
 let lastFavoritesFootprintHeight = null;
 let activeFavoriteFolderMenuChip = null;
+let favoriteFolderMenuCloseTimer = null;
 let motionMediaQuery = null;
 let prefersReducedMotion = false;
 let auroraParallaxOffset = 0;
@@ -3221,6 +3222,10 @@ function createFavoriteFolderHoverMenu(folderNode, chipButton) {
 
 
 function closeFavoriteFolderMenu() {
+    if (favoriteFolderMenuCloseTimer) {
+        clearTimeout(favoriteFolderMenuCloseTimer);
+        favoriteFolderMenuCloseTimer = null;
+    }
     if (!activeFavoriteFolderMenuChip) return;
     activeFavoriteFolderMenuChip.classList.remove('is-folder-menu-open');
     activeFavoriteFolderMenuChip.setAttribute('aria-expanded', 'false');
@@ -3244,6 +3249,16 @@ function toggleFavoriteFolderMenu(chipButton) {
         return;
     }
     openFavoriteFolderMenu(chipButton);
+}
+
+function scheduleFavoriteFolderMenuClose(delay = 120) {
+    if (favoriteFolderMenuCloseTimer) {
+        clearTimeout(favoriteFolderMenuCloseTimer);
+    }
+    favoriteFolderMenuCloseTimer = setTimeout(() => {
+        favoriteFolderMenuCloseTimer = null;
+        closeFavoriteFolderMenu();
+    }, delay);
 }
 
 function handleGlobalPointerDown(event) {
@@ -3370,13 +3385,41 @@ function renderFavoritesDock() {
                 button.setAttribute('aria-haspopup', 'true');
                 button.setAttribute('aria-expanded', 'false');
                 button.appendChild(hoverMenu);
+
+                button.addEventListener('mouseenter', () => {
+                    if (favoriteFolderMenuCloseTimer) {
+                        clearTimeout(favoriteFolderMenuCloseTimer);
+                        favoriteFolderMenuCloseTimer = null;
+                    }
+                    openFavoriteFolderMenu(button);
+                });
+
+                button.addEventListener('mouseleave', () => {
+                    scheduleFavoriteFolderMenuClose(140);
+                });
+
+                button.addEventListener('focusin', () => {
+                    openFavoriteFolderMenu(button);
+                });
+
+                button.addEventListener('focusout', (event) => {
+                    if (button.contains(event.relatedTarget)) {
+                        return;
+                    }
+                    scheduleFavoriteFolderMenuClose(120);
+                });
             }
         }
 
-        button.addEventListener('click', () => {
+        button.addEventListener('click', (event) => {
             if (node.type === 'folder') {
                 if (button.classList.contains('has-hover-folder-menu')) {
-                    toggleFavoriteFolderMenu(button);
+                    const isTouchLike = event.pointerType === 'touch' || window.matchMedia('(hover: none)').matches;
+                    if (isTouchLike) {
+                        toggleFavoriteFolderMenu(button);
+                    } else {
+                        navigateToNode(node);
+                    }
                     return;
                 }
                 navigateToNode(node);
