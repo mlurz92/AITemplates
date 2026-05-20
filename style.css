@@ -1421,59 +1421,75 @@ body.favorites-dock-visible .favorites-dock {
 
 .favorite-folder-hover-menu {
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: calc(100% + 0.42rem);
-    display: flex;
-    flex-direction: column-reverse;
-    gap: 0.34rem;
+    left: 50%;
+    bottom: calc(100% + 0.5rem);
+    transform: translate(-50%, 8px) scale(0.98);
+    width: min(340px, 86vw);
+    max-height: 260px;
+    padding: 0.45rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: linear-gradient(145deg, rgba(10, 16, 30, 0.96), rgba(14, 24, 44, 0.94));
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.46);
     pointer-events: none;
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
-    transform-origin: bottom center;
-    transition: opacity var(--duration-2) var(--ease-smooth),
-        transform var(--duration-2) var(--ease-smooth);
+    transition: opacity var(--duration-2) var(--ease-smooth), transform var(--duration-2) var(--ease-smooth);
     z-index: 30;
 }
 
 .favorite-chip.has-hover-folder-menu.is-folder-menu-open .favorite-folder-hover-menu {
     opacity: 1;
     pointer-events: auto;
-    transform: translateY(0) scale(1);
+    transform: translate(-50%, 0) scale(1);
 }
 
-.favorite-folder-hover-item {
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: linear-gradient(145deg, rgba(16, 22, 38, 0.96), rgba(18, 28, 48, 0.9));
+.favorite-folder-hover-header {
+    font-size: 0.72rem;
+    color: var(--fg-2);
+    padding: 0.2rem 0.35rem 0.45rem;
+}
+
+.favorite-folder-hover-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 208px;
+    overflow: auto;
+}
+
+.favorite-folder-hover-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.4rem;
+    align-items: center;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 0.36rem 0.4rem;
+    background: rgba(255,255,255,0.03);
+}
+
+.favorite-folder-hover-title {
+    font-size: 0.78rem;
     color: var(--fg-1);
-    border-radius: 11px;
-    padding: 0.42rem 0.58rem;
-    font-size: clamp(0.7rem, 1.08vw, 0.8rem);
-    line-height: 1.2;
-    text-align: left;
-    cursor: pointer;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
-    transform: translateY(6px);
-    opacity: 0;
-    transition: transform 240ms var(--ease-smooth),
-        opacity 200ms var(--ease-smooth),
-        border-color var(--duration-2) var(--ease-smooth),
-        background var(--duration-2) var(--ease-smooth);
-    transition-delay: calc(var(--folder-item-index, 0) * 32ms);
 }
 
-.favorite-chip.has-hover-folder-menu.is-folder-menu-open .favorite-folder-hover-item {
-    transform: translateY(0);
-    opacity: 1;
+.favorite-folder-hover-copy {
+    border: 1px solid rgba(6, 214, 214, 0.35);
+    background: rgba(6, 214, 214, 0.14);
+    color: var(--fg-1);
+    border-radius: 8px;
+    font-size: 0.72rem;
+    padding: 0.24rem 0.5rem;
+    cursor: pointer;
 }
 
-.favorite-folder-hover-item:hover,
-.favorite-folder-hover-item:focus-visible {
-    border-color: rgba(0, 230, 255, 0.58);
-    background: linear-gradient(145deg, rgba(20, 34, 58, 0.98), rgba(24, 42, 66, 0.94));
+.favorite-folder-hover-copy:hover,
+.favorite-folder-hover-copy:focus-visible {
+    background: rgba(6, 214, 214, 0.25);
+    border-color: rgba(6, 214, 214, 0.6);
     outline: none;
 }
 @keyframes favorite-chip-enter {
@@ -2234,4 +2250,69 @@ body.favorites-dock-visible .favorites-dock {
 body.has-toolbar .cards-container { padding-top: 10px; }
 @media (max-width: 760px) {
   .view-toolbar { grid-template-columns: 1fr; top: calc(var(--safe-area-inset-top) + var(--top-bar-height) + 4px); }
+}
+
+
+/* Subtle toolbar/search placement + multi-select visuals */
+.view-toolbar {
+  max-width: min(920px, calc(100vw - 28px));
+  margin-inline: auto;
+  padding: 8px 10px;
+  border-color: rgba(255,255,255,.09);
+  background: linear-gradient(140deg, rgba(20,24,42,.58), rgba(14,18,34,.46));
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+}
+.toolbar-search-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+.toolbar-search-wrap {
+  justify-self: stretch;
+  width: 100%;
+}
+.toolbar-search-wrap[hidden] {
+  display: none;
+}
+.toolbar-search-wrap.is-open {
+  display: block;
+}
+.toolbar-search {
+  min-height: 40px;
+  font-size: 13px;
+  opacity: .88;
+}
+.toolbar-search::placeholder { color: rgba(220,230,255,.55); }
+.card.is-multi-selected {
+  outline: 2px solid rgba(6, 214, 214, 0.86);
+  box-shadow: 0 0 0 3px rgba(6, 214, 214, 0.22), var(--shadow-2);
+}
+.card.is-multi-selected::before {
+  opacity: .92;
+}
+@media (max-width: 760px) {
+  .view-toolbar { grid-template-columns: auto minmax(0, 1fr); }
+  .toolbar-sort { grid-column: 1 / -1; }
+  .toolbar-search-wrap { width: 100%; }
+}
+
+
+/* search only visible after icon click */
+.view-toolbar { position: fixed; top: calc(var(--safe-area-inset-top) + var(--top-bar-height) + 8px); right: clamp(12px,2vw,24px); left: auto; width: auto; display: flex; gap: 8px; padding: 6px; }
+.toolbar-sort { width: auto; min-width: 190px; }
+.toolbar-search-wrap { position: absolute; right: 0; top: calc(100% + 8px); width: min(420px, calc(100vw - 24px)); z-index: 130; }
+.toolbar-search-wrap[hidden] { display:none !important; }
+.toolbar-search-wrap.is-open { display:block; }
+.toolbar-search { width: 100%; box-shadow: 0 10px 24px rgba(0,0,0,.35); }
+
+.favorite-folder-hover-menu { left: 50%; right: auto; bottom: calc(100% + .35rem); width: min(300px, 84vw); }
+.favorite-folder-hover-list { max-height: 220px; overflow: auto; }
+.favorite-folder-hover-item { width:100%; text-align:left; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.04); color:var(--fg-1); border-radius:9px; padding:.38rem .5rem; font-size:.78rem; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.favorite-folder-hover-item:hover,.favorite-folder-hover-item:focus-visible{ background:rgba(6,214,214,.2); border-color:rgba(6,214,214,.55); outline:none; }
+
+@media (max-width: 760px){
+  .view-toolbar{ left: 12px; right: 12px; justify-content: flex-end; }
+  .toolbar-sort{ min-width: 150px; }
+  .toolbar-search-wrap{ right: 0; width: min(420px, calc(100vw - 24px)); }
 }
