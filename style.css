@@ -2247,7 +2247,7 @@ body.favorites-dock-visible .favorites-dock {
   font-size: 14px;
 }
 .toolbar-search:focus, .toolbar-sort:focus { outline: 2px solid rgba(6,214,214,.6); outline-offset: 1px; }
-body.has-toolbar .cards-container { padding-top: 10px; }
+body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + clamp(1.6rem, 3.8vw, 3.1rem) + var(--safe-area-inset-top)); }
 @media (max-width: 760px) {
   .view-toolbar { grid-template-columns: 1fr; top: calc(var(--safe-area-inset-top) + var(--top-bar-height) + 4px); }
 }
