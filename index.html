@@ -125,20 +125,19 @@
           <path d="M5 8V5a2 2 0 0 1 2-2h3m11 0h-3a2 2 0 0 1-2 2V8m0 11v-3a2 2 0 0 1 2-2h3m-11 0H8a2 2 0 0 1-2-2v-3"></path>
         </svg>
       </button>
+      <button id="search-toggle-button" class="btn btn-ghost" aria-label="Suche öffnen" aria-expanded="false">
+        <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </button>
       <button id="app-logo-button" class="btn btn-ghost" aria-label="Zur Startseite">
         <img id="app-logo-svg" src="icons/favicon.svg" alt="App Logo" width="30" height="30">
       </button>
     </header>
-        <section id="view-toolbar" class="view-toolbar" aria-label="Filter und Sortierung">
-      <div class="toolbar-search-wrap">
+        <section id="view-toolbar" class="view-toolbar" aria-label="Suche">
+      <div class="toolbar-search-wrap" hidden>
         <input id="search-input" class="toolbar-search" type="search" placeholder="Prompts & Ordner suchen …" aria-label="Suche in aktuellem Ordner">
       </div>
-      <select id="sort-select" class="toolbar-sort" aria-label="Sortierung">
-        <option value="manual">Sortierung: Manuell</option>
-        <option value="title-asc">Titel: A → Z</option>
-        <option value="title-desc">Titel: Z → A</option>
-        <option value="type">Typ: Ordner zuerst</option>
-      </select>
     </section>
     <main id="cards-container" class="cards-container"></main>
     <div id="prompt-modal" class="modal hidden">

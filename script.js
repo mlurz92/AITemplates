@@ -58,9 +58,10 @@ let displayModeMediaQuery = null;
 let installAppBtn = null;
 let deferredInstallPrompt = null;
 let searchInputEl = null;
-let sortSelectEl = null;
+let searchToggleBtn = null;
+let searchWrapEl = null;
 let currentSearchQuery = '';
-let currentSortMode = 'manual';
+let multiSelectedCardIds = new Set();
 
 const FAVORITE_ACCENTS = [
     { accent: '#8b5cf6', border: 'rgba(139, 92, 246, 0.65)', soft: 'rgba(139, 92, 246, 0.18)', glow: 'rgba(139, 92, 246, 0.36)', text: '#0c0f17' },
@@ -150,7 +151,8 @@ function initApp() {
     storageSourceBtn = document.getElementById('storage-source-button');
     installAppBtn = document.getElementById('install-app-button');
     searchInputEl = document.getElementById('search-input');
-    sortSelectEl = document.getElementById('sort-select');
+    searchToggleBtn = document.getElementById('search-toggle-button');
+    searchWrapEl = document.querySelector('.toolbar-search-wrap');
 
     favoritesDockEl = document.getElementById('favorites-dock');
     favoritesListEl = document.getElementById('favorites-list');
@@ -228,13 +230,13 @@ function createContextMenu() {
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
-            Umbenennen
+            <span>Umbenennen</span>
         </div>
         <div class="context-menu-item" data-action="move">
              <svg class="icon icon-move" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line>
             </svg>
-            Verschieben...
+            <span>Verschieben...</span>
         </div>
         <div class="context-menu-divider"></div>
         <div class="context-menu-item" data-action="delete">
@@ -243,7 +245,7 @@ function createContextMenu() {
                 <line x1="15" y1="9" x2="9" y2="15"></line>
                 <line x1="9" y1="9" x2="15" y2="15"></line>
             </svg>
-            Löschen
+            <span>Löschen</span>
         </div>
     `;
     document.body.appendChild(contextMenu);
@@ -257,10 +259,29 @@ function createContextMenu() {
         const favoriteTargetId = contextMenu.getAttribute('data-favorite-target-id');
         const card = document.querySelector(`.card[data-id="${elementId}"]`);
         
+        const selectionIds = getContextSelectionIds(elementId);
         if (action === 'rename') startRenamingCard(card);
-        else if (action === 'delete') handleDeleteClick(elementId, card);
-        else if (action === 'move') openMoveItemModal(elementId);
-        else if (action === 'toggle-favorite' && favoriteTargetId) toggleFavoriteStatus(favoriteTargetId);
+        else if (action === 'delete') {
+            if (selectionIds.length > 1) {
+                const ok = confirm(`${selectionIds.length} Elemente wirklich löschen?`);
+                if (ok) deleteItemsByIds(selectionIds);
+            } else {
+                handleDeleteClick(elementId, card);
+            }
+        }
+        else if (action === 'move') {
+            if (selectionIds.length > 1) {
+                showNotification('Mehrfach verschieben: Zielordner im Dialog auswählen.', 'info');
+                openMoveItemModal(selectionIds[0]);
+            } else {
+                openMoveItemModal(elementId);
+            }
+        }
+        else if (action === 'toggle-favorite') {
+            const ids = selectionIds.length > 0 ? selectionIds : [favoriteTargetId];
+            ids.forEach((selId) => toggleFavoriteStatus(selId));
+            clearMultiSelection();
+        }
         
         hideContextMenu();
     });
@@ -288,6 +309,8 @@ function showContextMenu(x, y, targetElement) {
     const type = targetElement.dataset.type || (targetElement.classList.contains('favorite-chip') ? 'favorite' : null);
     if (!id || !type) return;
 
+    const selectedIds = getContextSelectionIds(id);
+    const isMulti = selectedIds.length > 1;
     const favoriteTargetId = getFavoriteTargetIdForElement(targetElement);
     const isFavorite = favoriteTargetId ? favoritePrompts.includes(favoriteTargetId) : false;
 
@@ -298,7 +321,7 @@ function showContextMenu(x, y, targetElement) {
     const favoriteText = favoriteItem.querySelector('span');
     const dividers = contextMenu.querySelectorAll('.context-menu-divider');
 
-    renameItem.classList.toggle('hidden', type === 'favorite');
+    renameItem.classList.toggle('hidden', type === 'favorite' || isMulti);
     moveItem.classList.toggle('hidden', type === 'favorite');
     deleteItem.classList.toggle('hidden', type !== 'folder' && type !== 'prompt');
     dividers[1].classList.toggle('hidden', type === 'favorite');
@@ -316,6 +339,12 @@ function showContextMenu(x, y, targetElement) {
         dividers[0].classList.remove('hidden');
     }
 
+    const deleteText = deleteItem.querySelector('svg + text, span') || deleteItem.childNodes[3];
+    const moveText = moveItem.querySelector('span') || moveItem.lastChild;
+    const renameText = renameItem.querySelector('span') || renameItem.lastChild;
+    if (deleteItem.querySelector('span')) deleteItem.querySelector('span').textContent = isMulti ? `Auswahl löschen (${selectedIds.length})` : 'Löschen';
+    if (moveItem.querySelector('span')) moveItem.querySelector('span').textContent = isMulti ? `Auswahl verschieben (${selectedIds.length})` : 'Verschieben...';
+    if (renameItem.querySelector('span')) renameItem.querySelector('span').textContent = 'Umbenennen';
     contextMenu.setAttribute('data-id', id);
     contextMenu.setAttribute('data-favorite-target-id', favoriteTargetId || '');
     contextMenu.classList.add('visible');
@@ -1030,6 +1059,54 @@ function handleKeyDown(e) {
     }
 }
 
+
+function clearMultiSelection() {
+    multiSelectedCardIds.clear();
+    containerEl.querySelectorAll('.card.is-multi-selected').forEach((card) => card.classList.remove('is-multi-selected'));
+}
+
+function toggleCardMultiSelection(card) {
+    const id = card?.getAttribute('data-id');
+    if (!id) return;
+    if (multiSelectedCardIds.has(id)) {
+        multiSelectedCardIds.delete(id);
+        card.classList.remove('is-multi-selected');
+    } else {
+        multiSelectedCardIds.add(id);
+        card.classList.add('is-multi-selected');
+    }
+}
+
+function getContextSelectionIds(fallbackId = null) {
+    const ids = Array.from(multiSelectedCardIds);
+    if (ids.length > 0) return ids;
+    return fallbackId ? [fallbackId] : [];
+}
+
+function deleteItemsByIds(ids) {
+    let removed = 0;
+    ids.forEach((id) => {
+        const parentNode = findParentOfNode(id);
+        if (!parentNode?.items) return;
+        const index = parentNode.items.findIndex(item => item.id === id);
+        if (index > -1) {
+            parentNode.items.splice(index, 1);
+            removed += 1;
+            if (favoritePrompts.includes(id)) {
+                favoritePrompts = favoritePrompts.filter(favId => favId !== id);
+            }
+        }
+    });
+    if (removed > 0) {
+        saveFavorites();
+        renderFavoritesDock();
+        persistJsonData(`${removed} Element(e) gelöscht!`, 'success');
+        clearMultiSelection();
+        renderView(currentNode);
+        updateBreadcrumb();
+    }
+}
+
 function handleContextMenu(e) {
     e.preventDefault();
 
@@ -1487,6 +1564,16 @@ function handleCardContainerClick(e) {
     }
 
     const button = e.target.closest('button[data-action]');
+
+    if ((e.ctrlKey || e.metaKey) && !button && !containerEl.classList.contains('edit-mode')) {
+        e.preventDefault();
+        toggleCardMultiSelection(card);
+        return;
+    }
+
+    if (!e.ctrlKey && !e.metaKey && multiSelectedCardIds.size > 0 && !button) {
+        clearMultiSelection();
+    }
     
     if (containerEl.classList.contains('edit-mode')) {
         if (button) {
@@ -1909,17 +1996,58 @@ function adjustCardTitleFontSize(card) {
 }
 
 
+function setSearchExpanded(expanded) {
+    if (!searchWrapEl || !searchToggleBtn) return;
+    searchWrapEl.hidden = !expanded;
+    searchWrapEl.classList.toggle('is-open', expanded);
+    searchToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    searchToggleBtn.setAttribute('aria-label', expanded ? 'Suche schließen' : 'Suche öffnen');
+    if (expanded) {
+        requestAnimationFrame(() => searchInputEl?.focus());
+    }
+}
+
 function setupViewToolbar() {
-    if (!searchInputEl || !sortSelectEl) return;
+    if (!searchInputEl || !searchToggleBtn || !searchWrapEl) return;
     document.body.classList.add('has-toolbar');
+    setSearchExpanded(false);
+
+    searchToggleBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const isOpen = searchToggleBtn.getAttribute('aria-expanded') === 'true';
+        if (isOpen && currentSearchQuery) {
+            currentSearchQuery = '';
+            searchInputEl.value = '';
+            renderView(currentNode);
+        }
+        setSearchExpanded(!isOpen);
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!searchWrapEl || searchWrapEl.hidden) return;
+        if (searchWrapEl.contains(event.target) || searchToggleBtn.contains(event.target)) return;
+        if (!currentSearchQuery) {
+            setSearchExpanded(false);
+        }
+    });
+
     searchInputEl.addEventListener('input', (event) => {
         currentSearchQuery = (event.target.value || '').trim().toLowerCase();
         renderView(currentNode);
     });
-    sortSelectEl.addEventListener('change', (event) => {
-        currentSortMode = event.target.value || 'manual';
-        renderView(currentNode);
+
+    searchInputEl.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            if (!currentSearchQuery) {
+                setSearchExpanded(false);
+            } else {
+                currentSearchQuery = '';
+                searchInputEl.value = '';
+                renderView(currentNode);
+            }
+        }
     });
+
 }
 
 function getVisibleNodesForCurrentView(childNodes) {
@@ -1932,23 +2060,12 @@ function getVisibleNodesForCurrentView(childNodes) {
         });
     }
 
-    if (currentSortMode === 'title-asc') {
-        list.sort((a, b) => (a.title || '').localeCompare((b.title || ''), 'de', { sensitivity: 'base' }));
-    } else if (currentSortMode === 'title-desc') {
-        list.sort((a, b) => (b.title || '').localeCompare((a.title || ''), 'de', { sensitivity: 'base' }));
-    } else if (currentSortMode === 'type') {
-        list.sort((a, b) => {
-            const aFolder = (a.type || '').includes('folder') ? 0 : 1;
-            const bFolder = (b.type || '').includes('folder') ? 0 : 1;
-            return aFolder - bFolder || (a.title || '').localeCompare((b.title || ''), 'de', { sensitivity: 'base' });
-        });
-    }
-
     return list;
 }
 
 function renderView(node) {
     exitOrganizeMode();
+    clearMultiSelection();
     const currentScroll = containerEl.scrollTop;
     containerEl.innerHTML = '';
     if (!node) {
@@ -3237,35 +3354,40 @@ function collectPromptsFromFolder(folderNode, seen = new Set()) {
 }
 
 function createFavoriteFolderHoverMenu(folderNode, chipButton) {
-    const prompts = collectPromptsFromFolder(folderNode);
+    const prompts = collectPromptsFromFolder(folderNode).slice(0, 10);
     if (!prompts.length) return null;
 
-    const menu = document.createElement('div');
-    menu.className = 'favorite-folder-hover-menu';
-    menu.setAttribute('role', 'list');
-    menu.setAttribute('aria-label', `Prompts in ${folderNode.title || 'Ordner'}`);
+    const panel = document.createElement('div');
+    panel.className = 'favorite-folder-hover-menu';
+    panel.setAttribute('role', 'listbox');
+    panel.setAttribute('aria-label', `Vorschau für ${folderNode.title || 'Ordner'}`);
 
-    const fragment = document.createDocumentFragment();
+    const header = document.createElement('div');
+    header.className = 'favorite-folder-hover-header';
+    header.textContent = `${folderNode.title || 'Ordner'} · ${prompts.length} Prompt${prompts.length === 1 ? '' : 's'}`;
+    panel.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'favorite-folder-hover-list';
+
     prompts.forEach((promptNode, index) => {
         const item = document.createElement('button');
         item.type = 'button';
         item.className = 'favorite-folder-hover-item';
-        item.setAttribute('role', 'listitem');
         item.style.setProperty('--folder-item-index', String(index));
         item.textContent = promptNode.title || 'Unbenannter Prompt';
-
+        item.setAttribute('aria-label', `Prompt ${promptNode.title || 'Unbenannter Prompt'} kopieren`);
         item.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
             copyToClipboard(promptNode.content || '', chipButton, promptNode);
             closeFavoriteFolderMenu();
         });
-
-        fragment.appendChild(item);
+        list.appendChild(item);
     });
 
-    menu.appendChild(fragment);
-    return menu;
+    panel.appendChild(list);
+    return panel;
 }
 
 
@@ -3443,7 +3565,19 @@ function renderFavoritesDock() {
                 });
 
                 button.addEventListener('mouseleave', () => {
-                    scheduleFavoriteFolderMenuClose(140);
+                    scheduleFavoriteFolderMenuClose(220);
+                });
+
+                hoverMenu.addEventListener('mouseenter', () => {
+                    if (favoriteFolderMenuCloseTimer) {
+                        clearTimeout(favoriteFolderMenuCloseTimer);
+                        favoriteFolderMenuCloseTimer = null;
+                    }
+                    openFavoriteFolderMenu(button);
+                });
+
+                hoverMenu.addEventListener('mouseleave', () => {
+                    scheduleFavoriteFolderMenuClose(220);
                 });
 
                 button.addEventListener('focusin', () => {
@@ -3466,7 +3600,7 @@ function renderFavoritesDock() {
                     if (isTouchLike) {
                         toggleFavoriteFolderMenu(button);
                     } else {
-                        openFavoriteFolderMenu(button);
+                        navigateToNode(node);
                     }
                     return;
                 }
