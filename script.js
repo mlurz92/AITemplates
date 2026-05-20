@@ -3378,7 +3378,7 @@ function createFavoriteFolderHoverMenu(folderNode, chipButton) {
 
     const panel = document.createElement('div');
     panel.className = 'favorite-folder-hover-menu';
-    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('role', 'region');
     panel.setAttribute('aria-label', `Vorschau für ${folderNode.title || 'Ordner'}`);
 
     const header = document.createElement('div');
