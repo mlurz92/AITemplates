@@ -60,9 +60,7 @@ let deferredInstallPrompt = null;
 let searchInputEl = null;
 let searchToggleBtn = null;
 let searchWrapEl = null;
-let sortSelectEl = null;
 let currentSearchQuery = '';
-let currentSortMode = 'manual';
 let multiSelectedCardIds = new Set();
 
 const FAVORITE_ACCENTS = [
@@ -155,7 +153,6 @@ function initApp() {
     searchInputEl = document.getElementById('search-input');
     searchToggleBtn = document.getElementById('search-toggle-button');
     searchWrapEl = document.querySelector('.toolbar-search-wrap');
-    sortSelectEl = document.getElementById('sort-select');
 
     favoritesDockEl = document.getElementById('favorites-dock');
     favoritesListEl = document.getElementById('favorites-list');
@@ -2011,7 +2008,7 @@ function setSearchExpanded(expanded) {
 }
 
 function setupViewToolbar() {
-    if (!searchInputEl || !sortSelectEl || !searchToggleBtn || !searchWrapEl) return;
+    if (!searchInputEl || !searchToggleBtn || !searchWrapEl) return;
     document.body.classList.add('has-toolbar');
     setSearchExpanded(false);
 
@@ -2051,10 +2048,6 @@ function setupViewToolbar() {
         }
     });
 
-    sortSelectEl.addEventListener('change', (event) => {
-        currentSortMode = event.target.value || 'manual';
-        renderView(currentNode);
-    });
 }
 
 function getVisibleNodesForCurrentView(childNodes) {
@@ -2064,18 +2057,6 @@ function getVisibleNodesForCurrentView(childNodes) {
             const title = (item.title || '').toLowerCase();
             const content = (item.content || '').toLowerCase();
             return title.includes(currentSearchQuery) || content.includes(currentSearchQuery);
-        });
-    }
-
-    if (currentSortMode === 'title-asc') {
-        list.sort((a, b) => (a.title || '').localeCompare((b.title || ''), 'de', { sensitivity: 'base' }));
-    } else if (currentSortMode === 'title-desc') {
-        list.sort((a, b) => (b.title || '').localeCompare((a.title || ''), 'de', { sensitivity: 'base' }));
-    } else if (currentSortMode === 'type') {
-        list.sort((a, b) => {
-            const aFolder = (a.type || '').includes('folder') ? 0 : 1;
-            const bFolder = (b.type || '').includes('folder') ? 0 : 1;
-            return aFolder - bFolder || (a.title || '').localeCompare((b.title || ''), 'de', { sensitivity: 'base' });
         });
     }
 
@@ -3378,7 +3359,7 @@ function createFavoriteFolderHoverMenu(folderNode, chipButton) {
 
     const panel = document.createElement('div');
     panel.className = 'favorite-folder-hover-menu';
-    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('role', 'listbox');
     panel.setAttribute('aria-label', `Vorschau für ${folderNode.title || 'Ordner'}`);
 
     const header = document.createElement('div');
@@ -3619,7 +3600,7 @@ function renderFavoritesDock() {
                     if (isTouchLike) {
                         toggleFavoriteFolderMenu(button);
                     } else {
-                        openFavoriteFolderMenu(button);
+                        navigateToNode(node);
                     }
                     return;
                 }

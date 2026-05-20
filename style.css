@@ -2316,3 +2316,16 @@ body.has-toolbar .cards-container { padding-top: 10px; }
   .toolbar-sort{ min-width: 150px; }
   .toolbar-search-wrap{ right: 0; width: min(420px, calc(100vw - 24px)); }
 }
+
+
+/* remove sort UI and place search icon in top bar with dropdown search */
+.toolbar-sort { display:none !important; }
+.view-toolbar { position: fixed; top: calc(var(--safe-area-inset-top) + var(--top-bar-height) + 6px); right: clamp(10px,2vw,24px); left: auto; width: min(430px, calc(100vw - 20px)); background: transparent; border: 0; padding: 0; margin: 0; z-index: 1001; pointer-events: none; }
+.toolbar-search-wrap { pointer-events: auto; position: absolute; right: 0; top: 0; width: 100%; }
+.toolbar-search { min-height: 42px; background: rgba(8,14,24,.94); border: 1px solid rgba(255,255,255,.18); box-shadow: 0 14px 30px rgba(0,0,0,.48); }
+
+/* ensure favorites hover menu can overflow above dock */
+.favorites-dock, .favorites-dock-inner, .favorites-scroll-area, .favorites-list, .favorites-list-item, .favorite-chip { overflow: visible !important; }
+.favorite-folder-hover-menu { bottom: calc(100% + 6px); left: 50%; transform: translate(-50%, 8px) scale(.98); width: min(320px, 86vw); }
+.favorite-folder-hover-list { display: flex; flex-direction: column; gap: .28rem; max-height: 220px; overflow-y: auto; }
+.favorite-folder-hover-item { display:block; width:100%; text-align:left; }
