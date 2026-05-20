@@ -58,6 +58,8 @@ let displayModeMediaQuery = null;
 let installAppBtn = null;
 let deferredInstallPrompt = null;
 let searchInputEl = null;
+let searchToggleBtn = null;
+let searchWrapEl = null;
 let sortSelectEl = null;
 let currentSearchQuery = '';
 let currentSortMode = 'manual';
@@ -151,6 +153,8 @@ function initApp() {
     storageSourceBtn = document.getElementById('storage-source-button');
     installAppBtn = document.getElementById('install-app-button');
     searchInputEl = document.getElementById('search-input');
+    searchToggleBtn = document.getElementById('search-toggle-button');
+    searchWrapEl = document.querySelector('.toolbar-search-wrap');
     sortSelectEl = document.getElementById('sort-select');
 
     favoritesDockEl = document.getElementById('favorites-dock');
@@ -1995,13 +1999,58 @@ function adjustCardTitleFontSize(card) {
 }
 
 
+function setSearchExpanded(expanded) {
+    if (!searchWrapEl || !searchToggleBtn) return;
+    searchWrapEl.hidden = !expanded;
+    searchWrapEl.classList.toggle('is-open', expanded);
+    searchToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    searchToggleBtn.setAttribute('aria-label', expanded ? 'Suche schließen' : 'Suche öffnen');
+    if (expanded) {
+        requestAnimationFrame(() => searchInputEl?.focus());
+    }
+}
+
 function setupViewToolbar() {
-    if (!searchInputEl || !sortSelectEl) return;
+    if (!searchInputEl || !sortSelectEl || !searchToggleBtn || !searchWrapEl) return;
     document.body.classList.add('has-toolbar');
+    setSearchExpanded(false);
+
+    searchToggleBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const isOpen = searchToggleBtn.getAttribute('aria-expanded') === 'true';
+        if (isOpen && currentSearchQuery) {
+            currentSearchQuery = '';
+            searchInputEl.value = '';
+            renderView(currentNode);
+        }
+        setSearchExpanded(!isOpen);
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!searchWrapEl || searchWrapEl.hidden) return;
+        if (searchWrapEl.contains(event.target) || searchToggleBtn.contains(event.target)) return;
+        if (!currentSearchQuery) {
+            setSearchExpanded(false);
+        }
+    });
+
     searchInputEl.addEventListener('input', (event) => {
         currentSearchQuery = (event.target.value || '').trim().toLowerCase();
         renderView(currentNode);
     });
+
+    searchInputEl.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            if (!currentSearchQuery) {
+                setSearchExpanded(false);
+            } else {
+                currentSearchQuery = '';
+                searchInputEl.value = '';
+                renderView(currentNode);
+            }
+        }
+    });
+
     sortSelectEl.addEventListener('change', (event) => {
         currentSortMode = event.target.value || 'manual';
         renderView(currentNode);
@@ -3324,35 +3373,49 @@ function collectPromptsFromFolder(folderNode, seen = new Set()) {
 }
 
 function createFavoriteFolderHoverMenu(folderNode, chipButton) {
-    const prompts = collectPromptsFromFolder(folderNode);
+    const prompts = collectPromptsFromFolder(folderNode).slice(0, 10);
     if (!prompts.length) return null;
 
-    const menu = document.createElement('div');
-    menu.className = 'favorite-folder-hover-menu';
-    menu.setAttribute('role', 'list');
-    menu.setAttribute('aria-label', `Prompts in ${folderNode.title || 'Ordner'}`);
+    const panel = document.createElement('div');
+    panel.className = 'favorite-folder-hover-menu';
+    panel.setAttribute('role', 'region');
+    panel.setAttribute('aria-label', `Vorschau für ${folderNode.title || 'Ordner'}`);
 
-    const fragment = document.createDocumentFragment();
+    const header = document.createElement('div');
+    header.className = 'favorite-folder-hover-header';
+    header.textContent = `${folderNode.title || 'Ordner'} · ${prompts.length} Prompt${prompts.length === 1 ? '' : 's'}`;
+    panel.appendChild(header);
+
+    const list = document.createElement('div');
+    list.className = 'favorite-folder-hover-list';
+
     prompts.forEach((promptNode, index) => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'favorite-folder-hover-item';
-        item.setAttribute('role', 'listitem');
-        item.style.setProperty('--folder-item-index', String(index));
-        item.textContent = promptNode.title || 'Unbenannter Prompt';
+        const row = document.createElement('div');
+        row.className = 'favorite-folder-hover-row';
+        row.style.setProperty('--folder-item-index', String(index));
 
-        item.addEventListener('click', (event) => {
+        const title = document.createElement('span');
+        title.className = 'favorite-folder-hover-title';
+        title.textContent = promptNode.title || 'Unbenannter Prompt';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'favorite-folder-hover-copy';
+        copyBtn.textContent = 'Kopieren';
+        copyBtn.setAttribute('aria-label', `Prompt ${promptNode.title || 'Unbenannter Prompt'} kopieren`);
+        copyBtn.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
             copyToClipboard(promptNode.content || '', chipButton, promptNode);
             closeFavoriteFolderMenu();
         });
 
-        fragment.appendChild(item);
+        row.append(title, copyBtn);
+        list.appendChild(row);
     });
 
-    menu.appendChild(fragment);
-    return menu;
+    panel.appendChild(list);
+    return panel;
 }
 
 
