@@ -2235,3 +2235,33 @@ body.has-toolbar .cards-container { padding-top: 10px; }
 @media (max-width: 760px) {
   .view-toolbar { grid-template-columns: 1fr; top: calc(var(--safe-area-inset-top) + var(--top-bar-height) + 4px); }
 }
+
+
+/* Subtle toolbar/search placement + multi-select visuals */
+.view-toolbar {
+  max-width: min(920px, calc(100vw - 28px));
+  margin-inline: auto;
+  padding: 8px 10px;
+  border-color: rgba(255,255,255,.09);
+  background: linear-gradient(140deg, rgba(20,24,42,.58), rgba(14,18,34,.46));
+}
+.toolbar-search-wrap {
+  justify-self: start;
+  width: min(480px, 100%);
+}
+.toolbar-search {
+  min-height: 40px;
+  font-size: 13px;
+  opacity: .88;
+}
+.toolbar-search::placeholder { color: rgba(220,230,255,.55); }
+.card.is-multi-selected {
+  outline: 2px solid rgba(6, 214, 214, 0.86);
+  box-shadow: 0 0 0 3px rgba(6, 214, 214, 0.22), var(--shadow-2);
+}
+.card.is-multi-selected::before {
+  opacity: .92;
+}
+@media (max-width: 760px) {
+  .toolbar-search-wrap { width: 100%; }
+}
