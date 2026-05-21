@@ -32,6 +32,10 @@ let linkItemModalEl, linkItemListEl, linkItemConfirmBtn, linkItemCancelBtn, link
 let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, downloadMenu, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn, storageSourceBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
 let favoritesDockEl, favoritesListEl, favoritesScrollAreaEl, favoritesToggleBtn, auroraContainerEl;
+
+let favoriteFolderPreviewEl = null;
+let favoriteFolderPreviewHideTimer = null;
+let favoriteFolderPreviewAnchor = null;
 let favoritesChipResizeObserver = null;
 let favoritesLayoutRaf = null;
 let favoritesHeightSyncRaf = null;
@@ -190,6 +194,19 @@ function initApp() {
     updateDockPositioning();
     setupViewToolbar();
     setupEventListeners();
+    window.addEventListener('resize', () => {
+        if (favoriteFolderPreviewAnchor && favoriteFolderPreviewEl && !favoriteFolderPreviewEl.classList.contains('hidden')) {
+            positionFavoriteFolderPreview(favoriteFolderPreviewAnchor);
+        }
+    });
+    document.addEventListener('scroll', () => hideFavoriteFolderPreview(), true);
+    document.addEventListener('click', (event) => {
+        if (!favoriteFolderPreviewEl || favoriteFolderPreviewEl.classList.contains('hidden')) return;
+        const target = event.target;
+        if (favoriteFolderPreviewEl.contains(target)) return;
+        if (favoriteFolderPreviewAnchor && favoriteFolderPreviewAnchor.contains(target)) return;
+        hideFavoriteFolderPreview();
+    });
     setupPwaInstallPrompt();
     checkFullscreenSupport();
     createContextMenu();
@@ -3347,6 +3364,99 @@ function collectPromptsFromFolder(folderNode, seen = new Set()) {
     return prompts;
 }
 
+
+function ensureFavoriteFolderPreview() {
+    if (favoriteFolderPreviewEl) return favoriteFolderPreviewEl;
+    favoriteFolderPreviewEl = document.createElement('div');
+    favoriteFolderPreviewEl.className = 'favorite-folder-preview hidden';
+    favoriteFolderPreviewEl.setAttribute('role', 'dialog');
+    favoriteFolderPreviewEl.setAttribute('aria-live', 'polite');
+    favoriteFolderPreviewEl.addEventListener('mouseenter', () => {
+        if (favoriteFolderPreviewHideTimer) {
+            clearTimeout(favoriteFolderPreviewHideTimer);
+            favoriteFolderPreviewHideTimer = null;
+        }
+    });
+    favoriteFolderPreviewEl.addEventListener('mouseleave', () => scheduleHideFavoriteFolderPreview());
+    document.body.appendChild(favoriteFolderPreviewEl);
+    return favoriteFolderPreviewEl;
+}
+
+function scheduleHideFavoriteFolderPreview(delay = 120) {
+    if (favoriteFolderPreviewHideTimer) clearTimeout(favoriteFolderPreviewHideTimer);
+    favoriteFolderPreviewHideTimer = window.setTimeout(() => hideFavoriteFolderPreview(), delay);
+}
+
+function hideFavoriteFolderPreview() {
+    if (!favoriteFolderPreviewEl) return;
+    favoriteFolderPreviewEl.classList.add('hidden');
+    favoriteFolderPreviewEl.innerHTML = '';
+    favoriteFolderPreviewAnchor = null;
+    if (favoriteFolderPreviewHideTimer) {
+        clearTimeout(favoriteFolderPreviewHideTimer);
+        favoriteFolderPreviewHideTimer = null;
+    }
+}
+
+function positionFavoriteFolderPreview(anchor) {
+    if (!favoriteFolderPreviewEl || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const previewRect = favoriteFolderPreviewEl.getBoundingClientRect();
+    const spacing = 10;
+    const maxLeft = window.innerWidth - previewRect.width - 8;
+    const centeredLeft = rect.left + (rect.width / 2) - (previewRect.width / 2);
+    const left = Math.max(8, Math.min(maxLeft, centeredLeft));
+
+    let top = rect.top - previewRect.height - spacing;
+    if (top < 8) {
+        top = rect.bottom + spacing;
+    }
+
+    favoriteFolderPreviewEl.style.left = `${Math.round(left)}px`;
+    favoriteFolderPreviewEl.style.top = `${Math.round(top)}px`;
+}
+
+function showFavoriteFolderPreview(folderNode, chipButton) {
+    if (!folderNode || folderNode.type !== 'folder' || !chipButton) return;
+    const preview = ensureFavoriteFolderPreview();
+    const prompts = collectPromptsFromFolder(folderNode);
+
+    preview.innerHTML = '';
+    const title = document.createElement('div');
+    title.className = 'favorite-folder-preview-title';
+    title.textContent = folderNode.title || 'Ordner';
+    preview.appendChild(title);
+
+    if (prompts.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'favorite-folder-preview-empty';
+        empty.textContent = 'Keine Prompt-Karten in diesem Ordner';
+        preview.appendChild(empty);
+    } else {
+        const list = document.createElement('div');
+        list.className = 'favorite-folder-preview-list';
+        prompts.slice(0, 12).forEach((prompt) => {
+            const itemBtn = document.createElement('button');
+            itemBtn.type = 'button';
+            itemBtn.className = 'favorite-folder-preview-item';
+            itemBtn.textContent = prompt.title || 'Ohne Titel';
+            itemBtn.title = `Kopieren: ${prompt.title || 'Ohne Titel'}`;
+            itemBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                copyToClipboard(prompt.content || '', chipButton, prompt);
+                hideFavoriteFolderPreview();
+            });
+            list.appendChild(itemBtn);
+        });
+        preview.appendChild(list);
+    }
+
+    preview.classList.remove('hidden');
+    favoriteFolderPreviewAnchor = chipButton;
+    positionFavoriteFolderPreview(chipButton);
+}
+
 function renderFavoritesDock() {
     if (!favoritesDockEl || !favoritesListEl) return;
 
@@ -3464,6 +3574,13 @@ function renderFavoritesDock() {
             }
             copyToClipboard(node.content || '', button, node);
         });
+
+        if (node.type === 'folder') {
+            button.addEventListener('mouseenter', () => showFavoriteFolderPreview(node, button));
+            button.addEventListener('mouseleave', () => scheduleHideFavoriteFolderPreview());
+            button.addEventListener('focus', () => showFavoriteFolderPreview(node, button));
+            button.addEventListener('blur', () => scheduleHideFavoriteFolderPreview());
+        }
         
         // Add sparkle effect to favorite chip
         addSparklesToFavoriteChip(button);
