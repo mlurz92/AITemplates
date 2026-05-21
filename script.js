@@ -3419,7 +3419,7 @@ function positionFavoriteFolderPreview(anchor) {
 function showFavoriteFolderPreview(folderNode, chipButton) {
     if (!folderNode || folderNode.type !== 'folder' || !chipButton) return;
     const preview = ensureFavoriteFolderPreview();
-    const prompts = collectPromptsFromFolder(folderNode).filter((prompt) => prompt && prompt.type === 'prompt');
+    const prompts = collectPromptsFromFolder(folderNode);
 
     preview.innerHTML = '';
     const title = document.createElement('div');
