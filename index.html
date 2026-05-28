@@ -6,7 +6,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0c0f17">
+    <meta name="theme-color" content="#0c0f1a" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f2f4f8" media="(prefers-color-scheme: light)">
     <!-- Favicon - Klassisch für alle Browser -->
     <link rel="icon" href="icons/favicon.ico" sizes="any">
     <!-- Favicon - SVG für moderne Browser -->
@@ -136,9 +137,14 @@
     </header>
         <section id="view-toolbar" class="view-toolbar" aria-label="Suche">
       <div class="toolbar-search-wrap" hidden>
-        <input id="search-input" class="toolbar-search" type="search" placeholder="Prompts & Ordner suchen …" aria-label="Suche in aktuellem Ordner">
+        <input id="search-input" class="toolbar-search" type="search" placeholder="Prompts &amp; Ordner suchen …" aria-label="Suche in aktuellem Ordner">
       </div>
     </section>
+    <!-- Pull-to-Refresh Indikator (Mobile) -->
+    <div id="pull-to-refresh" class="pull-to-refresh" aria-hidden="true">
+      <div class="ptr-spinner"></div>
+      <span id="ptr-label">Zum Aktualisieren ziehen</span>
+    </div>
     <main id="cards-container" class="cards-container"></main>
     <div id="prompt-modal" class="modal hidden">
       <div class="modal-content card">
