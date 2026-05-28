@@ -209,6 +209,10 @@ function initApp() {
     setupSwipeBackGesture();
     setupPullToRefresh();
     setupColorSchemeWatcher();
+    initColorScheme();
+
+    const colorSchemeBtn = document.getElementById('color-scheme-button');
+    if (colorSchemeBtn) colorSchemeBtn.addEventListener('click', toggleColorScheme);
 
     loadJsonData();
     updateParallax();
@@ -379,23 +383,28 @@ function showContextMenu(x, y, targetElement) {
     contextMenu.style.left = `${finalX}px`;
     contextMenu.style.top = `${finalY}px`;
     contextMenu.style.transformOrigin = `${originX} ${originY}`;
-    
+
+    setupContextMenuDismiss();
+}
+
+function setupContextMenuDismiss() {
     setTimeout(() => {
-        const hideMenu = (e) => {
-            if (!contextMenu.contains(e.target)) {
-                const menuScope = contextMenu.dataset.menuScope;
-                hideContextMenu();
-                if (menuScope === 'empty' && e.type === 'click') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                }
-                document.removeEventListener('click', hideMenu, true);
-                document.removeEventListener('contextmenu', hideMenu, true);
-            }
-        };
-        document.addEventListener('click', hideMenu, true);
-        document.addEventListener('contextmenu', hideMenu, true);
+        function dismissHandler(e) {
+            if (contextMenu.contains(e.target)) return;
+            hideContextMenu();
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            document.removeEventListener('mousedown', dismissHandler, true);
+            document.removeEventListener('contextmenu', dismissHandler, true);
+            // Also block the click that follows this mousedown
+            document.addEventListener('click', function suppressClick(ce) {
+                ce.stopImmediatePropagation();
+                ce.preventDefault();
+                document.removeEventListener('click', suppressClick, true);
+            }, true);
+        }
+        document.addEventListener('mousedown', dismissHandler, true);
+        document.addEventListener('contextmenu', dismissHandler, true);
     }, 0);
 }
 
@@ -2639,6 +2648,8 @@ function showContextMenuForEmptyArea(e) {
       if (action === 'add-folder-link') openLinkItemModal('folder');
       hideContextMenu();
     };
+
+    setupContextMenuDismiss();
 }
 
 function resetLocalStorage() {
@@ -4002,6 +4013,53 @@ function setupColorSchemeWatcher() {
 
     updateThemeColor();
     mq.addEventListener('change', updateThemeColor);
+}
+
+// =====================================================================
+// LIQUID GLASS – COLOR SCHEME TOGGLE (Light / Dark)
+// =====================================================================
+
+const COLOR_SCHEME_KEY = 'user-color-scheme';
+
+function initColorScheme() {
+    const saved = localStorage.getItem(COLOR_SCHEME_KEY);
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const scheme = saved || (systemDark ? 'dark' : 'light');
+    applyColorScheme(scheme, false);
+
+    // Follow system preference when no manual override
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        if (!localStorage.getItem(COLOR_SCHEME_KEY)) {
+            applyColorScheme(e.matches ? 'dark' : 'light', false);
+        }
+    });
+}
+
+function applyColorScheme(scheme, save = true) {
+    document.documentElement.dataset.colorScheme = scheme;
+    if (save) localStorage.setItem(COLOR_SCHEME_KEY, scheme);
+    updateColorSchemeButton();
+
+    // Meta-Theme-Color an das aktive Farbschema anpassen
+    const isDark = scheme === 'dark';
+    document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+        meta.content = isDark ? '#0c0f1a' : '#f2f4f8';
+    });
+}
+
+function toggleColorScheme() {
+    const current = document.documentElement.dataset.colorScheme || 'dark';
+    applyColorScheme(current === 'dark' ? 'light' : 'dark');
+    triggerHapticFeedback('light');
+}
+
+function updateColorSchemeButton() {
+    const btn = document.getElementById('color-scheme-button');
+    if (!btn) return;
+    const isDark = (document.documentElement.dataset.colorScheme || 'dark') !== 'light';
+    btn.querySelector('.icon-moon')?.classList.toggle('hidden', !isDark);
+    btn.querySelector('.icon-sun')?.classList.toggle('hidden', isDark);
+    btn.setAttribute('aria-label', isDark ? 'Zum Hell-Modus wechseln' : 'Zum Dunkel-Modus wechseln');
 }
 
 // =====================================================================
