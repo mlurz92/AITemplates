@@ -186,6 +186,9 @@ function initApp() {
     svgTemplateEdit = document.getElementById('svg-template-edit');
     svgTemplateMove = document.getElementById('svg-template-move');
 
+    // Liquid Glass: Platform detection
+    detectAndSetPlatform();
+
     updateViewportMetrics();
     updateDockPositioning();
     setupViewToolbar();
@@ -201,9 +204,15 @@ function initApp() {
         setupMobileSpecificFeatures();
     }
 
+    // Liquid Glass: Feature-Initialisierung
+    setupKeyboardShortcuts();
+    setupSwipeBackGesture();
+    setupPullToRefresh();
+    setupColorSchemeWatcher();
+
     loadJsonData();
     updateParallax();
-    
+
     // Initialize enhanced animation systems
     setupAuroraVisibilityObserver();
     initParticlesSystem();
@@ -2066,6 +2075,8 @@ function renderView(node) {
         containerEl.innerHTML = `<p style="color:red; text-align:center; padding:2rem;">Interner Fehler: Ungültiger Knoten.</p>`;
         return;
     }
+    // Liquid Glass: theme-color dynamisch updaten (Android)
+    updateThemeColorForNode(node);
 
     const childNodes = node.items || [];
     const visibleNodes = getVisibleNodesForCurrentView(childNodes);
@@ -3523,10 +3534,10 @@ function createParticles() {
     if (!particlesContainer) return;
     
     const colors = [
-        'rgba(124, 58, 237, 0.6)',
-        'rgba(6, 214, 214, 0.5)',
-        'rgba(255, 107, 157, 0.4)',
-        'rgba(255, 209, 102, 0.5)'
+        'rgba(94, 92, 230, 0.50)',   /* Indigo */
+        'rgba(90, 200, 250, 0.42)',   /* Teal */
+        'rgba(50, 215, 75, 0.38)',    /* Green */
+        'rgba(255, 159, 10, 0.40)'    /* Orange */
     ];
     
     for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -3564,7 +3575,7 @@ function initGlowBurstSystem() {
     document.body.appendChild(glowBurstElement);
 }
 
-function triggerGlowBurst(x, y, color = 'rgba(124, 58, 237, 0.4)') {
+function triggerGlowBurst(x, y, color = 'rgba(94, 92, 230, 0.38)') {
     if (!glowBurstElement || prefersReducedMotion) return;
     
     const size = 100;
@@ -3748,7 +3759,7 @@ function enhancedCopySuccess(buttonElement, x, y) {
     if (prefersReducedMotion) return;
     
     // Trigger glow burst
-    triggerGlowBurst(x, y, 'rgba(6, 214, 214, 0.5)');
+    triggerGlowBurst(x, y, 'rgba(90, 200, 250, 0.45)');
     
     // Haptic feedback
     triggerHapticFeedback('success');
@@ -3772,6 +3783,237 @@ function addSparklesToFavoriteChip(chip) {
     }
     
     chip.appendChild(sparkleContainer);
+}
+
+// =====================================================================
+// LIQUID GLASS – PLATFORM DETECTION
+// =====================================================================
+
+function detectAndSetPlatform() {
+    const ua = navigator.userAgent || '';
+    const platformStr = (navigator.userAgentData?.platform || navigator.platform || '');
+    // iPad on iOS 13+ reports as MacIntel with touch support
+    const isIpadFallback = /mac/i.test(platformStr) && navigator.maxTouchPoints > 1;
+    let platform = 'desktop';
+    if ((/iPad|iPhone|iPod/.test(ua) && !window.MSStream) || isIpadFallback) {
+        platform = 'ios';
+    } else if (/Android/.test(ua)) {
+        platform = 'android';
+    } else if ('ontouchstart' in window && navigator.maxTouchPoints > 1) {
+        platform = 'touch';
+    }
+    document.documentElement.dataset.platform = platform;
+    return platform;
+}
+
+// =====================================================================
+// LIQUID GLASS – KEYBOARD SHORTCUTS (Desktop)
+// =====================================================================
+
+function setupKeyboardShortcuts() {
+    if (window.matchMedia('(hover: none)').matches) return; // Nur Desktop
+
+    document.addEventListener('keydown', (e) => {
+        const platformStr = (navigator.userAgentData?.platform || navigator.platform || '').toUpperCase();
+        const isMac = platformStr.includes('MAC');
+        const cmdKey = isMac ? e.metaKey : e.ctrlKey;
+
+        // Cmd+K / Ctrl+K → Suche öffnen
+        if (cmdKey && e.key === 'k') {
+            e.preventDefault();
+            if (searchToggleBtn) searchToggleBtn.click();
+            return;
+        }
+
+        // Cmd+N / Ctrl+N → Neuer Prompt (wenn Add-Menü vorhanden)
+        if (cmdKey && e.key === 'n') {
+            e.preventDefault();
+            if (addBtn) {
+                addBtn.click();
+                // Nach kurzem Delay auf "Neuer Prompt" klicken
+                setTimeout(() => {
+                    const addPromptItem = document.querySelector('.add-menu-item[data-action="add-prompt"]');
+                    if (addPromptItem) addPromptItem.click();
+                }, 50);
+            }
+            return;
+        }
+
+        // Escape → Modals schließen (bereits implementiert, aber sicherstellen)
+        if (e.key === 'Escape') {
+            return; // Bestehende Logik greift
+        }
+
+        // Arrow Left → Navigiere zurück (wie Backspace im Browser)
+        if (e.key === 'ArrowLeft' && cmdKey) {
+            e.preventDefault();
+            if (pathStack && pathStack.length > 0) navigateOneLevelUp();
+            return;
+        }
+    });
+}
+
+// =====================================================================
+// LIQUID GLASS – SWIPE-BACK GESTURE (iOS / Mobile)
+// =====================================================================
+
+function setupSwipeBackGesture() {
+    if (!('ontouchstart' in window)) return;
+
+    let swipeStartX = 0;
+    let swipeStartY = 0;
+    let swipeActive = false;
+    let swipeVelocity = 0;
+    let swipeLastTime = 0;
+    const EDGE_THRESHOLD = 28; // px vom linken Rand
+    const MIN_SWIPE_DISTANCE = 60;
+
+    document.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        swipeStartX = touch.clientX;
+        swipeStartY = touch.clientY;
+        swipeLastTime = Date.now();
+        // Nur aktivieren wenn Touch am linken Rand startet
+        swipeActive = swipeStartX <= EDGE_THRESHOLD;
+        swipeVelocity = 0;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!swipeActive) return;
+        const touch = e.touches[0];
+        const dx = touch.clientX - swipeStartX;
+        const dy = Math.abs(touch.clientY - swipeStartY);
+
+        // Wenn stärker vertikal als horizontal → abbrechen
+        if (dy > Math.abs(dx) * 1.5) {
+            swipeActive = false;
+            return;
+        }
+
+        const now = Date.now();
+        const dt = now - swipeLastTime;
+        if (dt > 0) swipeVelocity = dx / dt;
+        swipeLastTime = now;
+
+        // Visuelles Feedback: cards-container leicht mitverschieben
+        if (dx > 10 && containerEl) {
+            containerEl.style.transform = `translateX(${Math.min(dx * 0.25, 40)}px)`;
+            containerEl.style.transition = 'none';
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+        if (!swipeActive) return;
+        swipeActive = false;
+
+        const dx = e.changedTouches[0].clientX - swipeStartX;
+        const fastSwipe = swipeVelocity > 0.6;
+
+        // Reset container position
+        if (containerEl) {
+            containerEl.style.transition = 'transform var(--duration-2) var(--ease-smooth)';
+            containerEl.style.transform = '';
+        }
+
+        if ((dx >= MIN_SWIPE_DISTANCE || fastSwipe) && pathStack && pathStack.length > 0) {
+            // Haptic feedback
+            triggerHapticFeedback('medium');
+            // Navigiere zurück
+            setTimeout(() => navigateOneLevelUp(), 50);
+        }
+    }, { passive: true });
+}
+
+// =====================================================================
+// LIQUID GLASS – PULL-TO-REFRESH (Mobile)
+// =====================================================================
+
+function setupPullToRefresh() {
+    if (!('ontouchstart' in window)) return;
+
+    const ptrEl = document.getElementById('pull-to-refresh');
+    const ptrLabel = document.getElementById('ptr-label');
+    if (!ptrEl) return;
+
+    let ptrStartY = 0;
+    let ptrActive = false;
+    let ptrTriggered = false;
+    const PTR_THRESHOLD = 72;
+
+    document.addEventListener('touchstart', (e) => {
+        ptrStartY = e.touches[0].clientY;
+        ptrActive = (containerEl ? containerEl.scrollTop : 0) === 0;
+        ptrTriggered = false;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!ptrActive) return;
+        const dy = e.touches[0].clientY - ptrStartY;
+        if (dy <= 0) return;
+
+        const progress = Math.min(dy / PTR_THRESHOLD, 1);
+        if (dy > 10) {
+            ptrEl.classList.add('ptr-pulling');
+            if (ptrLabel) {
+                ptrLabel.textContent = progress >= 1 ? 'Loslassen zum Aktualisieren' : 'Zum Aktualisieren ziehen';
+            }
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', async (e) => {
+        if (!ptrActive) return;
+        ptrActive = false;
+
+        const dy = e.changedTouches[0].clientY - ptrStartY;
+        if (dy >= PTR_THRESHOLD && !ptrTriggered) {
+            ptrTriggered = true;
+            ptrEl.classList.remove('ptr-pulling');
+            ptrEl.classList.add('ptr-loading');
+            if (ptrLabel) ptrLabel.textContent = 'Wird aktualisiert…';
+            triggerHapticFeedback('medium');
+
+            try {
+                await syncFromCloud({ silent: false, reason: 'pull-to-refresh' });
+            } finally {
+                ptrEl.classList.remove('ptr-loading');
+                ptrEl.classList.remove('ptr-pulling');
+            }
+        } else {
+            ptrEl.classList.remove('ptr-pulling');
+            ptrEl.classList.remove('ptr-loading');
+        }
+    }, { passive: true });
+}
+
+// =====================================================================
+// LIQUID GLASS – COLOR SCHEME WATCHER
+// =====================================================================
+
+function setupColorSchemeWatcher() {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+
+    function updateThemeColor() {
+        document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+            const mediaPref = meta.getAttribute('media') || '';
+            if (mediaPref.includes('dark')) meta.content = '#0c0f1a';
+            else if (mediaPref.includes('light')) meta.content = '#f2f4f8';
+        });
+    }
+
+    updateThemeColor();
+    mq.addEventListener('change', updateThemeColor);
+}
+
+// =====================================================================
+// LIQUID GLASS – DYNAMIC THEME-COLOR (Android)
+// =====================================================================
+
+function updateThemeColorForNode(node) {
+    if (!node) return;
+    const isDark = !window.matchMedia('(prefers-color-scheme: light)').matches;
+    const mediaPref = isDark ? 'dark' : 'light';
+    const metaTheme = document.querySelector(`meta[name="theme-color"][media*="${mediaPref}"]`);
+    if (metaTheme) metaTheme.content = isDark ? '#0c0f1a' : '#f2f4f8';
 }
 
 // Initialisiere die Anwendung erst, wenn das gesamte DOM und alle Variablen geladen sind
