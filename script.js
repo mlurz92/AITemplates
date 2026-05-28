@@ -4039,6 +4039,12 @@ function applyColorScheme(scheme, save = true) {
     document.documentElement.dataset.colorScheme = scheme;
     if (save) localStorage.setItem(COLOR_SCHEME_KEY, scheme);
     updateColorSchemeButton();
+
+    // Meta-Theme-Color an das aktive Farbschema anpassen
+    const isDark = scheme === 'dark';
+    document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+        meta.content = isDark ? '#0c0f1a' : '#f2f4f8';
+    });
 }
 
 function toggleColorScheme() {
