@@ -221,6 +221,7 @@ function initApp() {
     setupAuroraVisibilityObserver();
     initParticlesSystem();
     initGlowBurstSystem();
+    initKonfettiSystem();
     initCardTiltEffect();
     initDeviceOrientationParallax();
 }
@@ -390,29 +391,62 @@ function showContextMenu(x, y, targetElement) {
 function setupContextMenuDismiss() {
     setTimeout(() => {
         function dismissHandler(e) {
-            if (contextMenu.contains(e.target)) return;
+            if (contextMenu && contextMenu.contains(e.target)) return;
             hideContextMenu();
-            e.stopImmediatePropagation();
-            e.preventDefault();
+            if (e) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+            }
             document.removeEventListener('mousedown', dismissHandler, true);
             document.removeEventListener('contextmenu', dismissHandler, true);
-            // Also block the click that follows this mousedown
-            document.addEventListener('click', function suppressClick(ce) {
-                ce.stopImmediatePropagation();
-                ce.preventDefault();
-                document.removeEventListener('click', suppressClick, true);
-            }, true);
         }
+        contextMenu._hideHandler = dismissHandler;
         document.addEventListener('mousedown', dismissHandler, true);
         document.addEventListener('contextmenu', dismissHandler, true);
     }, 0);
 }
 
 function hideContextMenu() {
+    // Check if this was the empty area context menu BEFORE removing the attribute
+    const wasEmptyMenu = contextMenu.dataset.menuScope === 'empty';
     contextMenu.classList.remove('visible');
     contextMenu.removeAttribute('data-menu-scope');
+    // Restore context menu HTML if it was modified for empty area context menu
+    if (wasEmptyMenu) {
+        contextMenu.innerHTML = `
+            <div class="context-menu-item" data-action="toggle-favorite">
+                <svg class="icon icon-star" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <span>Favorit</span>
+            </div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="rename">
+                <svg class="icon icon-edit" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                <span>Umbenennen</span>
+            </div>
+            <div class="context-menu-item" data-action="move">
+                 <svg class="icon icon-move" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line>
+                </svg>
+                <span>Verschieben...</span>
+            </div>
+            <div class="context-menu-divider"></div>
+            <div class="context-menu-item" data-action="delete">
+                <svg class="icon icon-delete" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <span>Löschen</span>
+            </div>
+        `;
+    }
     if (contextMenu._hideHandler) {
-        document.removeEventListener('click', contextMenu._hideHandler, true);
+        document.removeEventListener('mousedown', contextMenu._hideHandler, true);
         document.removeEventListener('contextmenu', contextMenu._hideHandler, true);
         contextMenu._hideHandler = null;
     }
@@ -1277,7 +1311,9 @@ function resolveCardDropIntent(evt) {
     }
 
     const elements = document.elementsFromPoint(coordinates.x, coordinates.y);
-    const targetCard = elements.map(el => el.closest('.card')).find(card => card && card !== evt.item) || null;
+    // Note: This function was unused and had incorrect property 'dragged'. Using 'item' for consistency.
+    const draggedCard = evt?.item?.closest('.card');
+    const targetCard = elements.map(el => el.closest('.card')).find(card => card && card !== draggedCard) || null;
     if (!targetCard) {
         return { targetCard: null, intent: 'reorder' };
     }
@@ -1310,7 +1346,7 @@ function setDropTargetHighlight(targetId, targetType) {
 }
 
 function resolveSortableCombineIntent(evt) {
-    const draggedCard = evt.dragged?.closest('.card');
+    const draggedCard = evt.item?.closest('.card');
     const relatedCard = evt.related?.closest('.card');
     if (!draggedCard || !relatedCard || draggedCard === relatedCard) {
         return null;
@@ -1739,7 +1775,7 @@ function checkFullscreenSupport() {
         document.body.setAttribute('data-fullscreen-supported', 'true');
     } else {
         document.body.removeAttribute('data-fullscreen-supported');
-        if(fullscreenBtn) fullscreenBtn.remove();
+        if(fullscreenBtn) fullscreenBtn.style.display = 'none';
     }
 }
 
@@ -2379,7 +2415,7 @@ function renderFolderTree(itemIdToMove) {
 
         parentElement.appendChild(item);
 
-        if (node.items) {
+        if (Array.isArray(node.items)) {
             node.items.forEach(child => createTree(child, parentElement, level + 1));
         }
     };
@@ -2637,18 +2673,19 @@ function showContextMenuForEmptyArea(e) {
     contextMenu.style.left = `${e.pageX}px`;
     contextMenu.style.top = `${e.pageY}px`;
     contextMenu.classList.add('visible');
-    contextMenu.dataset.menuScope = 'empty';
+contextMenu.dataset.menuScope = 'empty';
     contextMenu.onclick = (evt) => {
-      const action = evt.target.closest('.context-menu-item')?.dataset.action;
-      if (!action) return;
-      if (action === 'toggle-organize') toggleOrganizeMode();
-      if (action === 'add-prompt') openNewPromptModal();
-      if (action === 'add-folder') openCreateFolderModal();
-      if (action === 'add-prompt-link') openLinkItemModal('prompt');
-      if (action === 'add-folder-link') openLinkItemModal('folder');
+      const menuItem = evt.target.closest('.context-menu-item');
+      if (menuItem) {
+        const action = menuItem.dataset.action;
+        if (action === 'toggle-organize') toggleOrganizeMode();
+        if (action === 'add-prompt') openNewPromptModal();
+        if (action === 'add-folder') openCreateFolderModal();
+        if (action === 'add-prompt-link') openLinkItemModal('prompt');
+        if (action === 'add-folder-link') openLinkItemModal('folder');
+      }
       hideContextMenu();
     };
-
     setupContextMenuDismiss();
 }
 
@@ -3210,7 +3247,10 @@ function trimPreviewForLayout(text, maxChars) {
         trimmed = trimmed.replace(/\s+\S*$/, '').trim();
     }
 
-    return trimmed.length ? `${trimmed}…` : text.slice(0, maxChars);
+    if (trimmed.length === 0) {
+        return text.slice(0, maxChars);
+    }
+    return `${trimmed}…`;
 }
 
 function fitFavoriteChipText(chip, layout) {
@@ -3244,7 +3284,7 @@ function fitFavoriteTextBlock(chip, element, { lines, minScale, scaleVar }) {
 
     const styles = window.getComputedStyle(element);
     const fontSize = parseFloat(styles.fontSize) || 0;
-    const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.2;
+    const lineHeight = (parseFloat(styles.lineHeight) || fontSize * 1.2) || 1;
     if (!lineHeight || !lines) {
         return;
     }
@@ -3604,6 +3644,51 @@ function triggerGlowBurst(x, y, color = 'rgba(94, 92, 230, 0.38)') {
 }
 
 // === KONFETTI SYSTEM ===
+let konfettiContainer = null;
+
+function initKonfettiSystem() {
+    if (prefersReducedMotion) return;
+
+    konfettiContainer = document.createElement('div');
+    konfettiContainer.className = 'konfetti-container';
+    konfettiContainer.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(konfettiContainer);
+}
+
+function triggerKonfetti(x, y) {
+    if (!konfettiContainer || prefersReducedMotion) return;
+
+    const konfettiColors = [
+        '#FFD60A', '#FF9F0A', '#FF375F', '#BF5AF2', '#5E5CE6', '#0A84FF', '#5AC8FA', '#32D74B'
+    ];
+
+    for (let i = 0; i < 24; i++) {
+        const konfetti = document.createElement('div');
+        const tilt = (Math.random() * 2) - 1;
+        const size = Math.random() * 8 + 6;
+        const color = konfettiColors[Math.floor(Math.random() * konfettiColors.length)];
+
+        konfetti.className = 'konfetti-piece';
+        konfetti.style.cssText = `
+            left: ${x}px;
+            top: ${y}px;
+            width: ${size}px;
+            height: ${size}px;
+            background: ${color};
+            --konfetti-tilt: ${tilt}deg;
+            --konfetti-rotate: ${(Math.random() * 200) + 100}deg;
+            --konfetti-duration: ${(Math.random() * 0.5) + 0.8}s;
+            --konfetti-delay: ${Math.random() * 50}ms;
+        `;
+
+        konfettiContainer.appendChild(konfetti);
+
+        setTimeout(() => {
+            konfetti.remove();
+        }, 2000);
+    }
+}
+
 // === CARD 3D TILT EFFECT ===
 function initCardTiltEffect() {
     if (prefersReducedMotion) {
@@ -3649,10 +3734,11 @@ function handleCardTilt(e) {
 }
 
 function resetCardTilt(e) {
-    const card = e.target.closest('.card');
-    if (!card) return;
-    
-    card.style.transform = '';
+    // Reset tilt for all cards when mouse leaves the container
+    const cards = containerEl.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.style.transform = '';
+    });
 }
 
 // === DEVICE ORIENTATION PARALLAX ===
@@ -3768,10 +3854,13 @@ function triggerHapticFeedback(type = 'light') {
 // === ENHANCED COPY SUCCESS ===
 function enhancedCopySuccess(buttonElement, x, y) {
     if (prefersReducedMotion) return;
-    
+
     // Trigger glow burst
     triggerGlowBurst(x, y, 'rgba(90, 200, 250, 0.45)');
-    
+
+    // Trigger konfetti effect
+    triggerKonfetti(x, y);
+
     // Haptic feedback
     triggerHapticFeedback('success');
 }
