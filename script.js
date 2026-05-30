@@ -1496,7 +1496,7 @@ function navigateOneLevelUp() {
 }
 
 function findParentOfNode(targetId, startNode = jsonData) {
-    if (!startNode.items) return null;
+    if (!startNode?.items || !Array.isArray(startNode.items)) return null;
 
     for (const child of startNode.items) {
         if (child.id === targetId) {
