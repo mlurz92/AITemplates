@@ -1471,9 +1471,50 @@ function setupMobileSpecificFeatures() {
     containerEl.addEventListener('touchstart', handleTouchStart, { passive: true });
     containerEl.addEventListener('touchmove', handleTouchMove, { passive: true });
     containerEl.addEventListener('touchend', handleTouchEnd, { passive: true });
+    containerEl.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     window.history.replaceState({ path: [], modalOpen: false }, '', window.location.href);
-    window.onpopstate = handlePopState;
+    window.addEventListener('popstate', handlePopState);
+
+    // iOS: Prevent double-tap zoom on interactive elements
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (e) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+            // Only prevent if the target is not an input/textarea
+            const tag = e.target.tagName.toLowerCase();
+            if (tag !== 'input' && tag !== 'textarea' && tag !== 'select') {
+                e.preventDefault();
+            }
+        }
+        lastTouchEnd = now;
+    }, { passive: false });
+
+    // Handle visual viewport resize (iOS keyboard)
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            updateViewportMetrics();
+            updateDockPositioning();
+        }, { passive: true });
+    }
+
+    // Card active class for touch feedback on glass border
+    containerEl.addEventListener('touchstart', (e) => {
+        const card = e.target.closest('.card');
+        const chip = e.target.closest('.favorite-chip');
+        if (card) card.classList.add('is-pressed');
+        if (chip) chip.classList.add('is-pressed');
+    }, { passive: true });
+    containerEl.addEventListener('touchend', () => {
+        document.querySelectorAll('.card.is-pressed, .favorite-chip.is-pressed').forEach(el => {
+            el.classList.remove('is-pressed');
+        });
+    }, { passive: true });
+    containerEl.addEventListener('touchcancel', () => {
+        document.querySelectorAll('.card.is-pressed, .favorite-chip.is-pressed').forEach(el => {
+            el.classList.remove('is-pressed');
+        });
+    }, { passive: true });
 }
 
 function navigateOneLevelUp() {
@@ -1662,10 +1703,17 @@ function handleTouchStart(e) {
     touchStartY = e.touches[0].clientY;
     touchEndX = touchStartX;
     touchEndY = touchStartY;
+    // Track if this touch is in the edge-swipe zone (avoid double-fire with edge gesture)
+    edgeSwipeTouch = touchStartX <= EDGE_SWIPE_ZONE;
 }
+
+const EDGE_SWIPE_ZONE = 35;
+let edgeSwipeTouch = false;
 
 function handleTouchMove(e) {
     if (!touchStartX || modalEl.classList.contains('visible') || containerEl.classList.contains('edit-mode')) return;
+    // Don't interfere with edge-swipe-back gesture
+    if (edgeSwipeTouch) return;
     touchEndX = e.touches[0].clientX;
     touchEndY = e.touches[0].clientY;
     let diffX = touchEndX - touchStartX;
@@ -1682,6 +1730,15 @@ function handleTouchMove(e) {
 
 function handleTouchEnd() {
     if (!touchStartX || modalEl.classList.contains('visible') || containerEl.classList.contains('edit-mode')) return;
+    // Don't interfere with edge-swipe-back gesture
+    if (edgeSwipeTouch) {
+        edgeSwipeTouch = false;
+        touchStartX = 0;
+        touchStartY = 0;
+        containerEl.classList.remove('swiping-right');
+        containerEl.style.transform = '';
+        return;
+    }
     let diffX = touchEndX - touchStartX;
     let diffY = touchEndY - touchStartY;
 
@@ -1826,7 +1883,9 @@ function generateId() {
 function isMobile() {
     let isMobileDevice = false;
     try {
-        isMobileDevice = navigator.maxTouchPoints > 0 || 'ontouchstart' in window || /Mobi|Android/i.test(navigator.userAgent);
+        isMobileDevice = (navigator.maxTouchPoints > 0 && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent))
+            || 'ontouchstart' in window
+            || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     } catch (e) { }
     return isMobileDevice;
 }
@@ -4034,6 +4093,7 @@ function setupPullToRefresh() {
     const ptrEl = document.getElementById('pull-to-refresh');
     const ptrLabel = document.getElementById('ptr-label');
     if (!ptrEl) return;
+    if (!ptrLabel) ptrEl.removeAttribute('aria-hidden');
 
     let ptrStartY = 0;
     let ptrActive = false;
@@ -4079,6 +4139,14 @@ function setupPullToRefresh() {
                 ptrEl.classList.remove('ptr-pulling');
             }
         } else {
+            ptrEl.classList.remove('ptr-pulling');
+            ptrEl.classList.remove('ptr-loading');
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchcancel', () => {
+        if (ptrActive) {
+            ptrActive = false;
             ptrEl.classList.remove('ptr-pulling');
             ptrEl.classList.remove('ptr-loading');
         }

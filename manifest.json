@@ -1,11 +1,15 @@
 {
-  "name": "Prompt-Templates Browser",
+  "name": "Prompt-Templates",
   "short_name": "Prompts",
   "description": "Ein Browser zum Navigieren und Kopieren von Prompt-Templates.",
-  "start_url": "index.html",
+  "start_url": "/index.html",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0b0e1a",
   "theme_color": "#0c0f1a",
+  "dir": "ltr",
+  "lang": "de",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "icons/web-app-manifest-192x192.png",
@@ -31,5 +35,10 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "shortcuts": [],
+  "id": "/index.html",
+  "scope": "/",
+  "prefer_related_applications": false
 }

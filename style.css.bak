@@ -4,16 +4,6 @@
   padding: 0;
 }
 
-/* === MOBILE BREAKPOINT SYSTEM ===
-   - xs: 0-359px     (very small phones)
-   - sm: 360-479px   (small phones, iPhone SE)
-   - md: 480-719px   (large phones, iPhone 14 Pro Max = 430px)
-   - lg: 720-899px   (tablets portrait)
-   - xl: 900-1119px  (tablets landscape / small desktop)
-   - xxl: 1120-1319px (desktop)
-   - xxxl: 1320+      (large desktop)
-*/
-
 :root {
   /* === LIQUID GLASS – Cupertino Palette 2025/2026 === */
 
@@ -86,7 +76,7 @@
   --font-ui: ui-sans-serif, system-ui, "Inter", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   --fs-1: clamp(28px, 4vw, 40px);
   --fs-2: clamp(18px, 2.2vw, 22px);
-  --fs-3: clamp(14px, 2.5vw, 16px);
+  --fs-3: 14.5px;
 
   /* Animation */
   --ease-smooth: cubic-bezier(.22,.61,.36,1);
@@ -102,34 +92,12 @@
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
   --app-vh: 100dvh;
-  --app-vw: 100dvw;
+  --app-vw: 100vw;
   --viewport-bottom-offset: 0px;
   --top-bar-height: 60px;
   --card-aspect-ratio: 10 / 7;
 }
 
-/* === GLOBAL MOBILE TOUCH OPTIMIZATIONS === */
-@media (pointer: coarse) {
-  * {
-    -webkit-tap-highlight-color: transparent;
-  }
-  /* Prevent iOS callout on long press for interactive elements */
-  .card, .favorite-chip, .folder-icon, .btn, .breadcrumb-link,
-  .context-menu-item, .add-menu-item, .folder-tree-item,
-  .favorites-toggle, .favorite-folder-hover-copy {
-    -webkit-touch-callout: none;
-  }
-  /* Prevent text selection on UI controls */
-  .top-bar, .card, .favorite-chip, .context-menu, .add-menu,
-  .favorites-dock, .favorites-toggle {
-    -webkit-user-select: none;
-    user-select: none;
-  }
-  .card h3, .favorite-chip-title, .breadcrumb-link {
-    -webkit-user-select: auto;
-    user-select: auto;
-  }
-}
 
 
 html {
@@ -230,8 +198,8 @@ body::before {
 }
 
 .shape1 {
-  width: 60dvmax;
-  height: 60dvmax;
+  width: 60vmax;
+  height: 60vmax;
   top: -22vmax;
   left: -22vmax;
   /* Cupertino Indigo/Lavendel – sanft */
@@ -245,8 +213,8 @@ body::before {
 }
 
 .shape2 {
-  width: 54dvmax;
-  height: 54dvmax;
+  width: 54vmax;
+  height: 54vmax;
   top: 8vmax;
   right: -18vmax;
   /* Cupertino Minz-Grün – sehr subtil */
@@ -260,8 +228,8 @@ body::before {
 }
 
 .shape3 {
-  width: 52dvmax;
-  height: 52dvmax;
+  width: 52vmax;
+  height: 52vmax;
   bottom: -12vmax;
   left: 14vmax;
   /* Cupertino Warm Peach/Orange – dezent */
@@ -276,22 +244,22 @@ body::before {
 
 @keyframes aurora-drift-1 {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  25% { transform: translate3d(2.5dvw, 1.8dvh, 0) scale(1.04); }
-  50% { transform: translate3d(-1.8vw, 3.5dvh, 0) scale(0.98); }
-  75% { transform: translate3d(0.8dvw, -1.5dvh, 0) scale(1.02); }
+  25% { transform: translate3d(2.5vw, 1.8vh, 0) scale(1.04); }
+  50% { transform: translate3d(-1.8vw, 3.5vh, 0) scale(0.98); }
+  75% { transform: translate3d(0.8vw, -1.5vh, 0) scale(1.02); }
 }
 
 @keyframes aurora-drift-2 {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  30% { transform: translate3d(-3.5dvw, 2.5dvh, 0) scale(1.06); }
-  60% { transform: translate3d(1.8dvw, -2.5dvh, 0) scale(0.96); }
+  30% { transform: translate3d(-3.5vw, 2.5vh, 0) scale(1.06); }
+  60% { transform: translate3d(1.8vw, -2.5vh, 0) scale(0.96); }
 }
 
 @keyframes aurora-drift-3 {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  20% { transform: translate3d(1.8dvw, -2.5dvh, 0) scale(1.03); }
-  45% { transform: translate3d(-2.5dvw, 1.8dvh, 0) scale(0.97); }
-  70% { transform: translate3d(0.8dvw, 3.5dvh, 0) scale(1.02); }
+  20% { transform: translate3d(1.8vw, -2.5vh, 0) scale(1.03); }
+  45% { transform: translate3d(-2.5vw, 1.8vh, 0) scale(0.97); }
+  70% { transform: translate3d(0.8vw, 3.5vh, 0) scale(1.02); }
 }
 
 .aurora-container.motion-reduced .aurora-shape {
@@ -377,19 +345,6 @@ body::before {
     color: var(--acc-teal);
 }
 
-.breadcrumb-link:active {
-  background-color: rgba(94, 92, 230, 0.20);
-  opacity: 0.8;
-}
-@media (pointer: coarse) {
-  .breadcrumb-link {
-    padding: 0.4em 0.6em;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-  }
-}
-
 .breadcrumb > span:not(.breadcrumb-link):not(.current-level-active) {
     padding: 0 0.35em;
     color: var(--fg-3);
@@ -452,7 +407,7 @@ body::before {
 .add-menu-item:hover svg { color: var(--acc-2); }
 
 .fullscreen-toggle .icon-fullscreen-exit.hidden, .fullscreen-toggle .icon-fullscreen-enter.hidden { display: none; }
-#app-logo-button { padding: 6px; min-width: 44px; min-height: 44px; }
+#app-logo-button { padding: 6px; }
 #app-logo-svg { transition: transform var(--duration-2) var(--ease-smooth); }
 #app-logo-button:hover #app-logo-svg { transform: scale(1.05) rotate(-3deg); }
 
@@ -591,14 +546,8 @@ body::before {
 }
 
 .card:active {
-  transform: translateY(-2px) scale(0.98) translateZ(0);
+  transform: translateY(-2px) translateZ(0);
   transition: transform 80ms var(--ease-smooth);
-  box-shadow: 0 12px 32px rgba(0,0,0,.36),
-              inset 0 1px 0 var(--glass-specular-top),
-              inset 0 -1px 0 var(--glass-specular-bottom);
-  border-color: var(--glass-stroke-hover);
-  backdrop-filter: blur(28px) saturate(175%) brightness(1.04);
-  -webkit-backdrop-filter: blur(28px) saturate(175%) brightness(1.04);
 }
 
 .cards-container.edit-mode .card { cursor: grab; animation: jiggle 0.4s infinite; }
@@ -620,8 +569,8 @@ body::before {
     background: var(--bg-1);
     border: 1px solid var(--glass-stroke);
     border-radius: 50%;
-    width: clamp(44px, 6vw, 48px);
-    height: clamp(44px, 6vw, 48px);
+    width: clamp(28px, 3vw, 32px);
+    height: clamp(28px, 3vw, 32px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -633,7 +582,7 @@ body::before {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 .card-delete-btn { right: 8px; }
-.card-edit-btn { right: calc(8px + clamp(44px, 6vw, 48px) + 6px); }
+.card-edit-btn { right: calc(8px + clamp(28px, 3vw, 32px) + 6px); }
 .cards-container.edit-mode .card-delete-btn, .cards-container.edit-mode .card-edit-btn { opacity: 1; transform: scale(1) translateY(0); }
 .card-delete-btn:hover { transform: scale(1.15) translateY(0); background: var(--delete-hover-bg); box-shadow: 0 6px 16px rgba(255, 107, 107, 0.3); }
 .card-delete-btn .icon-delete { stroke: var(--fg-2); transition: stroke 0.2s ease; }
@@ -698,10 +647,10 @@ body::before {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: clamp(10px, 2.5vw, 12px) clamp(14px, 3vw, 18px);
+  padding: 10px 14px;
   border-radius: 999px;
   font-weight: 600;
-  font-size: var(--fs-3);
+  font-size: 14.5px;
   transition: transform var(--duration-1) var(--ease-smooth), 
               background-color var(--duration-1) var(--ease-smooth), 
               box-shadow var(--duration-1) var(--ease-smooth);
@@ -749,9 +698,7 @@ body::before {
   background: transparent; 
   border-color: transparent; 
   color: var(--fg-2); 
-  padding: 8px;
-  min-width: 44px;
-  min-height: 44px; 
+  padding: 8px; 
 }
 
 .btn-ghost:hover { 
@@ -1175,8 +1122,8 @@ body.favorites-dock-visible .favorites-dock {
     top: -1px;
     right: clamp(0.35rem, 1vw, 0.8rem);
     transform: translate(55%, -100%) translateZ(0);
-    min-width: clamp(44px, 8vw, 48px);
-    height: clamp(44px, 5vw, 48px);
+    min-width: clamp(32px, 4.5vw, 44px);
+    height: clamp(22px, 2.7vw, 28px);
     border-radius: 14px 14px 8px 8px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     background: linear-gradient(150deg, rgba(24, 30, 46, 0.48), rgba(54, 64, 84, 0.3));
@@ -1400,8 +1347,7 @@ body.favorites-dock-visible .favorites-dock {
 }
 
 .favorite-chip:active {
-    transform: translateY(0) scale(0.97);
-    transition-duration: 80ms;
+    transform: translateY(0) scale(0.985);
 }
 
 .favorite-chip:focus-visible {
@@ -1700,18 +1646,6 @@ body:not([data-fullscreen-supported]) #fullscreen-button { display: none; }
   background-color: rgba(6, 214, 214, 0.55); 
 }
 
-/* === TOUCH ACTION OPTIMIZATIONS FOR SCROLLABLE AREAS === */
-.breadcrumb, .favorites-scroll-area, .folder-tree {
-  touch-action: pan-x pan-y;
-}
-.favorites-dock:not(.expanded) .favorites-scroll-area {
-  touch-action: pan-x;
-}
-.cards-container {
-  touch-action: pan-y;
-  -webkit-overflow-scrolling: touch;
-}
-
 @keyframes fade-in-vt { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fade-out-vt { from { opacity: 1; } to { opacity: 0; } }
 @keyframes slide-from-right-vt { from { transform: translateX(35px); opacity: 0;} to { transform: translateX(0); opacity: 1;} }
@@ -1754,8 +1688,7 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   opacity: .8;
   transition: opacity var(--duration-2) var(--ease-smooth);
 }
-.top-bar:hover::before, .card:hover::before, .modal .modal-content:hover::before, .context-menu:hover::before, .notification:hover::before, .favorite-chip:hover::before,
-.card.is-pressed::before, .favorite-chip.is-pressed::before {
+.top-bar:hover::before, .card:hover::before, .modal .modal-content:hover::before, .context-menu:hover::before, .notification:hover::before, .favorite-chip:hover::before {
   opacity: 1;
 }
 .top-bar::after, .card::after, .modal .modal-content::after, .context-menu::after, .notification::after {
@@ -2334,9 +2267,9 @@ body.favorites-dock-visible .favorites-dock {
   background: rgba(6, 12, 22, 0.62);
   color: var(--fg-1);
   border-radius: 12px;
-  min-height: 48px;
+  min-height: 44px;
   padding: 0 14px;
-  font-size: 16px;
+  font-size: 14px;
 }
 .toolbar-search:focus, .toolbar-sort:focus { outline: 2px solid rgba(6,214,214,.6); outline-offset: 1px; }
 body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + clamp(1.6rem, 3.8vw, 3.1rem) + var(--safe-area-inset-top)); }
@@ -2359,8 +2292,8 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   display: block;
 }
 .toolbar-search {
-  min-height: 48px;
-  font-size: 16px;
+  min-height: 40px;
+  font-size: 13px;
   opacity: .88;
 }
 .toolbar-search::placeholder { color: rgba(220,230,255,.55); }
@@ -2383,248 +2316,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   .view-toolbar{ left: 12px; right: 12px; justify-content: flex-end; }
   .toolbar-sort{ min-width: 150px; }
   .toolbar-search-wrap{ right: 0; width: min(420px, calc(100vw - 24px)); }
-}
-
-/* === IPHONE SE / VERY SMALL (max-width: 359px) === */
-@media (max-width: 359px) {
-  :root {
-    --card-min-width: 100%;
-    --card-max-width: 100%;
-    --top-bar-height: 52px;
-  }
-  .top-bar {
-    padding: 0.35rem 0.5rem;
-    min-height: 52px;
-    gap: 0.2rem;
-  }
-  .cards-container {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
-    padding: 0.5rem;
-    padding-top: calc(var(--top-bar-height) + 0.5rem + var(--safe-area-inset-top));
-    padding-bottom: calc(5rem + var(--safe-area-inset-bottom));
-  }
-  .card {
-    padding: 0.55rem;
-    border-radius: 14px;
-  }
-  .card h3 {
-    font-size: clamp(0.8rem, 3.5vw, 1rem);
-  }
-  .breadcrumb {
-    font-size: clamp(0.7rem, 3vw, 0.85rem);
-  }
-  .modal .modal-content {
-    width: 96%;
-    padding: 1rem;
-  }
-  .modal .modal-content.small-modal {
-    max-width: 96%;
-    padding: 1rem;
-  }
-  .modal-buttons {
-    gap: 0.5rem;
-  }
-  .btn {
-    font-size: 13px;
-    padding: 8px 12px;
-  }
-  #search-toggle-button,
-  #clear-favorites-button,
-  #reset-button,
-  #download-button,
-  #organize-button,
-  #storage-source-button,
-  #color-scheme-button {
-    padding: 6px;
-    min-width: 36px;
-    min-height: 36px;
-  }
-  #app-logo-button {
-    padding: 4px;
-    min-width: 40px;
-    min-height: 40px;
-  }
-  #add-button {
-    padding: 8px;
-    min-width: 42px;
-    min-height: 42px;
-  }
-  #fullscreen-button {
-    padding: 6px;
-    min-width: 36px;
-    min-height: 36px;
-  }
-}
-
-/* === SMALL PHONES (360-479px: iPhone 12/13/14/15/16 regular = 390px, iPhone 14 Pro = 393px) === */
-@media (min-width: 360px) and (max-width: 479px) {
-  :root {
-    --card-min-width: clamp(160px, 42vw, 190px);
-    --card-max-width: clamp(180px, 46vw, 210px);
-  }
-  .cards-container {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: clamp(0.5rem, 2vw, 0.8rem);
-    padding: clamp(0.5rem, 1.5vw, 0.8rem);
-    padding-top: calc(var(--top-bar-height) + clamp(0.5rem, 1.5vw, 0.8rem) + var(--safe-area-inset-top));
-  }
-}
-
-/* === LARGE PHONES (480-719px: iPhone 14 Pro Max = 430px, iPhone 15 Plus = 430px, foldables) === */
-@media (min-width: 480px) and (max-width: 719px) {
-  :root {
-    --card-min-width: clamp(180px, 28vw, 220px);
-    --card-max-width: clamp(200px, 32vw, 240px);
-  }
-  .cards-container {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(0.6rem, 1.8vw, 1rem);
-    padding: clamp(0.6rem, 1.8vw, 1rem);
-    padding-top: calc(var(--top-bar-height) + clamp(0.6rem, 1.8vw, 1rem) + var(--safe-area-inset-top));
-  }
-}
-
-/* === ALL MOBILE / TOUCH DEVICE OPTIMIZATIONS === */
-@media (pointer: coarse) {
-  /* Larger touch targets on icon buttons in top bar */
-  #search-toggle-button,
-  #clear-favorites-button,
-  #reset-button,
-  #download-button,
-  #organize-button,
-  #storage-source-button,
-  #color-scheme-button,
-  #fullscreen-button {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 10px;
-  }
-  #add-button {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 10px;
-  }
-  #app-logo-button {
-    min-width: 44px;
-    min-height: 44px;
-  }
-  
-  /* Larger context menu items */
-  .context-menu-item {
-    padding: 0.85rem 1.2rem;
-    min-height: 48px;
-  }
-  
-  /* Larger add menu items */
-  .add-menu-item {
-    padding: 0.8rem 1.2rem;
-    min-height: 48px;
-    font-size: clamp(14px, 3vw, 16px);
-  }
-  
-  /* Larger folder tree items */
-  .folder-tree-item {
-    padding: 0.7rem 0.9rem;
-    min-height: 48px;
-  }
-  
-  /* Card delete/edit buttons always visible on touch during edit mode */
-  .cards-container.edit-mode .card-delete-btn,
-  .cards-container.edit-mode .card-edit-btn {
-    width: 44px;
-    height: 44px;
-    top: 6px;
-  }
-  .cards-container.edit-mode .card-delete-btn {
-    right: 6px;
-  }
-  .cards-container.edit-mode .card-edit-btn {
-    right: 56px;
-  }
-  
-  /* Notification position on mobile */
-  #notification-area {
-    bottom: calc(1rem + var(--safe-area-inset-bottom));
-    width: calc(100% - 1.6rem);
-    max-width: 420px;
-  }
-  
-  /* Folder tree scrollable area */
-  .folder-tree {
-    max-height: 40dvh;
-  }
-  
-  /* Swipe indicator for card container */
-  .cards-container {
-    overscroll-behavior-x: contain;
-  }
-}
-
-/* === SPECIFIC IPHONE 14 PRO MAX TUNING (428-430px wide) === */
-@media (min-width: 425px) and (max-width: 435px) {
-  :root {
-    --card-min-width: clamp(175px, 44vw, 196px);
-    --card-max-width: clamp(190px, 48vw, 210px);
-  }
-  .cards-container {
-    padding-left: clamp(0.5rem, 2vw, 1rem);
-    padding-right: clamp(0.5rem, 2vw, 1rem);
-  }
-}
-
-/* === LANDSCAPE MOBILE (oriented phone, short height) === */
-@media screen and (max-height: 500px) and (orientation: landscape) {
-  :root {
-    --top-bar-height: 48px;
-  }
-  .top-bar {
-    min-height: 48px;
-    padding: 0.3rem 0.8rem;
-  }
-  .cards-container {
-    padding-top: calc(48px + 0.4rem + var(--safe-area-inset-top));
-    padding-bottom: calc(4rem + var(--safe-area-inset-bottom));
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0.5rem;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-  .card {
-    padding: 0.5rem;
-  }
-  .modal .modal-content {
-    max-height: 95dvh;
-    padding: 1rem 1.5rem 1.5rem;
-  }
-  .fixed-back {
-    left: calc(0.5rem + var(--safe-area-inset-left));
-    padding: 0.4rem;
-    top: calc(48px + var(--safe-area-inset-top) + 0.3rem);
-  }
-  .fixed-back svg.icon {
-    width: 20px;
-    height: 20px;
-  }
-  .favorites-dock {
-    padding: 0 0.5rem calc(0.3rem + max(env(safe-area-inset-bottom, 0px), var(--viewport-bottom-offset)));
-  }
-  .favorites-dock-inner {
-    border-radius: 14px;
-  }
-}
-
-/* === REDUCED MOTION on touch === */
-@media (prefers-reduced-motion: reduce) and (pointer: coarse) {
-  .card:hover,
-  .favorite-chip:hover,
-  .btn:hover,
-  .btn-primary:hover,
-  .btn-ghost:hover,
-  .fixed-back:hover,
-  .breadcrumb-link:hover {
-    transform: none !important;
-  }
 }
 
 
@@ -2820,7 +2511,7 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
     max-height: 92dvh;
     border-radius: 22px 22px 0 0;
     border-bottom: none;
-    padding: 1.4rem 1.6rem calc(2rem + env(safe-area-inset-bottom));
+    padding: 1.4rem 1.6rem 2rem;
     transform: translateY(100%) translateZ(0);
     /* Drag Handle */
     padding-top: 2rem;
@@ -3200,7 +2891,7 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
 .toolbar-sort { display:none !important; }
 .view-toolbar { position: fixed; top: calc(var(--safe-area-inset-top) + var(--top-bar-height) + 6px); right: clamp(10px,2vw,24px); left: auto; width: min(430px, calc(100vw - 20px)); background: transparent; border: 0; padding: 0; margin: 0; z-index: 1001; pointer-events: none; }
 .toolbar-search-wrap { pointer-events: auto; position: absolute; right: 0; top: 0; width: 100%; }
-.toolbar-search {   min-height: 48px; background: rgba(8,14,24,.94); border: 1px solid rgba(255,255,255,.18); box-shadow: 0 14px 30px rgba(0,0,0,.48); }
+.toolbar-search { min-height: 42px; background: rgba(8,14,24,.94); border: 1px solid rgba(255,255,255,.18); box-shadow: 0 14px 30px rgba(0,0,0,.48); }
 
 /* ensure favorites hover menu can overflow above dock */
 .favorites-dock, .favorites-dock-inner, .favorites-scroll-area, .favorites-list, .favorites-list-item, .favorite-chip { overflow: visible !important; }
