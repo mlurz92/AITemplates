@@ -137,7 +137,7 @@ html {
 }
 
 html, body {
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: none;
   height: 100%;
   /* PWA Fullscreen: Nutze dynamic viewport height für sichere Bereiche */
   min-height: 100vh;
@@ -311,12 +311,11 @@ body::before {
   }
 }
 
-/* === TOP BAR - Enhanced Design === */
 .top-bar {
   position: fixed;
-  top: var(--safe-area-inset-top);
-  left: var(--safe-area-inset-left);
-  right: var(--safe-area-inset-right);
+  top: 0;
+  left: 0;
+  right: 0;
   /* 5-Layer Liquid Glass */
   background: var(--glass-highlight), var(--glass-refraction), var(--glass-shadow-overlay), var(--glass-bg);
   backdrop-filter: blur(28px) saturate(160%) brightness(1.04);
@@ -328,8 +327,8 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem 1.2rem;
-  min-height: 3.75rem;
+  padding: calc(0.6rem + var(--safe-area-inset-top)) calc(1.2rem + var(--safe-area-inset-right)) 0.6rem calc(1.2rem + var(--safe-area-inset-left));
+  min-height: calc(3.75rem + var(--safe-area-inset-top));
   gap: 0.5rem;
   border-bottom: 1px solid var(--glass-stroke);
   border-top-color: var(--glass-stroke-top);
@@ -708,6 +707,8 @@ body::before {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .btn:hover { 
@@ -829,7 +830,7 @@ body::before {
   position: relative;
   max-width: 750px;
   width: 92%;
-  max-height: 88vh;
+  max-height: 88dvh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -875,7 +876,7 @@ body::before {
               border-color var(--duration-1) var(--ease-smooth),
               background var(--duration-1) var(--ease-smooth);
   font-family: var(--font-ui);
-  font-size: 1rem;
+  font-size: 16px; /* 16px prevents iOS auto-zoom */
 }
 
 .input::placeholder, .textarea::placeholder { 
@@ -1034,7 +1035,7 @@ body.favorites-dock-visible #notification-area {
 
 /* === FOLDER TREE - Enhanced Design === */
 .folder-tree { 
-  max-height: 50vh; 
+  max-height: 50dvh; 
   overflow-y: auto; 
   padding: 0.5rem; 
   border: 1px solid var(--glass-stroke); 
@@ -1078,20 +1079,20 @@ body.favorites-dock-visible #notification-area {
 }
 
 body.favorites-dock-visible .cards-container {
-    padding-bottom: calc(var(--favorites-footprint, 0px) + clamp(2.1rem, 5vh, 3.3rem) + max(var(--viewport-bottom-offset), var(--safe-area-inset-bottom)));
+    padding-bottom: calc(var(--favorites-footprint, 0px) + clamp(2.1rem, 5dvh, 3.3rem) + max(var(--viewport-bottom-offset), var(--safe-area-inset-bottom)));
 }
 
 .favorites-dock {
     --favorite-chip-width: clamp(148px, 20vw, 224px);
-    --favorite-chip-base-height: clamp(56px, 11vw, 88px);
+    --favorite-chip-base-height: clamp(56px, 11dvw, 88px);
     --favorites-frame-pad-x: clamp(0.45rem, 1.8vw, 0.85rem);
-    --favorites-frame-pad-y: clamp(0.34rem, 1vw, 0.58rem);
+    --favorites-frame-pad-y: clamp(0.34rem, 1dvh, 0.58rem);
     position: fixed;
     left: 0;
     right: 0;
     bottom: calc(max(var(--viewport-bottom-offset), 0px));
     /* Browser und PWA: sichere Position am Visual-Viewport-Ende + Safe Area */
-    padding: 0 clamp(10px, 3.2vw, 32px) calc(clamp(6px, 2.4vw, 14px) + max(env(safe-area-inset-bottom, 0px), var(--viewport-bottom-offset)));
+    padding: 0 clamp(10px, 3.2vw, 32px) calc(clamp(6px, 2.4dvh, 14px) + max(env(safe-area-inset-bottom, 0px), var(--viewport-bottom-offset)));
     z-index: 998;
     pointer-events: none;
     opacity: 0;
@@ -1176,7 +1177,7 @@ body.favorites-dock-visible .favorites-dock {
     right: clamp(0.35rem, 1vw, 0.8rem);
     transform: translate(55%, -100%) translateZ(0);
     min-width: clamp(44px, 8vw, 48px);
-    height: clamp(44px, 5vw, 48px);
+    height: clamp(44px, 5dvh, 48px);
     border-radius: 14px 14px 8px 8px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     background: linear-gradient(150deg, rgba(24, 30, 46, 0.48), rgba(54, 64, 84, 0.3));
@@ -1224,7 +1225,7 @@ body.favorites-dock-visible .favorites-dock {
 
 .favorites-toggle-icon {
     width: clamp(16px, 2.4vw, 20px);
-    height: clamp(16px, 2.4vw, 20px);
+    height: clamp(16px, 2.4dvh, 20px);
     animation: favorites-toggle-peek 3.2s ease-in-out infinite;
     transform-origin: center;
 }
@@ -1297,7 +1298,7 @@ body.favorites-dock-visible .favorites-dock {
 .favorites-dock.expanded .favorites-scroll-area {
     overflow-x: hidden;
     overflow-y: visible;
-    max-height: clamp(14rem, 56vh, 26rem);
+    max-height: clamp(14rem, 56dvh, 26rem);
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
     scroll-snap-type: none;
@@ -1335,7 +1336,7 @@ body.favorites-dock-visible .favorites-dock {
     grid-template-columns: auto 1fr;
     align-items: center;
     gap: clamp(0.38rem, 1vw, 0.65rem);
-    padding: clamp(0.38rem, 1.05vw, 0.65rem) clamp(0.52rem, 1.4vw, 0.82rem);
+    padding: clamp(0.38rem, 1.05dvh, 0.65rem) clamp(0.52rem, 1.4vw, 0.82rem);
     border-radius: 15px;
     border: 1px solid var(--favorite-border);
     background: linear-gradient(165deg, 
@@ -1421,13 +1422,13 @@ body.favorites-dock-visible .favorites-dock {
 }
 
 .favorite-chip-badge {
-    width: clamp(1.6rem, 2.8vw, 2rem);
-    height: clamp(1.6rem, 2.8vw, 2rem);
+    width: clamp(1.6rem, 2.8dvh, 2rem);
+    height: clamp(1.6rem, 2.8dvh, 2rem);
     border-radius: 11px;
     display: grid;
     place-items: center;
     font-weight: 700;
-    font-size: clamp(0.84rem, 1.6vw, 0.98rem);
+    font-size: clamp(0.84rem, 1.6dvh, 0.98rem);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     background: linear-gradient(145deg, var(--favorite-accent), rgba(255, 255, 255, 0.22));
@@ -1439,7 +1440,7 @@ body.favorites-dock-visible .favorites-dock {
 .favorite-chip-text {
     display: flex;
     flex-direction: column;
-    gap: clamp(0.12rem, 0.4vw, 0.28rem);
+    gap: clamp(0.12rem, 0.4dvh, 0.28rem);
     min-width: 0;
     flex: 1 1 auto;
     justify-content: center;
@@ -1447,7 +1448,7 @@ body.favorites-dock-visible .favorites-dock {
 
 .favorite-chip-title {
     font-weight: 700;
-    font-size: calc(clamp(0.82rem, 1.45vw, 1.02rem) * var(--favorite-title-scale));
+    font-size: calc(clamp(0.82rem, 1.45dvh, 1.02rem) * var(--favorite-title-scale));
     line-height: 1.22;
     word-break: normal;
     overflow-wrap: normal;
@@ -1460,7 +1461,7 @@ body.favorites-dock-visible .favorites-dock {
 }
 
 .favorite-chip-preview {
-    font-size: calc(clamp(0.68rem, 1.18vw, 0.82rem) * var(--favorite-preview-scale));
+    font-size: calc(clamp(0.68rem, 1.18dvh, 0.82rem) * var(--favorite-preview-scale));
     color: var(--fg-3);
     letter-spacing: 0.01em;
     line-height: 1.3;
