@@ -1,391 +1,133 @@
-# Prompt-Templates – Vollständige Anwendungsdokumentation
+# 🌌 Prompt-Templates – Die ultimative Prompt-Management Web-App
 
-> **Version**: Aktueller Stand (2026-05-30)  
-> **Plattform**: Web-Applikation (Progressive Web App) – optimal für iPhone 14 Pro Max (430 px Viewport-Breite) und alle Viewport-Größen  
-> **Technologie-Stack**: Vanilla JavaScript (ES6+), HTML5, CSS3 (Custom Properties, Grid, Flexbox), SortableJS, GSAP, Vivus, View Transitions API
+Willkommen bei **Prompt-Templates**, einer hochmodernen, performanten und visuell atemberaubenden Single-Page-Application (SPA) zur Verwaltung, Organisation und schnellen Nutzung von Text-Prompts. Diese Anwendung wurde mit einem extremen Fokus auf **Premium-UX/UI**, **Mobile-First Progressive Web App (PWA) Standards** und **Apple Cupertino Design-Ästhetik** entwickelt.
 
----
-
-## Inhaltsverzeichnis
-
-1. [Überblick](#überblick)
-2. [Kernkonzept & Zweck](#kernkonzept--zweck)
-3. [Design-Philosophie & visuelle Sprache](#design-philosophie--visuelle-sprache)
-4. [Responsive & adaptives Layout-System](#responsive--adaptives-layout-system)
-5. [Touch & Pointer-Interaktionen](#touch--pointer-interaktionen)
-6. [Komponentenkatalog](#komponentenkatalog)
-7. [Animation- & Motion-System](#animation--motion-system)
-8. [Performance-Optimierungen](#performance-optimierungen)
-9. [Barrierefreiheit & Inklusion](#barrierefreiheit--inklusion)
-10. [Progressive Web App](#progressive-web-app)
-11. [Mobile-Optimierungen (iPhone 14 Pro Max)](#mobile-optimierungen-iphone-14-pro-max)
-12 [Datenmanagement & Sync](#datenmanagement--sync)
-13. [Installation & Deployment](#installation--deployment)
+Dieses Dokument dient als allumfassende Architekturbeschreibung und UX-Manifest, das jedes Detail, jede Design-Entscheidung und jede Interaktionsnuance der Anwendung lückenlos dokumentiert.
 
 ---
 
-## Überblick
+## 🎨 1. Design-Philosophie: Liquid Glass & Cupertino Ästhetik
 
-Prompt-Templates ist ein spezialisiertes Werkzeug zum Durchsuchen, Organisieren und Kopieren von Prompt-Vorlagen. Die Anwendung nutzt ein modernes "Liquid Glass"-Design im Cupertino-Stil mit 5-Schichten-Glas-Effekt, Aurora-Hintergrundanimation und subtilen Mikro-Animationen. Sie ist als Progressive Web App (PWA) implementiert und funktioniert sowohl im Browser als auch im Standalone-Modus auf iOS/Android-Geräten.
+Die visuelle Identität der App basiert auf einem state-of-the-art **5-Layer Liquid Glass Refraktions-System**, das Tiefe, Transparenz und Materialität simuliert, gepaart mit einer kosmischen **Aurora-Hintergrundanimation**.
 
-Die Anwendung folgt einem **mobile-first** Ansatz und ist bis ins letzte Detail für die Interaktion auf Touch-Geräten optimiert – speziell für das iPhone 14 Pro Max mit seiner dreispaltigen Kachel-Anordnung.
+### 1.1 Das 5-Layer Liquid Glass System
+Jedes gehobene UI-Element (Karten, Modals, Top-Bar, Favorites-Dock) nutzt eine komplexe Schichtung aus CSS-Eigenschaften, um physisches Glas nachzubilden:
+1. **Highlight (Lichtreflexion):** Ein radialer Gradient simuliert den Lichteinfall an der oberen linken Kante (`--glass-highlight`).
+2. **Refraktion (Lichtbrechung):** Ein diagonaler Gradient (`--glass-refraction`) erzeugt die typische Glas-Brechung, die den Hintergrund subtil verzerrt.
+3. **Shadow-Overlay (Innere Tiefe):** Ein abgedunkelter radialer Bereich unten rechts (`--glass-shadow-overlay`) verleiht dem Element Volumen.
+4. **Base Background (Grundfärbung):** Ein halbtransparenter Basis-Farbton (`--glass-bg`), der sich im Hell- und Dunkelmodus dynamisch anpasst.
+5. **Backdrop-Filter (Unschärfe & Sättigung):** Die Magie passiert durch `backdrop-filter: blur(22px) saturate(160%) brightness(1.02)`. Der Hintergrund wird weichgezeichnet und in der Sättigung verstärkt, was den typischen iOS-Vibrant-Look erzeugt.
 
----
+Zusätzlich erhalten die Elemente **Specular-Highlights** (feine weiße/helle Ränder oben) und sanfte **Drop-Shadows**, um sie vom Hintergrund abzuheben.
 
-## Kernkonzept & Zweck
-
-### Primäre Funktion
-Die Anwendung ermöglicht es Benutzern, eine hierarchische Sammlung von Prompt-Vorlagen zu erkunden, zu durchsuchen und zu kopieren. Jede Vorlage kann als Favorit markiert werden und steht im Dock für schnellen Zugriff zur Verfügung.
-
-### Datenmodell
-```javascript
-{
-  id: string | eindeutige Kennung (UUID),
-  type: "prompt" | "folder" | "prompt-link" | "folder-link",
-  title: string | Anzeigename,
-  content?: string | Prompt-Text (bei type="prompt"),
-  items?: Array | Untergeordnete Elemente (bei type="folder"),
-  targetId?: string | Referenz auf verknüpftes Element (bei Link-Typen)
-}
-```
-
-### Navigation
-- **Breadcrumb-Navigation**: Zeigt aktuelle Position in der Ordnerhierarchie an
-- **Swipe-to-go-back**: Rechtsswipe auf Inhaltsfläche oder Edgeswipe von links navigiert eine Ebene zurück
-- **Pull-to-Refresh**: Ziehen am oberen Rand lädt Cloud-Daten neu (nur auf Touch-Geräten)
+### 1.2 Die Aurora-Hintergrundanimation
+Der Hintergrund besteht nicht nur aus statischen Farben, sondern aus einem dynamischen, performance-optimierten Partikelsystem.
+* **Cosmic Aurora Theme:** Drei asymmetrische, weichgezeichnete Form-Elemente (`.shape1`, `.shape2`, `.shape3`) treiben in langsamen, versetzten `translate3d`-Animationen über den Bildschirm.
+* **Farbspektrum:** Die Farben (Indigo/Lavendel, Minz-Grün, Warm Peach) sind direkt aus der Apple HIG (Human Interface Guidelines) Palette entlehnt.
+* **Performance:** Durch `translateZ(0)` und `contain: strict` werden die Berechnungen vollständig auf die GPU (Hardwarebeschleunigung) ausgelagert, ohne das Layout-Rendering des Browsers zu belasten.
 
 ---
 
-## Design-Philosophie & visuelle Sprache
+## 📱 2. Mobile-First & PWA-Exzellenz (iPhone 14 Pro Max optimiert)
 
-### Liquid Glass – 5-Schichten-System
+Die App ist explizit als installierbare **Progressive Web App (PWA)** für iOS und moderne Smartphones konzipiert. Jedes Detail wurde poliert, um sich wie eine native App anzufühlen.
 
-Die visuellen Elemente verwenden einen aufwändigen Glas-Effekt mit fünf Ebenen:
+### 2.1 Safe Area & Dynamic Island Integration
+* Die `index.html` nutzt den Meta-Tag `viewport-fit=cover`, um die App bis an die physikalischen Ränder des Bildschirms auszuweiten.
+* **Top-Bar Blur-Erweiterung:** Die obere Glas-Menüleiste (`.top-bar`) erstreckt sich physisch bis zum oberen Bildschirmrand (unter die Dynamic Island und Statusleiste). Ihr inneres `padding-top` wird dynamisch über `env(safe-area-inset-top)` berechnet, sodass alle Buttons sicher *unter* der Notch/Dynamic Island liegen, während der Unschärfe-Effekt dahinter sichtbar bleibt.
+* **Home-Indicator Schutz:** Das Favorites-Dock und das untere Padding des Grid-Containers respektieren strikt `env(safe-area-inset-bottom)`, um Überlappungen mit dem iOS-Home-Balken auszuschließen.
 
-1. **Highlight-Gradient** (`--glass-highlight`): Oberflächenreflexion
-2. **Refraction-Gradient** (`--glass-refraction`): Lichtbrechung
-3. **Shadow-Overlay** (`--glass-shadow-overlay`): Schatten
-4. **Basis-Glas** (`--glass-bg`): Hintergrund mit Transparenz
-5. **Border-Glow** (`--glass-border-gradient`): Dynamischer Farbverlauf
-
-### Farbsystem (Cupertino)
-
-| Variable | Dark Mode | Light Mode | Verwendung |
-|----------|-----------|------------|------------|
-| `--bg-0` | `hsl(218, 26%, 8%)` | `hsl(210, 22%, 96%)` | Haupthintergrund |
-| `--bg-1` | `hsl(218, 22%, 12%)` | `hsl(210, 18%, 92%)` | Sekundärhintergrund |
-| `--fg-1` | `hsl(220, 30%, 97%)` | `hsl(218, 30%, 10%)` | Haupttext |
-| `--fg-2` | `hsl(220, 20%, 78%)` | `hsl(218, 20%, 30%)` | Sekundärtext |
-| `--fg-3` | `hsl(220, 14%, 58%)` | `hsl(218, 14%, 52%)` | Tertiärtext |
-| `--acc-teal` | `#5AC8FA` | `#008FA8` | Akzent (Links, Hover) |
-| `--acc-1` | `#5E5CE6` | `#4340C8` | Indigo Akzent |
-| `--acc-2` | `#32D74B` | `#25A83A` | Grün (Success) |
-| `--acc-3` | `#FF453A` | `#D32F22` | Rot (Löschen) |
-| `--acc-4` | `#FFD60A` | `#C8A800` | Gelb (Favorit) |
-
-### Aurora-Hintergrund
-Drei radial-gradient basierte Schleier mit Animationen:
-- **Shape 1**: Indigo/Lavendel (18s Drift)
-- **Shape 2**: Minz-Grün (22s Drift)  
-- **Shape 3**: Warm Peach/Orange (26s Drift)
-
-Die Animationen verwenden `dvmax`, `dvh`, `dvw` für flackerfreies Verhalten auf mobilen Geräten.
+### 2.2 Natives Interaktions-Gefühl (Touch-Ergonomie)
+* **Verhinderung von Auto-Zoom:** Alle Eingabefelder (`input`, `textarea`) haben eine erzwungene `font-size: 16px`. Dies ist ein kritischer Hack für iOS Safari, der ansonsten ungefragt hereinzoomt, wenn ein Feld angetippt wird. Zusätzlich ist `user-scalable=no` gesetzt.
+* **Overscroll Behavior:** Der unschöne "Gummiband-Effekt" beim Scrollen über den Bildschirmrand hinaus (Bounce-Scrolling) ist durch `overscroll-behavior-y: none` auf dem `body` komplett deaktiviert. Nur spezifische Container dürfen scrollen.
+* **Touch Targets (44px Rule):** Unter `@media (pointer: coarse)` (Geräte mit Touchscreen) haben alle interaktiven Buttons eine garantierte Mindestgröße von `44x44px`. Auf dem Desktop (Mausbedienung) bleiben sie feiner und kompakter, um das Layout nicht zu sprengen.
+* **Visuelles Tap-Feedback:** Der graue Standard-Tipp-Effekt von Safari (`-webkit-tap-highlight-color`) wurde entfernt. Stattdessen nutzen Buttons exakte `:active`-States (`transform: scale(0.98)` und Helligkeitsveränderungen) für ein unmittelbares, physisches Touch-Gefühl.
+* **Text Selection Control:** Um versehentliches Markieren beim Scrollen oder Wischen zu verhindern, ist `user-select: none` auf allen UI-Elementen angewandt. Lediglich die reinen Prompt-Texte sind markier- und kopierbar.
+* **DVH (Dynamic Viewport Heights):** Modal-Höhen und Container-Größen nutzen `dvh` statt `vh`, wodurch sich das Layout beim Einblenden der virtuellen Tastatur perfekt und ruckelfrei skaliert.
 
 ---
 
-## Responsive & adaptives Layout-System
+## 🧩 3. UI- & UX-Komponenten im Detail
 
-### Breakpoints (standardisiert)
+Die App ist modular aus hochkomplexen Komponenten aufgebaut, die nahtlos ineinandergreifen.
 
-| Breakpoint | Breite | Geräteklasse |
-|-----------|--------|--------------|
-| xs | 0-359px | iPhone SE, sehr kleine Phones |
-| sm | 360-479px | iPhone 12/13/14/15 (390/393px) |
-| md | 480-719px | **iPhone 14 Pro Max (430px), Foldables** |
-| lg | 720-899px | Tablets Portrait |
-| xl | 900-1119px | Tablets Landscape |
-| xxl | 1120-1319px | Desktop klein |
-| xxxl | 1320px+ | Großer Desktop |
+### 3.1 Die Top-Bar (Navigationsleiste)
+Die Top-Bar ist der zentrale Ankerpunkt. Sie ist `fixed` positioniert und beinhaltet:
+* **Zurück-Button:** Erscheint kontextbezogen, sobald man sich in einem Unterordner befindet.
+* **Breadcrumb-Navigation:** Ein horizontal scrollbarer Bereich (`overflow-x: auto`), der den genauen Pfad (`Root > Ordner A > Unterordner B`) anzeigt. Jeder Schritt ist klickbar.
+* **Aktions-Buttons:** Ein Kontext-sensitives Menü-System zum Hinzufügen (Prompts/Ordner/Verknüpfungen), Reorganisieren, Herunterladen (JSON) und Wechseln des Color-Schemes (Hell/Dunkel).
 
-### Kachel-Layout
-Grid-basiert mit `aspect-ratio: 10/7`:
-- **Desktop**: Auto-fit mit `minmax(var(--card-min-width), 1fr)`
-- **iPhone 14 Pro Max**: 3 Spalten (`repeat(3, minmax(0, 1fr))`)
-- **iPhone SE**: 2 Spalten
-- **Landscape < 500px**: Auto-fit mit min. 140px
+### 3.2 Cards (Die Prompt- und Ordner-Karten)
+Das Herzstück der Anwendung. Das Grid (`cards-container`) skaliert vollkommen dynamisch (`auto-fit`, `minmax`) basierend auf der Bildschirmbreite.
+* **Zwei Typen:** Ordner-Karten (zur Navigation) und Prompt-Karten (zur Ausführung).
+* **Hover- & 3D-Tilt-Effekt:** Auf dem Desktop reagieren Karten beim Darüberfahren mit einem subtilen 3D-Tilt-Effekt (basierend auf Maus-Position). Der Hover-Zustand verstärkt das Glühen (`--shadow-glow-1`) und hebt die Karte leicht an (`translateY(-6px)`).
+* **Kontextmenü & Schnellzugriff:** Ein Rechtsklick (oder Long-Press auf Mobile) öffnet ein flüssig animiertes, schwebendes Kontextmenü (Favorisieren, Umbenennen, Verschieben, Löschen).
+* **Schnell-Aktionen:** Beim Hovern über eine Karte werden kleine, kreisrunde Buttons eingeblendet, um direkt zu Editieren oder zu Löschen.
 
-### Safe Areas
-Alle fixpositionierten Elemente nutzen `env(safe-area-inset-*)` für die korrekte Positionierung bei:
-- Dynamic Island (iPhone 14 Pro/Pro Max)
-- Android Notches
-- iOS Home Indicator (untere Sicherheitszone)
+### 3.3 Favorites-Dock (Favoriten-Verwaltung)
+Am unteren Bildschirmrand befindet sich das smarte Favorites-Dock, das sich intelligent einklappt oder ausbreitet:
+* **Chips-System:** Favoriten werden als kompakte Chips dargestellt. Jeder Chip hat eine individuelle Akzentfarbe (`FAVORITE_ACCENTS`), die aus einem Pool von Cupertino-kompatiblen Neon-Farben generiert wird.
+* **Fluid Layout:** Je nach Platzangebot im Chip rendert er entweder als `full` (Titel & Vorschautext) oder `compact` (nur Titel).
+* **Swipe-to-Expand:** Auf Mobilgeräten kann das Dock durch eine physische Wischgeste (Swipe Up/Down) geöffnet und geschlossen werden.
+* **Resize Observer:** Das Dock misst permanent seinen Platzbedarf (`favoritesFootprintRaf`) und schiebt den Haupt-Container (`padding-bottom`) exakt so weit nach oben, dass keine Karten vom Dock verdeckt werden.
 
----
-
-## Touch & Pointer-Interaktionen
-
-### Touch-Target-Größen
-Alle interaktiven Elemente entsprechen **mindestens 44×44px**:
-- `.card-delete-btn`: `clamp(44px, 6vw, 48px)`
-- `.card-edit-btn`: `clamp(44px, 6vw, 48px)`
-- `.favorites-toggle`: `clamp(44px, 8vw, 48px)` (war vorher 22px!)
-- Top-Bar Icons: `min-width: 44px; min-height: 44px`
-- `.btn-ghost`: `min-width: 44px; min-height: 44px`
-
-### Touch-Optimierungen
-- `-webkit-tap-highlight-color: transparent` global bei `pointer: coarse`
-- `-webkit-touch-callout: none` verhindert iOS-Long-Press-Menü
-- `user-select: none` auf UI-Elementen, automatisch auf Text-Inhalten
-- `touch-action: pan-x pan-y` auf scrollbaren Containern
-- Double-Tap-Zoom-Prävention für interaktive Elemente
-
-### Gesten
-
-#### Swipe-to-Go-Back
-Zwei Implementierungen:
-1. **Edgeswipe**: Start im linken 28px Rand → Navigation mit visuellem Feedback
-2. **Container-Swipe**: Rechtsswipe auf Karten-Container → Navigation
-
-**Entschärfung**: Edge-Swipe fügt `edgeSwipeTouch=true` hinzu → verhindert Doppelfire mit Container-Swipe
-
-#### Pull-to-Refresh
-- Aktiv beim `containerEl.scrollTop === 0`
-- Schwellwert: 72px
-- Zeigt Spinner mit "Loslassen zum Aktualisieren"
-- Haptic Feedback (`medium`) bei Trigger
-
-#### Favoriten-Dock-Swipe
-- Vertikaler Swipe (>56px) öffnet/schließt das Dock
-- Horizontales Scrollen mit Overflow-Indikator (links/rechts Pfeil-Deko)
+### 3.4 Modal-System & Overlays
+Die Modals (für Prompt-Detailansicht, Umbenennen, Ordner-Erstellung) gleiten von unten über den Bildschirm (ähnlich wie iOS-Sheets).
+* **Eingabefelder:** Transparente Eingabefelder mit starkem Fokus-Glow (`box-shadow: 0 0 0 3px rgba(...)`).
+* **Copy-Button-Animation:** Ein Klick auf "Kopieren" triggert nicht nur den Clipboard-API-Call, sondern auch eine feine Micro-Animation (Häkchen-SVG erscheint via GSAP), gefolgt von einer Toast-Benachrichtigung am oberen Bildschirmrand.
 
 ---
 
-## Komponentenkatalog
+## 🛠 4. Technischer Funktionsumfang & Features
 
-### Top Bar (`.top-bar`)
-Positioniert oben mit Safe-Area, Glas-Effekt. Enthält:
-- `#topbar-back-button`: Zurück-Pfeil (Ghost-Button)
-- `#breadcrumb`: Pfadnavigation mit klickbaren Zwischenstopps
-- `#organize-button`: Wechsel in den Organisations-Modus
-- `#add-button` + `#add-menu`: Neue Elemente erstellen
-- `#reset-button`: Lokalen Cache zurücksetzen
-- `#storage-source-button`: Cloud-Sync-Status-Anzeige
-- `#color-scheme-button`: Light/Dark Wechsel
-- `#fullscreen-button`: Vollbild-Modus
-- `#search-toggle-button`: Suchleiste einblenden
-- `#app-logo-button`: Zur Startseite
+Die App ist nicht nur schön, sondern ein echtes Produktivitäts-Kraftpaket.
 
-### Karten-Container (`.cards-container`)
-Centrales Grid mit:
-- `content-visibility: auto` für Performance
-- `contain-intrinsic-size: 220px 154px` für Layout-Stabilität
-- Stagger-Animation für Einblendeffekt (30ms pro Karte)
+### 4.1 Datenhaltung & Synchronisierung (Cloudflare KV & LocalStorage)
+* **Hybrid-Ansatz:** Alle Daten (Prompts, Ordnerstruktur, Verknüpfungen) liegen in einer hierarchischen JSON-Struktur.
+* **Realtime-Sync:** Wenn konfiguriert, kommuniziert die App via REST-API mit einem Cloudflare Worker (`handleCloudflareKVSync`), um den JSON-State über mehrere Geräte hinweg synchron zu halten. Eine Timestamp-Logik (`syncTimestampCloud`) verhindert Konflikte. Ein pulsierender Cloud-Indikator in der Top-Bar signalisiert den Online-Status.
+* **Offline-Fallback:** Ist kein Server erreichbar, greift die App nahtlos auf den lokalen Browser-Speicher (`localStorage`) zurück.
+* **Import/Export:** Die gesamte Struktur kann jederzeit als `templates.json` heruntergeladen oder per Drag&Drop-Modal wieder importiert werden.
 
-### Karte (`.card`)
-Zwei Typen:
-- **Prompt-Karte**: Führt Text-Inhalt
-- **Ordner-Karte**: 
+### 4.2 Drag & Drop Reorganisation (SortableJS)
+* Durch Klick auf das "Organisieren"-Icon (`organize-toggle`) wechselt die App in den Edit-Mode. Die Karten fangen leicht an zu wackeln (Jiggle-Animation, inspiriert vom iOS Homescreen).
+* Dank der Integration von **SortableJS** können Karten nun per Drag&Drop beliebig verschoben, in andere Ordner gedroppt oder umsortiert werden.
+* Das Datenmodell im Hintergrund wird in Echtzeit geparst und gespeichert.
 
-#### Karten-Elemente
-- Glasmorphismus-Hintergrund
-- Hover/Glow-Effekt (auf Touch durch `:active` und `.is-pressed` ersetzt)
-- 5-Schicht-Glas-Border (sichtbar bei Hover/Fokus/Pressed)
-- Delete-/Edit-Buttons (nur im Edit-Modus sichtbar)
-- Kontextmenü per Rechts-Click oder langes Drücken
+### 4.3 Verknüpfungen (Symlinks)
+* Um Prompts nicht doppelt pflegen zu müssen, unterstützt das System **Verknüpfungen** (`add-prompt-link`, `add-folder-link`). 
+* Eine Karte kann in mehreren Ordnern auftauchen. Änderungen an der Verknüpfung ändern das Original. Der rekursive `resolveLinkedNode`-Algorithmus sorgt dafür, dass keine Endlosschleifen beim Rendern entstehen.
 
-### Modal-Dialoge
+### 4.4 Suchfunktion & View-Toolbar
+* Über die Such-Lupe öffnet sich eine Suchleiste. Die App filtert den aktuellen Ordner (und optional Unterordner) in Echtzeit (`input`-Event) und blendet nicht-treffende Karten via CSS/JS aus.
 
-#### Prompt-Modal (`#prompt-modal`)
-- **Mobile (≤720px)**: Bottom Sheet mit Drag-Handle
-- **Desktop**: Zentrales Dialog-Fenster
-- Schließt bei Backdrop-Klick, ESC, Swipe-down
-
-#### Kontext-Menü (`#context-menu`)
-- Positioniert relativ zum Auslösenden
-- Aktionen: Favorit, Umbenennen, Verschieben, Löschen
-- Auto-Hide bei Außer-Klick
-
-### Favoriten-Dock (`#favorites-dock`)
-- Fixed am unteren Bildschirmrand
-- **Collapsed**: Horizontales Scrolling, Chips auf einzeilig
-- **Expanded**: Mehrzeiliges Grid-Layout
-- Toggle via Button oder Wischgeste
-
-### Favoriten-Chip (`.favorite-chip`)
-- 5-Schicht-Glas-Effekt
-- Badge mit Accent-Farbe (zyklisch aus 8 Farben)
-- Copy-Animation mit Konfetti
-- Eingebettetes Folder-Hover-Menü (bei Ordner-Links)
+### 4.5 Erweiterte Animationen (GSAP & Vivus)
+* **GSAP & Flip Plugin:** Wenn Chips im Favoriten-Dock hinzugefügt, entfernt oder in der Größe verändert werden, berechnet das `Flip`-Plugin die exakten Delta-Werte und animiert die Elemente butterweich an ihre neue Position (F.L.I.P. Technik: First, Last, Invert, Play).
+* **Vivus SVG-Animation:** Ordner-Icons und leere Zustände werden nicht einfach eingeblendet, sondern mit der `Vivus`-Bibliothek wird der Strichpfad der SVGs live "gezeichnet", wenn sie auf dem Bildschirm erscheinen.
 
 ---
 
-## Animation & Motion-System
+## 🏗 5. Code-Architektur & Struktur
 
-### Easing & Timing
-```css
---ease-smooth: cubic-bezier(.22,.61,.36,1);
---timing-function-bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
---duration-1: 160ms; /* Sofortiges Feedback */
---duration-2: 260ms; /* Übergänge */
---duration-3: 600ms; /* Gestaltungsgelernte Animationen */
-```
+Die Anwendung ist ohne schwere Frameworks wie React oder Vue geschrieben, um maximale Kontrolle, geringste Ladezeiten und rohe Performance zu garantieren.
 
-### Micro-Animationen
-- **Button Ripple**: Kreis-Expansions-Effekt beim `:active`
-- **Primary Button Glow**: Pulsierender Glow-Ring
-- **Card Glow Burst**: Radial-Glow bei Hover (Touch: `:active` + `.is-pressed`)
-- **Copy Success**: Enhanced Icon-Animation mit Farbschema-Wechsel
-- **Konfetti**: Partikel-System bei erfolgreichem Kopieren
-- **Sparkles**: Für Favoriten-Chips
+### 5.1 `index.html`
+* Enthält das semantische Grundgerüst.
+* Definiert alle versteckten SVG-Templates (`<defs>`), die in der Laufzeit via JavaScript referenziert und in die DOM geklont werden (das spart massive Mengen an DOM-Knoten und Traffic).
+* Kümmert sich um das PWA-Manifest und die Apple-spezifischen Meta-Tags.
 
-### View Transitions API
-- Slide-Animation bei Navigation (forward/backward)
-- Custom `vt-slide-out-*` und `vt-slide-in-*` Keyframes
-- Easing mit `--ease-smooth`
+### 5.2 `style.css` (3.300+ Zeilen pure Magie)
+* Arbeitet intensiv mit **CSS Variables (Custom Properties)** (`:root`), um das gesamte Theme, Abstände, Farben und das 5-Layer Liquid Glass System zentral steuerbar zu machen.
+* **Breakpoints:** Nutzt ein ausgeklügeltes Fluid-Grid-System mit Clamp-Funktionen (`clamp(208px, 22vw, 236px)`), wodurch media queries auf ein absolutes Minimum reduziert werden.
+* **Color Schemes:** Unterstützt systembasierten (prefers-color-scheme) sowie manuell getriggerten Light- und Dark-Mode (`data-color-scheme="light|dark"`).
 
-### Prefers-Reduced-Motion
-Alle Animationen deaktivieren bei:
-```css
-@media (prefers-reduced-motion: reduce) { ... }
-```
+### 5.3 `script.js` (State & Logic)
+* **DOM-Caching:** Am Anfang (`initApp`) werden alle relevanten DOM-Knoten gecached, um unnötige QuerySelector-Aufrufe während der Laufzeit zu vermeiden.
+* **State Management:** Der gesamte Zustand liegt im `jsonData` Objekt und dem `pathStack` Array (welches definiert, wie tief wir in der Ordnerstruktur sind).
+* **Event Delegation:** Klick-Events auf Karten werden zumeist an übergeordnete Container gebunden (Event Bubbling), um Speicherlecks zu verhindern und die Performance bei hunderten Karten hoch zu halten.
+* **RAF (Request Animation Frame):** Aufwendige Layout-Berechnungen (wie das Messen des Favoriten-Docks) werden gebündelt und nur im nächsten Animation-Frame (`requestAnimationFrame`) ausgeführt, um Layout-Thrashing (Reflows) zu verhindern.
 
 ---
 
-## Performance-Optimierungen
+## 🏁 Zusammenfassung
 
-### Render-Optimierung
-- `will-change: transform` auf animierten Elementen
-- `backface-visibility: hidden` für GPU-Beschleunigung
-- `content-visibility: auto` auf Karten und Chips
-- `transform: translateZ(0)` für Hardware-Beschleunigungsschichten
-
-### Scroll-Performance
-- `-webkit-overflow-scrolling: touch` (legacy) + `overscroll-behavior` (modern)
-- Scroll-Snap auf Favoriten-Chips (`x proximity`)
-- IntersectionObserver für Aurora-Pausierung
-
-### Lazy Loading
-- Karten-Animation nur für sichtbare Elemente (`IntersectionObserver`)
-- Aurora-Pause wenn nicht im Viewport
-
-### Memory Management
-- `touchcancel`-Handler für saubere State-Reset
-- debounce für Resize- und Layout-Aktualisierungen
-
----
-
-## Barrierefreiheit & Inklusion
-
-### Tastatur-Navigation
-- Vollständige Tastatur-Steuerung über `keydown` Handler
-- Focus-Ringe mit `--ease-smooth` Transition
-- Escape schließt Modals, Favoriten-Dock, Kontext-Menü
-
-### Screen-Reader Unterstützung
-- `aria-label` auf allen interaktiven Elementen
-- `.sr-only` Klasse für versteckte Beschreibungen
-- Landmarks: `role="region"` für Favoriten-Dock
-
-### Farb-Kontrast
-- WCAG AAA-konform für alle Textfarben
-- Light-Mode und Dark-Mode separat abgestimmt
-
-### Reduced Motion
-- Alle Animationen abschalten per `prefers-reduced-motion`
-- Keine Herumdrehung/Spring-Effekte
-
----
-
-## Progressive Web App
-
-### PWA-Features
-- **Standalone-Modus** unterstützt
-- **BeforeInstallPrompt** für manuelle Installation
-- **App-Installed** Event für Bestätigung
-- **Theme-Color** dynamisch für Light/Dark
-
-### Meta-Tags
-```html
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Prompt-Templates">
-```
-
-### Visual Viewport Handling
-- `visualViewport` Resize-Listener für Keyboard-Awareness
-- Automatisches Anpassen von Safe-Area-Variablen
-
----
-
-## Mobile-Optimierungen (iPhone 14 Pro Max)
-
-### Viewport-Beschreibung
-Das iPhone 14 Pro Max hat eine rendering-Viewport-Breite von **430 px** (CSS-Pixel), was es in den **md-Breakpoint (480-719px)** einordnet. Die drei-Spalten-Anordnung der Kacheln entspricht exakt dem verfügbaren Platz.
-
-### Spezifische Optimierungen
-
-| Element | Optimierung |
-|--------|------------|
-| Kacheln | 3 pro Zeile, 184-196px Breite, 140-158px Höhe |
-| Top-Bar | 60px Höhe, 28px Back-Button, 24px Icons |
-| Favoriten-Dock | 3 Chips sichtbar im Collapsed-Modus |
-| Suchfeld | 48px Höhe, 16px Font (kein Zoom) |
-| Context-Menü | 86vw Breite, max 340px |
-| Modal Bottom-Sheet | 92dvh Höhe, abgerundet 22px oben |
-
-### Safari iOS Spezifika
-- `viewport-fit=cover` für notchfreie Darstellung
-- `interactive-widget=resizes-content` für Keyboard-Resize-Handling
-- `-webkit-touch-callout: none` für Menü-Unterdrückung
-- Dynamische Safe-Area-Insets im Dock, Top-Bar, Modals
-
-### Touch-Geräte Fixes
-- Alle Hover-Effekte durch `:active` und `.is-pressed` ersetzt
-- Haptic Feedback über Vibration API (Android) / visuelle Alternative (iOS)
-- 300ms-Tap-Delay durch `touch-action` eliminiert
-
----
-
-## Datenmanagement & Sync
-
-### Speicherorte
-| Ebene | Speicher | Synchronisation |
-|-------|----------|-----------------|
-| Lokal | `localStorage` | Sofort |
-| Cloud | Cloudflare KV | Echtzeit via Poll/Interval |
-
-### Sync-Mechanismus
-- **GET**: Holt von `/api/templates` (Cloud KV) oder fallback `templates.json`
-- **POST**: Sendet Änderungen mit `lastUpdated` Timestamp
-- **Konflikt-Erkennung**: 409 Conflict bei neuerer Server-Version
-
-### Favoriten-System
-- Gespeichert in `favoritePrompts` Array (localStorage)
-- Dynamische Chips im Dock
-- Copy-Success-Animation mit Konfetti
-
-### JSON-Upload
-- Drag&Drop-Zone für `.json`-Dateien
-- Strukturvalidierung vor dem Import
-
----
-
-## Installation & Deployment
-
-### Lokale Entwicklung
-```bash
-# Einfach nur die Dateien öffnen:
-# index.html, style.css, script.js, manifest.json, templates.json
-```
-
-### Firebase/Cloudflare Deployment
-- `firebase.json` konfiguriert Hosting
-- `/functions/api/templates.js` für KV-Speicherung
-- Environment-Variable `TEMPLATES_KV` für Cloudflare KV Namespace
-
-### PWA-Installation
-1. Im Safari: Teilen → „Zum Home-Bildschirm“
-2. Oder: BeforeInstallPrompt Event abfangen
-
-### Build-Prozess
-Keine Build-Pipeline erforderlich – Vanilla JS/CSS, CDN-Ressourcen für externe Bibliotheken.
+**Prompt-Templates** ist weit mehr als eine einfache JSON-Viewer-App. Es ist ein minutiös durchdachtes Stück Software, bei dem jede Millisekunde Latenz, jeder Pixel Unschärfe und jede Touch-Interaktion mit äußerster Sorgfalt designt und entwickelt wurde. Die App beweist, dass moderne, native-ähnliche UX vollständig im Web – als PWA – ohne Kompromisse bei der Ästhetik oder Funktionalität realisierbar ist.
