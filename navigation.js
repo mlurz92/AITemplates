@@ -531,9 +531,19 @@
     container.addEventListener('touchcancel', finish, { passive: true });
 
     // Tippen außerhalb schließt offene Trays.
+    // Tippen außerhalb oder auf den Karteninhalt schließt offene Trays, ohne die Kartenaktion auszulösen.
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('.card.swipe-actions-open')) closeAllSwipeTrays();
-    });
+      const openCard = e.target.closest('.card.swipe-actions-open');
+      if (openCard) {
+        if (!e.target.closest('.card-swipe-tray')) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeAllSwipeTrays();
+        }
+      } else {
+        closeAllSwipeTrays();
+      }
+    }, true);
   }
 
   /* =================================================================
