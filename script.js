@@ -3116,7 +3116,13 @@ function loadFavorites() {
     const storedFavorites = localStorage.getItem(favoritesKey);
     if (storedFavorites) {
         try {
-            favoritePrompts = JSON.parse(storedFavorites);
+            const parsed = JSON.parse(storedFavorites);
+            // Gegen beschädigte oder veraltete Daten absichern: nur ein Array
+            // valider String-IDs zulassen, damit nachgelagerte Aufrufe
+            // (indexOf/filter/push) niemals an unerwarteten Typen scheitern.
+            favoritePrompts = Array.isArray(parsed)
+                ? parsed.filter((id) => typeof id === 'string' && id.length > 0)
+                : [];
         } catch (e) {
             console.error("Fehler beim Laden der Favoriten:", e);
             favoritePrompts = [];
@@ -3236,12 +3242,6 @@ function handleWindowResize() {
 
 function updateDockPositioning() {
     const root = document.documentElement;
-    const computedStyle = getComputedStyle(root);
-    const safeInset = parseFloat(computedStyle.getPropertyValue('--safe-area-inset-bottom')) || 0;
-
-    if (favoritesDockEl) {
-        favoritesDockEl.style.setProperty('--favorites-safe-offset', `${safeInset}px`);
-    }
 
     if (topBarEl) {
         const topBarHeight = Math.ceil(topBarEl.getBoundingClientRect().height);
@@ -3267,8 +3267,7 @@ function applyFavoriteChipMetrics() {
     const expanded = favoritesDockEl.classList.contains('expanded');
     const count = chips.length;
 
-    const baseMinWidth = FAVORITE_CHIP_MIN_WIDTH;
-    const compactMinWidth = FAVORITE_CHIP_MIN_WIDTH_NARROW;
+    // Sizing-Tokens werden vom Stylesheet verwaltet (inkl. responsiver Breakpoints).\n    // Um teure getComputedStyle-Aufrufe bei jedem Layout-Update (z. B. beim Auf-/Zuklappen)\n    // zu vermeiden, cachen wir die Werte und lesen sie nur bei einer Änderung der Viewport-Größe neu aus.\n    const viewportWidth = window.innerWidth;\n    const viewportHeight = window.innerHeight;\n\n    if (!applyFavoriteChipMetrics.cachedTokens ||\n        applyFavoriteChipMetrics.lastWidth !== viewportWidth ||\n        applyFavoriteChipMetrics.lastHeight !== viewportHeight) {\n\n        const dockStyles = getComputedStyle(favoritesDockEl);\n        const readToken = (name, fallback) => {\n            const value = parseFloat(dockStyles.getPropertyValue(name));\n            return Number.isFinite(value) && value > 0 ? value : fallback;\n        };\n\n        const baseMinWidth = readToken('--favorite-chip-min', FAVORITE_CHIP_MIN_WIDTH);\n        const compactMinWidth = Math.min(\n            baseMinWidth,\n            readToken('--favorite-chip-min-narrow', FAVORITE_CHIP_MIN_WIDTH_NARROW)\n        );\n        const chipMaxWidth = readToken('--favorite-chip-max', FAVORITE_CHIP_MAX_WIDTH);\n\n        applyFavoriteChipMetrics.cachedTokens = { baseMinWidth, compactMinWidth, chipMaxWidth };\n        applyFavoriteChipMetrics.lastWidth = viewportWidth;\n        applyFavoriteChipMetrics.lastHeight = viewportHeight;\n    }\n\n    const { baseMinWidth, compactMinWidth, chipMaxWidth } = applyFavoriteChipMetrics.cachedTokens;
 
     let columns = Math.max(1, Math.floor((availableWidth + gap) / (baseMinWidth + gap)));
     if (count > columns && baseMinWidth > compactMinWidth) {
@@ -3286,7 +3285,7 @@ function applyFavoriteChipMetrics() {
 
     const hasOverflow = count > columns;
     const minWidth = hasOverflow ? compactMinWidth : baseMinWidth;
-    const maxWidth = expanded ? FAVORITE_CHIP_MAX_WIDTH : Math.min(FAVORITE_CHIP_MAX_WIDTH, availableWidth);
+    const maxWidth = expanded ? chipMaxWidth : Math.min(chipMaxWidth, availableWidth);
     const maxAllowedWidth = Math.min(maxWidth, availableWidth);
     const minAllowedWidth = Math.min(minWidth, maxAllowedWidth);
 
