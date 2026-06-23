@@ -1726,15 +1726,20 @@ function handleTouchStart(e) {
     touchEndY = touchStartY;
     // Track if this touch is in the edge-swipe zone (avoid double-fire with edge gesture)
     edgeSwipeTouch = touchStartX <= EDGE_SWIPE_ZONE;
+    // Touches, die auf einer Karte beginnen, werden von navigation.js (Karten-
+    // Wischgesten) behandelt – die container-weite Zurück-Wischgeste ignoriert sie.
+    touchOnCard = !!(e.target.closest && e.target.closest('.card'));
 }
 
 const EDGE_SWIPE_ZONE = 35;
 let edgeSwipeTouch = false;
+let touchOnCard = false;
 
 function handleTouchMove(e) {
     if (!touchStartX || modalEl.classList.contains('visible') || containerEl.classList.contains('edit-mode')) return;
     // Don't interfere with edge-swipe-back gesture
     if (edgeSwipeTouch) return;
+    if (touchOnCard) return; // Karten-Wischgesten gehören navigation.js
     touchEndX = e.touches[0].clientX;
     touchEndY = e.touches[0].clientY;
     let diffX = touchEndX - touchStartX;
@@ -1751,6 +1756,14 @@ function handleTouchMove(e) {
 
 function handleTouchEnd() {
     if (!touchStartX || modalEl.classList.contains('visible') || containerEl.classList.contains('edit-mode')) return;
+    if (touchOnCard) { // Karten-Wischgesten gehören navigation.js
+        touchOnCard = false;
+        edgeSwipeTouch = false;
+        touchStartX = 0; touchStartY = 0; touchEndX = 0; touchEndY = 0;
+        containerEl.classList.remove('swiping-right');
+        containerEl.style.transform = '';
+        return;
+    }
     // Don't interfere with edge-swipe-back gesture
     if (edgeSwipeTouch) {
         edgeSwipeTouch = false;
