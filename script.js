@@ -3267,8 +3267,20 @@ function applyFavoriteChipMetrics() {
     const expanded = favoritesDockEl.classList.contains('expanded');
     const count = chips.length;
 
-    const baseMinWidth = FAVORITE_CHIP_MIN_WIDTH;
-    const compactMinWidth = FAVORITE_CHIP_MIN_WIDTH_NARROW;
+    // Sizing tokens are owned by the stylesheet (incl. responsive breakpoints)
+    // so a single source of truth governs every viewport and device class.
+    const dockStyles = getComputedStyle(favoritesDockEl);
+    const readToken = (name, fallback) => {
+        const value = parseFloat(dockStyles.getPropertyValue(name));
+        return Number.isFinite(value) && value > 0 ? value : fallback;
+    };
+
+    const baseMinWidth = readToken('--favorite-chip-min', FAVORITE_CHIP_MIN_WIDTH);
+    const compactMinWidth = Math.min(
+        baseMinWidth,
+        readToken('--favorite-chip-min-narrow', FAVORITE_CHIP_MIN_WIDTH_NARROW)
+    );
+    const chipMaxWidth = readToken('--favorite-chip-max', FAVORITE_CHIP_MAX_WIDTH);
 
     let columns = Math.max(1, Math.floor((availableWidth + gap) / (baseMinWidth + gap)));
     if (count > columns && baseMinWidth > compactMinWidth) {
@@ -3286,7 +3298,7 @@ function applyFavoriteChipMetrics() {
 
     const hasOverflow = count > columns;
     const minWidth = hasOverflow ? compactMinWidth : baseMinWidth;
-    const maxWidth = expanded ? FAVORITE_CHIP_MAX_WIDTH : Math.min(FAVORITE_CHIP_MAX_WIDTH, availableWidth);
+    const maxWidth = expanded ? chipMaxWidth : Math.min(chipMaxWidth, availableWidth);
     const maxAllowedWidth = Math.min(maxWidth, availableWidth);
     const minAllowedWidth = Math.min(minWidth, maxAllowedWidth);
 
