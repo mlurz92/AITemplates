@@ -1088,7 +1088,7 @@ body.favorites-dock-visible .favorites-dock {
                 0 16px 36px rgba(0, 0, 0, 0.30),
                 inset 0 1px 0 rgba(255, 255, 255, 0.20),
                 inset 0 -1px 0 rgba(0, 0, 0, 0.12);
-    overflow: visible;
+    overflow: hidden;
     isolation: isolate;
 }
 
@@ -1123,6 +1123,7 @@ body.favorites-dock-visible .favorites-dock {
     width: 100%;
     padding: var(--favorites-frame-pad-y) var(--favorites-frame-pad-x) calc(var(--favorites-frame-pad-y) + 1px);
     transition: padding var(--duration-2) var(--ease-smooth);
+    overflow: hidden;
 }
 
 .favorites-toggle {
@@ -1192,7 +1193,7 @@ body.favorites-dock-visible .favorites-dock {
     position: relative;
     width: 100%;
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: hidden;
     scrollbar-width: none;
     scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
     overscroll-behavior-x: contain;
@@ -1245,13 +1246,15 @@ body.favorites-dock-visible .favorites-dock {
     list-style: none;
     margin: 0;
     padding: 0;
+    width: max-content;
     min-width: 100%;
     align-items: stretch;
+    overflow: hidden;
 }
 
 .favorites-dock.expanded .favorites-scroll-area {
     overflow-x: hidden;
-    overflow-y: visible;
+    overflow-y: auto;
     max-height: clamp(14rem, 56dvh, 26rem);
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
@@ -1269,10 +1272,15 @@ body.favorites-dock-visible .favorites-dock {
 .favorites-dock.expanded .favorites-list {
     flex-wrap: wrap;
     align-content: flex-start;
+    width: 100%;
 }
 
 .favorites-list-item {
     list-style: none;
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 /* === FAVORITE CHIP - Enhanced Design === */
@@ -1285,7 +1293,8 @@ body.favorites-dock-visible .favorites-dock {
     --favorite-title-scale: 1;
     --favorite-preview-scale: 1;
     position: relative;
-    overflow: visible;
+    overflow: hidden;
+    box-sizing: border-box;
     display: grid;
     grid-template-columns: auto 1fr;
     align-items: center;
@@ -2904,8 +2913,16 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
 .toolbar-search-wrap { pointer-events: auto; position: absolute; right: 0; top: 0; width: 100%; }
 .toolbar-search { min-height: 42px; background: rgba(8,14,24,.94); border: 1px solid rgba(255,255,255,.18); box-shadow: 0 14px 30px rgba(0,0,0,.48); }
 
-/* ensure favorites hover menu can overflow above dock */
-.favorites-dock, .favorites-dock-inner, .favorites-scroll-area, .favorites-list, .favorites-list-item, .favorite-chip { overflow: visible !important; }
+/* Keep the dock itself clipped so chips and action effects never bleed
+   outside the bar; only the outer fixed shell may remain visible for shadows. */
+.favorites-dock { overflow: visible; }
+.favorites-dock-inner,
+.favorites-scroll-frame,
+.favorites-list,
+.favorites-list-item,
+.favorite-chip { overflow: hidden; }
+.favorites-scroll-area { overflow-x: auto; overflow-y: hidden; }
+.favorites-dock.expanded .favorites-scroll-area { overflow-x: hidden; overflow-y: auto; }
 .favorite-folder-hover-menu { bottom: calc(100% + 6px); left: 50%; transform: translate(-50%, 8px) scale(.98); width: min(320px, 86vw); }
 .favorite-folder-hover-list { display: flex; flex-direction: column; gap: .28rem; max-height: 220px; overflow-y: auto; }
 .favorite-folder-hover-item { display:block; width:100%; text-align:left; }
@@ -3021,4 +3038,3 @@ html[data-color-scheme="dark"] .shape3 { opacity: 0.13; filter: blur(76px); }
 /* Color scheme toggle button active state */
 #color-scheme-button .icon-sun { color: var(--acc-4); }
 #color-scheme-button .icon-moon { color: var(--acc-teal); }
-

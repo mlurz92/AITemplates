@@ -95,6 +95,7 @@ let resizeRafId = null;
 const FAVORITE_CHIP_MIN_WIDTH = 140;
 const FAVORITE_CHIP_MAX_WIDTH = 236;
 const FAVORITE_CHIP_MIN_WIDTH_NARROW = 112;
+const FAVORITE_CHIP_IDEAL_WIDTH = 208;
 const FAVORITE_FULL_LAYOUT_THRESHOLD = 204;
 const FAVORITE_COMPACT_LAYOUT_THRESHOLD = 154;
 const FAVORITE_TITLE_MIN_SCALE = 0.6;
@@ -3267,7 +3268,37 @@ function applyFavoriteChipMetrics() {
     const expanded = favoritesDockEl.classList.contains('expanded');
     const count = chips.length;
 
-    // Sizing-Tokens werden vom Stylesheet verwaltet (inkl. responsiver Breakpoints).\n    // Um teure getComputedStyle-Aufrufe bei jedem Layout-Update (z. B. beim Auf-/Zuklappen)\n    // zu vermeiden, cachen wir die Werte und lesen sie nur bei einer Änderung der Viewport-Größe neu aus.\n    const viewportWidth = window.innerWidth;\n    const viewportHeight = window.innerHeight;\n\n    if (!applyFavoriteChipMetrics.cachedTokens ||\n        applyFavoriteChipMetrics.lastWidth !== viewportWidth ||\n        applyFavoriteChipMetrics.lastHeight !== viewportHeight) {\n\n        const dockStyles = getComputedStyle(favoritesDockEl);\n        const readToken = (name, fallback) => {\n            const value = parseFloat(dockStyles.getPropertyValue(name));\n            return Number.isFinite(value) && value > 0 ? value : fallback;\n        };\n\n        const baseMinWidth = readToken('--favorite-chip-min', FAVORITE_CHIP_MIN_WIDTH);\n        const compactMinWidth = Math.min(\n            baseMinWidth,\n            readToken('--favorite-chip-min-narrow', FAVORITE_CHIP_MIN_WIDTH_NARROW)\n        );\n        const chipMaxWidth = readToken('--favorite-chip-max', FAVORITE_CHIP_MAX_WIDTH);\n\n        applyFavoriteChipMetrics.cachedTokens = { baseMinWidth, compactMinWidth, chipMaxWidth };\n        applyFavoriteChipMetrics.lastWidth = viewportWidth;\n        applyFavoriteChipMetrics.lastHeight = viewportHeight;\n    }\n\n    const { baseMinWidth, compactMinWidth, chipMaxWidth } = applyFavoriteChipMetrics.cachedTokens;
+    // Sizing-Tokens werden vom Stylesheet verwaltet (inkl. responsiver
+    // Breakpoints). Um teure getComputedStyle-Aufrufe bei jedem
+    // Layout-Update (z. B. beim Auf-/Zuklappen) zu vermeiden, cachen wir
+    // die Werte und lesen sie nur bei einer Änderung der Viewport-Größe neu.
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    if (!applyFavoriteChipMetrics.cachedTokens ||
+        applyFavoriteChipMetrics.lastWidth !== viewportWidth ||
+        applyFavoriteChipMetrics.lastHeight !== viewportHeight) {
+
+        const dockStyles = getComputedStyle(favoritesDockEl);
+        const readToken = (name, fallback) => {
+            const value = parseFloat(dockStyles.getPropertyValue(name));
+            return Number.isFinite(value) && value > 0 ? value : fallback;
+        };
+
+        const baseMinWidth = readToken('--favorite-chip-min', FAVORITE_CHIP_MIN_WIDTH);
+        const compactMinWidth = Math.min(
+            baseMinWidth,
+            readToken('--favorite-chip-min-narrow', FAVORITE_CHIP_MIN_WIDTH_NARROW)
+        );
+        const chipMaxWidth = readToken('--favorite-chip-max', FAVORITE_CHIP_MAX_WIDTH);
+        const idealWidth = readToken('--favorite-chip-ideal', FAVORITE_CHIP_IDEAL_WIDTH);
+
+        applyFavoriteChipMetrics.cachedTokens = { baseMinWidth, compactMinWidth, chipMaxWidth, idealWidth };
+        applyFavoriteChipMetrics.lastWidth = viewportWidth;
+        applyFavoriteChipMetrics.lastHeight = viewportHeight;
+    }
+
+    const { baseMinWidth, compactMinWidth, chipMaxWidth, idealWidth } = applyFavoriteChipMetrics.cachedTokens;
 
     let targetWidth;
     if (expanded) {
