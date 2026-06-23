@@ -178,7 +178,7 @@ async function staleWhileRevalidate(request, cacheName) {
   const cached = await cache.match(request);
   const network = fetch(request)
     .then((response) => {
-      if (response && response.ok) cache.put(request, response.clone());
+      if (response && response.ok) cache.put(request, response.clone()).catch(() => {});
       return response;
     })
     .catch(() => null);
