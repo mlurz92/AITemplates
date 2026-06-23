@@ -236,8 +236,9 @@ Quer zu den Scopes wirken Filter-Chips: **Alle**, **★ Favoriten**, **🕑 Zule
 * **Neuronaler Pfad:** Beim ersten semantischen Suchlauf wird **lazy** die
   Transformers.js-Bibliothek (`@huggingface/transformers`) von einem CDN nachgeladen und
   das quantisierte Modell **`Xenova/all-MiniLM-L6-v2`** initialisiert. Für jeden Knoten
-  (Titel + Inhalt + Tags) wird ein **Embedding** berechnet, **nach Inhalts-Hash gecacht**
-  und gegen das Query-Embedding per **Kosinus-Ähnlichkeit** gerankt.
+  (Titel + Inhalt + Tags) wird ein **Embedding** berechnet, **pro Sitzung im Speicher nach
+  Inhalts-Hash gecacht** (das Modell selbst wird über den Browser-Cache vorgehalten) und
+  gegen das Query-Embedding per **Kosinus-Ähnlichkeit** gerankt.
 * **Inkrementelles Ranking:** Während das Modell rechnet, wird sofort ein **heuristisches
   Vorschau-Ranking** angezeigt; sobald die neuronalen Scores vorliegen, rendert die Ansicht
   automatisch neu.
@@ -454,7 +455,8 @@ Exports.
 | **Swipe rechts (Edge)** | Zurück-Navigation (Mobile) |
 | **Swipe hoch/runter (Dock)** | Favorites-Dock erweitern/einklappen |
 | **Pull-down** | Aktualisieren (Mobile) |
-| **Browser Zurück/Vor** | History- & Deep-Link-Navigation |
+| **Deep-Link / Reload / Teilen** | Ansicht wird aus der URL (`#/n/…/p/…`) rekonstruiert |
+| **Browser Zurück/Vor (Mobile)** | bestehende In-App-History-Navigation |
 
 (Weitere Shortcuts werden in `setupKeyboardShortcuts`/`handleKeyDown` verwaltet.)
 

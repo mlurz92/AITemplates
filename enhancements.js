@@ -163,7 +163,9 @@
         mod.env.allowLocalModels = false;
         mod.env.useBrowserCache = true;
         showHint('Neuronales Suchmodell wird geladen …', 'info');
-        const extractor = await mod.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { quantized: true });
+        // Transformers.js v3: Quantisierung wird über `dtype` gewählt (das frühere
+        // `quantized`-Flag existiert nicht mehr) – q8 hält den Download klein.
+        const extractor = await mod.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { dtype: 'q8' });
         PT.semantic.neuralAvailable = true;
         showHint('Neuronale Suche bereit.', 'success');
         return extractor;
@@ -791,6 +793,37 @@
     navigateToPath(ids, promptId);
   }
 
+  /* Schließen der Suche beendet jeden Scope/Filter/Collection-Kontext und
+     kehrt sauber zur Ordneransicht zurück (deckt Toggle, Escape, Außenklick ab,
+     da setSearchExpanded global aufgerufen wird). */
+  function installCollapseGuard() {
+    const orig = window.setSearchExpanded;
+    if (typeof orig !== 'function') return;
+    window.setSearchExpanded = function (expanded) {
+      const r = orig.call(this, expanded);
+      if (!expanded && (isResultsMode() || currentQuery())) {
+        clearResultsState();
+        if (window.currentNode) window.renderView(window.currentNode);
+      }
+      return r;
+    };
+  }
+
+  /* Home-/Zurück-/Breadcrumb-Buttons wurden in script.js per Referenz gebunden
+     (vor Installation unserer Wrapper). Daher zusätzlich Capture-Phase-Guards,
+     die einen aktiven Such-/Sammlungs-Kontext vor der eigentlichen Navigation
+     zurücksetzen. */
+  function installNavResetGuards() {
+    ['app-logo-button', 'fixed-back', 'topbar-back-button'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', () => { if (isResultsMode()) clearResultsState(); }, true);
+    });
+    const bc = document.getElementById('breadcrumb');
+    if (bc) bc.addEventListener('click', (e) => {
+      if (e.target.closest('.breadcrumb-link') && isResultsMode()) clearResultsState();
+    }, true);
+  }
+
   function installRouter() {
     window.addEventListener('hashchange', handleHashChange);
     // Modal-Schließen ebenfalls in den Hash spiegeln.
@@ -938,6 +971,8 @@
     installModalTagEditor();
     installHapticBridges();
     installRouter();
+    installCollapseGuard();
+    installNavResetGuards();
     installRipples();
     buildToolbarUI();
     installSearchInputBridge();

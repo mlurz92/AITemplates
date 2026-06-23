@@ -130,6 +130,7 @@ mark.search-hl {
  * ------------------------------------------------------------------- */
 .results-banner {
   grid-column: 1 / -1;
+  justify-self: stretch;
   position: relative;
   z-index: 2;
   width: 100%;
@@ -171,6 +172,8 @@ mark.search-hl {
  * ------------------------------------------------------------------- */
 .smart-collections {
   grid-column: 1 / -1;
+  justify-self: stretch;
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
