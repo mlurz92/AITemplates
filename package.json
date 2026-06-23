@@ -1,0 +1,15 @@
+{
+  "name": "aitemplates",
+  "version": "1.0.0",
+  "description": "Prompt-Templates – Premium Prompt-Management Web-App (PWA). Quellcode unter ./src, gebündelt via esbuild zu ./script.js.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch",
+    "build:dev": "node build.mjs --dev"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

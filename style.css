@@ -98,8 +98,6 @@
   --card-aspect-ratio: 10 / 7;
 }
 
-
-
 html {
   background: var(--bg-0);
 }
@@ -134,8 +132,6 @@ body[data-display-mode='standalone'],
 body[data-display-mode='fullscreen'] {
   --viewport-bottom-offset: 0px;
 }
-
-
 
 /* Nur gezielte GPU-Layer: kein globales transform, damit fixed-Elemente zuverlässig fixiert bleiben */
 .top-bar,
@@ -334,7 +330,7 @@ body::before {
     text-decoration: none;
     padding: 0.25em 0.5em;
     border-radius: 8px;
-    transition: background-color var(--duration-1) var(--ease-smooth), 
+    transition: background-color var(--duration-1) var(--ease-smooth),
                 color var(--duration-1) var(--ease-smooth);
     cursor: pointer;
     white-space: nowrap;
@@ -435,7 +431,6 @@ body::before {
   box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.6);
   animation: cloud-sync-pulse 1.8s ease-out infinite;
 }
-
 
 .cards-container {
   display: grid;
@@ -651,29 +646,29 @@ body::before {
   border-radius: 999px;
   font-weight: 600;
   font-size: 14.5px;
-  transition: transform var(--duration-1) var(--ease-smooth), 
-              background-color var(--duration-1) var(--ease-smooth), 
+  transition: transform var(--duration-1) var(--ease-smooth),
+              background-color var(--duration-1) var(--ease-smooth),
               box-shadow var(--duration-1) var(--ease-smooth);
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.btn:hover { 
-  transform: translateY(-2px); 
-  background-color: rgba(255,255,255,0.15); 
-  box-shadow: 0 6px 16px rgba(0,0,0,.25); 
+.btn:hover {
+  transform: translateY(-2px);
+  background-color: rgba(255,255,255,0.15);
+  box-shadow: 0 6px 16px rgba(0,0,0,.25);
 }
 
-.btn:active { 
-  transform: translateY(0) scale(0.98); 
-  filter: brightness(.95); 
+.btn:active {
+  transform: translateY(0) scale(0.98);
+  filter: brightness(.95);
 }
 
-.btn:focus-visible { 
-  outline: none; 
-  box-shadow: 0 0 0 3px rgba(6, 214, 214, .35), 
-              0 0 0 6px rgba(124, 58, 237, .2); 
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(6, 214, 214, .35),
+              0 0 0 6px rgba(124, 58, 237, .2);
 }
 
 .btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
@@ -688,27 +683,27 @@ body::before {
   font-weight: 700;
 }
 
-.btn-primary:hover { 
+.btn-primary:hover {
   background: var(--btn-primary-hover-gradient);
-  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35), 
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35),
               0 0 40px rgba(6, 214, 214, 0.2);
 }
 
-.btn-ghost { 
-  background: transparent; 
-  border-color: transparent; 
-  color: var(--fg-2); 
-  padding: 8px; 
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg-2);
+  padding: 8px;
 }
 
-.btn-ghost:hover { 
-  background: rgba(255,255,255,0.1); 
-  color: var(--fg-1); 
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--fg-1);
 }
 
-.btn-danger { 
-  background: var(--delete-hover-bg); 
-  border-color: var(--delete-color); 
+.btn-danger {
+  background: var(--delete-hover-bg);
+  border-color: var(--delete-color);
   color: var(--delete-color);
 }
 
@@ -747,18 +742,18 @@ body::before {
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
-  transition: opacity var(--duration-2) var(--ease-smooth), 
-              visibility var(--duration-2) var(--ease-smooth), 
+  transition: opacity var(--duration-2) var(--ease-smooth),
+              visibility var(--duration-2) var(--ease-smooth),
               backdrop-filter var(--duration-2) var(--ease-smooth);
   backdrop-filter: blur(0px);
   -webkit-backdrop-filter: blur(0px);
 }
 
-.modal.visible { 
-  opacity: 1; 
-  visibility: visible; 
-  backdrop-filter: blur(12px); 
-  -webkit-backdrop-filter: blur(12px); 
+.modal.visible {
+  opacity: 1;
+  visibility: visible;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .modal .modal-content {
@@ -789,14 +784,14 @@ body::before {
   height: auto;
 }
 
-.modal.visible .modal-content { 
-  transform: scale(1) translateZ(0); 
-  opacity: 1; 
+.modal.visible .modal-content {
+  transform: scale(1) translateZ(0);
+  opacity: 1;
 }
 
-.modal .modal-content.small-modal { 
-  max-width: 450px; 
-  padding: 1.5rem; 
+.modal .modal-content.small-modal {
+  max-width: 450px;
+  padding: 1.5rem;
 }
 
 .modal .modal-content h2 {
@@ -818,15 +813,15 @@ body::before {
   border-radius: 16px;
   padding: 12px 14px;
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.25);
-  transition: box-shadow var(--duration-1) var(--ease-smooth), 
+  transition: box-shadow var(--duration-1) var(--ease-smooth),
               border-color var(--duration-1) var(--ease-smooth),
               background var(--duration-1) var(--ease-smooth);
   font-family: var(--font-ui);
   font-size: 16px;
 }
 
-.input::placeholder, .textarea::placeholder { 
-  color: var(--fg-3); 
+.input::placeholder, .textarea::placeholder {
+  color: var(--fg-3);
 }
 
 .input:focus, .textarea:focus {
@@ -863,13 +858,13 @@ body::before {
 #modal-favorite-button .icon-star-filled.hidden, #modal-favorite-button .icon-star-outline.hidden { display: none; }
 
 /* === ICONS & ANIMATIONS - Enhanced Design === */
-svg.icon { 
-  display: block; 
-  stroke-width: 2.2; 
-  fill: none; 
-  stroke-linecap: round; 
-  stroke-linejoin: round; 
-  stroke: currentColor; 
+svg.icon {
+  display: block;
+  stroke-width: 2.2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: currentColor;
 }
 
 #notification-area {
@@ -913,23 +908,23 @@ body.favorites-dock-visible #notification-area {
                 opacity var(--duration-2) var(--ease-smooth);
 }
 
-.notification.show { 
-  opacity: 1; 
-  transform: translateY(0); 
+.notification.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.notification.fade-out { 
-  transition: transform var(--duration-2) var(--ease-smooth), 
-              opacity var(--duration-2) var(--ease-smooth); 
-  opacity: 0; 
-  transform: translateY(20px); 
+.notification.fade-out {
+  transition: transform var(--duration-2) var(--ease-smooth),
+              opacity var(--duration-2) var(--ease-smooth);
+  opacity: 0;
+  transform: translateY(20px);
 }
 
-.notification svg.icon { 
-  flex-shrink: 0; 
-  width: 19px; 
-  height: 19px; 
-  stroke-width: 3.2; 
+.notification svg.icon {
+  flex-shrink: 0;
+  width: 19px;
+  height: 19px;
+  stroke-width: 3.2;
 }
 
 .notification.success svg.icon {
@@ -980,48 +975,48 @@ body.favorites-dock-visible #notification-area {
 .rename-input { background: transparent; border: none; border-bottom: 2px solid var(--acc-2); color: var(--fg-1); font-size: 1em; font-weight: 600; text-align: center; padding: 0.2rem 0; width: 100%; outline: none; }
 
 /* === FOLDER TREE - Enhanced Design === */
-.folder-tree { 
-  max-height: 50dvh; 
-  overflow-y: auto; 
-  padding: 0.5rem; 
-  border: 1px solid var(--glass-stroke); 
-  border-radius: 14px; 
-  margin-bottom: 1.5rem; 
+.folder-tree {
+  max-height: 50dvh;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--glass-stroke);
+  border-radius: 14px;
+  margin-bottom: 1.5rem;
   background: rgba(0, 0, 0, 0.25);
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.folder-tree-item { 
-  padding: 0.5rem 0.8rem; 
-  border-radius: 10px; 
-  cursor: pointer; 
-  transition: background-color var(--duration-1) var(--ease-smooth), 
-              color var(--duration-1) var(--ease-smooth); 
-  display: flex; 
-  align-items: center; 
-  gap: 0.5rem; 
+.folder-tree-item {
+  padding: 0.5rem 0.8rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color var(--duration-1) var(--ease-smooth),
+              color var(--duration-1) var(--ease-smooth);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.folder-tree-item:hover { 
-  background-color: rgba(124, 58, 237, 0.15); 
+.folder-tree-item:hover {
+  background-color: rgba(124, 58, 237, 0.15);
   color: var(--fg-1);
 }
 
-.folder-tree-item.selected { 
-  background: var(--btn-primary-gradient); 
-  color: #fff; 
+.folder-tree-item.selected {
+  background: var(--btn-primary-gradient);
+  color: #fff;
   font-weight: 600;
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
 }
 
-.folder-tree-item.disabled { 
-  opacity: 0.5; 
-  cursor: not-allowed; 
-  background-color: transparent; 
+.folder-tree-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: transparent;
 }
 
-.folder-tree-item.disabled:hover { 
-  background-color: transparent; 
+.folder-tree-item.disabled:hover {
+  background-color: transparent;
 }
 
 body.favorites-dock-visible .cards-container {
@@ -1285,8 +1280,8 @@ body.favorites-dock-visible .favorites-dock {
     padding: clamp(0.38rem, 1.05vw, 0.65rem) clamp(0.52rem, 1.4vw, 0.82rem);
     border-radius: 15px;
     border: 1px solid var(--favorite-border);
-    background: linear-gradient(165deg, 
-        rgba(255, 255, 255, 0.08), 
+    background: linear-gradient(165deg,
+        rgba(255, 255, 255, 0.08),
         var(--favorite-soft));
     color: var(--fg-1);
     cursor: pointer;
@@ -1625,25 +1620,25 @@ body.favorites-dock-visible .favorites-dock {
 body:not([data-fullscreen-supported]) #fullscreen-button { display: none; }
 
 /* === SCROLLBAR - Enhanced Design === */
-::-webkit-scrollbar { 
-  width: 10px; 
-  height: 10px; 
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
-::-webkit-scrollbar-track { 
-  background: transparent; 
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-::-webkit-scrollbar-thumb { 
-  background-color: rgba(124, 58, 237, 0.25); 
-  border-radius: 10px; 
-  border: 2px solid transparent; 
-  background-clip: content-box; 
-  transition: background-color var(--duration-1) var(--ease-smooth); 
+::-webkit-scrollbar-thumb {
+  background-color: rgba(124, 58, 237, 0.25);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: background-color var(--duration-1) var(--ease-smooth);
 }
 
-::-webkit-scrollbar-thumb:hover { 
-  background-color: rgba(6, 214, 214, 0.55); 
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(6, 214, 214, 0.55);
 }
 
 @keyframes fade-in-vt { from { opacity: 0; } to { opacity: 1; } }
@@ -1784,9 +1779,9 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   border-radius: inherit;
   opacity: 0;
   pointer-events: none;
-  background: radial-gradient(circle at var(--glow-x, 50%) var(--glow-y, 50%), 
-    rgba(124, 58, 237, 0.3) 0%, 
-    rgba(6, 214, 214, 0.15) 30%, 
+  background: radial-gradient(circle at var(--glow-x, 50%) var(--glow-y, 50%),
+    rgba(124, 58, 237, 0.3) 0%,
+    rgba(6, 214, 214, 0.15) 30%,
     transparent 60%);
   transition: opacity 400ms var(--ease-smooth);
   z-index: 0;
@@ -2162,7 +2157,7 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
 /* === FIXED BACK BUTTON ANIMATION === */
 
 .fixed-back {
-  transition: transform var(--duration-2) var(--ease-smooth), 
+  transition: transform var(--duration-2) var(--ease-smooth),
               box-shadow var(--duration-2) var(--ease-smooth),
               background var(--duration-2) var(--ease-smooth);
 }
@@ -2170,7 +2165,6 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
 .fixed-back:hover {
   animation: back-btn-pulse 1s ease-in-out infinite;
 }
-
 
 /* === BREADCRUMB LINK ANIMATION === */
 
@@ -2229,7 +2223,6 @@ body.favorites-dock-visible .favorites-dock {
   animation: scrollbar-glow 1s ease-in-out infinite alternate;
 }
 
-
 /* === REDUCED MOTION - FINAL === */
 
 @media (prefers-reduced-motion: reduce) {
@@ -2242,7 +2235,7 @@ body.favorites-dock-visible .favorites-dock {
     display: none !important;
     animation: none !important;
   }
-  
+
   .card.is-visible,
   .modal.visible .modal-content,
   .notification.show,
@@ -2252,7 +2245,7 @@ body.favorites-dock-visible .favorites-dock {
     opacity: 1 !important;
     filter: none !important;
   }
-  
+
   .breadcrumb-link::after {
     display: none;
   }
@@ -2273,7 +2266,6 @@ body.favorites-dock-visible .favorites-dock {
 }
 .toolbar-search:focus, .toolbar-sort:focus { outline: 2px solid rgba(6,214,214,.6); outline-offset: 1px; }
 body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + clamp(1.6rem, 3.8vw, 3.1rem) + var(--safe-area-inset-top)); }
-
 
 /* Subtle toolbar/search placement + multi-select visuals */
 .toolbar-search-toggle {
@@ -2301,7 +2293,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   .toolbar-search-wrap { width: 100%; }
 }
 
-
 /* search only visible after icon click */
 .toolbar-search-wrap[hidden] { display:none !important; }
 .toolbar-search-wrap.is-open { display:block; }
@@ -2317,7 +2308,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   .toolbar-sort{ min-width: 150px; }
   .toolbar-search-wrap{ right: 0; width: min(420px, calc(100vw - 24px)); }
 }
-
 
 /* =====================================================================
    LIQUID GLASS – LIGHT MODE (Cupertino)
@@ -2491,7 +2481,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   .shape1, .shape2, .shape3 { opacity: 0; }
 }
 
-
 /* =====================================================================
    PLATFORM-SPECIFIC STYLES
    ===================================================================== */
@@ -2558,7 +2547,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   }
 }
 
-
 /* === iOS iOS Large Title (Root-Ebene) === */
 .cards-container-header {
   padding: clamp(0.5rem, 2vw, 1rem) clamp(0.8rem, 2.5vw, 1.8rem) 0;
@@ -2589,7 +2577,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
 @media (max-width: 720px) {
   .large-title { display: none; }
 }
-
 
 /* === Pull-to-Refresh Indikator === */
 .pull-to-refresh {
@@ -2647,7 +2634,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   .pull-to-refresh { display: none; }
 }
 
-
 /* === Keyboard Shortcut Hints (Desktop) === */
 .kbd-hint {
   display: inline-flex;
@@ -2682,7 +2668,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
 @media (hover: none), (max-width: 720px) {
   .kbd-hint { display: none; }
 }
-
 
 /* === Hover-Tooltip Prompt Preview (Desktop) === */
 .card-hover-preview {
@@ -2725,7 +2710,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   .card-hover-preview { display: none; }
 }
 
-
 /* === Favoriten-Chip Cupertino Verbesserungen === */
 .favorite-chip {
   /* Cupertino-Style: etwas runder */
@@ -2745,7 +2729,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(50, 215, 75, 0.28);
 }
 
-
 /* === Cloud Sync Pulse: Cupertino Teal === */
 .source-toggle.is-cloud::after {
   background: var(--acc-teal);
@@ -2757,7 +2740,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   70% { box-shadow: 0 0 0 9px rgba(90, 200, 250, 0); }
   100% { box-shadow: 0 0 0 0 rgba(90, 200, 250, 0); }
 }
-
 
 /* === Add-Menu 5-Layer Glass === */
 .add-menu {
@@ -2771,7 +2753,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
 .add-menu-item:hover { background-color: rgba(94, 92, 230, 0.12); color: var(--acc-teal); }
 .add-menu-item:hover svg { color: var(--acc-teal); }
 
-
 /* === Fixed Back Button: Cupertino === */
 .fixed-back {
   background: var(--glass-highlight), var(--glass-bg);
@@ -2781,7 +2762,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   -webkit-backdrop-filter: blur(22px) saturate(160%);
   box-shadow: var(--shadow-2), inset 0 1px 0 var(--glass-specular-top);
 }
-
 
 /* === Btn-Focus Cupertino === */
 .btn:focus-visible {
@@ -2794,7 +2774,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   outline: 2px solid rgba(94, 92, 230, 0.62);
   outline-offset: 3px;
 }
-
 
 /* === Breadcrumb Link: Cupertino Indigo === */
 .breadcrumb-link::after {
@@ -2813,13 +2792,11 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   50% { box-shadow: var(--shadow-2), 0 0 18px rgba(94, 92, 230, 0.28); }
 }
 
-
 /* === Multi-Select: Cupertino Teal === */
 .card.is-multi-selected {
   outline: 2px solid rgba(90, 200, 250, 0.75);
   box-shadow: 0 0 0 3px rgba(90, 200, 250, 0.18), var(--shadow-2);
 }
-
 
 /* === Folder Tree: Cupertino === */
 .folder-tree-item:hover {
@@ -2832,7 +2809,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   box-shadow: 0 4px 12px rgba(94, 92, 230, 0.28);
 }
 
-
 /* === Upload Drop Zone === */
 .upload-drop-zone {
   border-color: rgba(94, 92, 230, 0.35);
@@ -2841,7 +2817,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
   background: rgba(94, 92, 230, 0.08);
   border-color: rgba(94, 92, 230, 0.60);
 }
-
 
 /* === Notification Success: Cupertino Green === */
 .notification.success.show {
@@ -2854,7 +2829,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
         box-shadow: 0 0 28px rgba(50, 215, 75, 0.35); }
   100% { transform: translateY(0) scale(1) rotateX(0); opacity: 1; }
 }
-
 
 /* === View Transitions: Smooth Navigation === */
 @keyframes vt-slide-out-left {
@@ -2886,7 +2860,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
 
 #cards-container { view-transition-name: cards-area; }
 
-
 /* remove sort UI and place search icon in top bar with dropdown search */
 .toolbar-sort { display:none !important; }
 .view-toolbar { position: fixed; top: calc(var(--safe-area-inset-top) + var(--top-bar-height) + 6px); right: clamp(10px,2vw,24px); left: auto; width: min(430px, calc(100vw - 20px)); background: transparent; border: 0; padding: 0; margin: 0; z-index: 1001; pointer-events: none; }
@@ -2898,7 +2871,6 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
 .favorite-folder-hover-menu { bottom: calc(100% + 6px); left: 50%; transform: translate(-50%, 8px) scale(.98); width: min(320px, 86vw); }
 .favorite-folder-hover-list { display: flex; flex-direction: column; gap: .28rem; max-height: 220px; overflow-y: auto; }
 .favorite-folder-hover-item { display:block; width:100%; text-align:left; }
-
 
 /* =====================================================================
    MANUAL COLOR SCHEME OVERRIDE (via data-color-scheme attribute)

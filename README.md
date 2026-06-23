@@ -120,11 +120,27 @@ Die Anwendung ist ohne schwere Frameworks wie React oder Vue geschrieben, um max
 * **Breakpoints:** Nutzt ein ausgeklügeltes Fluid-Grid-System mit Clamp-Funktionen (`clamp(208px, 22vw, 236px)`), wodurch media queries auf ein absolutes Minimum reduziert werden.
 * **Color Schemes:** Unterstützt systembasierten (prefers-color-scheme) sowie manuell getriggerten Light- und Dark-Mode (`data-color-scheme="light|dark"`).
 
-### 5.3 `script.js` (State & Logic)
-* **DOM-Caching:** Am Anfang (`initApp`) werden alle relevanten DOM-Knoten gecached, um unnötige QuerySelector-Aufrufe während der Laufzeit zu vermeiden.
-* **State Management:** Der gesamte Zustand liegt im `jsonData` Objekt und dem `pathStack` Array (welches definiert, wie tief wir in der Ordnerstruktur sind).
-* **Event Delegation:** Klick-Events auf Karten werden zumeist an übergeordnete Container gebunden (Event Bubbling), um Speicherlecks zu verhindern und die Performance bei hunderten Karten hoch zu halten.
-* **RAF (Request Animation Frame):** Aufwendige Layout-Berechnungen (wie das Messen des Favoriten-Docks) werden gebündelt und nur im nächsten Animation-Frame (`requestAnimationFrame`) ausgeführt, um Layout-Thrashing (Reflows) zu verhindern.
+### 5.3 JavaScript-Architektur (ES-Module unter `./src`)
+Der ehemalige Monolith `script.js` (~4.300 Zeilen) ist in echte ES-Module aufgeteilt und wird per **esbuild** zu einem einzelnen klassischen Skript (`script.js`, IIFE) gebündelt:
+
+* **`src/main.js`** – Einstiegspunkt. Stößt `initApp` nach `DOMContentLoaded` an. Einzige vom Bundler verarbeitete Datei.
+* **`src/app.js`** – Hauptmodul mit dem gesamten geteilten, veränderlichen Zustand (`jsonData`, `pathStack`, DOM-Cache …) sowie Rendering, Navigation, Drag&Drop, Sync und Effekten. Der gekoppelte Kern bleibt bewusst in einem Modul, um die Semantik des Originals 1:1 zu erhalten.
+* **`src/constants.js`** – Statische Konfiguration (Storage-Schlüssel, Partikel-/Chip-Parameter, Akzentfarben-Pool). Wird nie zur Laufzeit verändert.
+* **`src/utils.js`** – Reine, zustandslose Helfer (`generateId`, `isMobile`, `findNodeById`, `trimPreviewForLayout`, `getFavoritePreviewText`, `validateTemplateSchema`) – isoliert testbar.
+
+**Verbleibende Konzepte:** DOM-Caching in `initApp`, State in `jsonData`/`pathStack`, Event-Delegation am Container (Bubbling) und gebündelte Layout-Messungen via `requestAnimationFrame` (kein Layout-Thrashing).
+
+### 5.4 Build-Setup (esbuild)
+Cloudflare Pages führt **keinen** Build aus – daher wird das gebündelte `script.js` mitcommittet. Nach Änderungen unter `./src`:
+
+```bash
+npm install        # einmalig: esbuild als devDependency
+npm run build      # produktiv: gebündelt + minifiziert -> script.js (+ .map)
+npm run dev        # Watch-Modus, unminifiziert, Inline-Sourcemap
+npm run build:dev  # einmaliger Dev-Build
+```
+
+Die externen CDN-Bibliotheken (Vivus, Sortable, gsap, Flip) bleiben globale Variablen und werden nicht gebündelt; `index.html` lädt sie weiterhin per `<script defer>` vor `script.js`.
 
 ---
 
