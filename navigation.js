@@ -69,11 +69,11 @@
   /* Navigiert zu einem beliebigen Knoten (rekonstruiert vollständigen Pfad). */
   function navigateToNodeViaPath(target) {
     if (!target) return;
+    NAV.history.userNavPending = true; // gilt für alle Sprungziele inkl. Home
     if (target === window.jsonData) {
       if (typeof window.navigateToHome === 'function') return window.navigateToHome();
     }
     const resolved = buildPath(target.id);
-    NAV.history.userNavPending = true;
     const apply = () => {
       if (resolved) { window.pathStack = resolved.ancestors; window.currentNode = resolved.node; }
       else { window.pathStack = []; window.currentNode = window.jsonData; }

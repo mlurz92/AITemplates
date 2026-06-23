@@ -110,7 +110,14 @@
  * #9 · Karten-Wischgesten (Touch)
  * ------------------------------------------------------------------- */
 .cards-container .card { position: relative; }
-.card-content-wrapper { position: relative; z-index: 2; background: inherit; will-change: transform; }
+.card-content-wrapper { position: relative; z-index: 2; will-change: transform; }
+/* Nur WÄHREND der Wischgeste deckt der Inhalt den dahinterliegenden Aktionstray
+   ab. Im Normalzustand bleibt der Wrapper transparent (Glas-Optik unverändert). */
+.card.swipe-left-active .card-content-wrapper,
+.card.swipe-actions-open .card-content-wrapper {
+  background: var(--glass-bg, rgba(18, 22, 42, 0.92));
+  border-radius: inherit;
+}
 
 /* Aktionstray hinter dem Karteninhalt (wird beim Links-Wischen sichtbar) */
 .card-swipe-tray {
