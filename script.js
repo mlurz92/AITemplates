@@ -76,6 +76,7 @@ let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark,
 
 let sortableInstance = null;
 let contextMenu = null;
+let contextMenuItemMarkup = null;
 let dragSource = null;
 let dragTarget = null;
 let springLoadTimeout = null;
@@ -229,7 +230,7 @@ function initApp() {
 function createContextMenu() {
     contextMenu = document.createElement('div');
     contextMenu.classList.add('context-menu');
-    contextMenu.innerHTML = `
+    contextMenuItemMarkup = `
         <div class="context-menu-item" data-action="toggle-favorite">
             <svg class="icon icon-star" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
@@ -260,6 +261,7 @@ function createContextMenu() {
             <span>Löschen</span>
         </div>
     `;
+    contextMenu.innerHTML = contextMenuItemMarkup;
     document.body.appendChild(contextMenu);
     
     contextMenu.addEventListener('click', (e) => {
@@ -325,6 +327,14 @@ function showContextMenu(x, y, targetElement) {
     const isMulti = selectedIds.length > 1;
     const favoriteTargetId = getFavoriteTargetIdForElement(targetElement);
     const isFavorite = favoriteTargetId ? favoritePrompts.includes(favoriteTargetId) : false;
+
+    // Falls zuvor das Leerflächen-Menü das Markup ersetzt hat: Item-Menü
+    // wiederherstellen und den dort gesetzten Inline-Handler entfernen, damit
+    // die delegierte Klick-Logik (createContextMenu) wieder greift.
+    if (contextMenuItemMarkup && !contextMenu.querySelector('[data-action="toggle-favorite"]')) {
+        contextMenu.innerHTML = contextMenuItemMarkup;
+    }
+    contextMenu.onclick = null;
 
     const renameItem = contextMenu.querySelector('[data-action="rename"]');
     const moveItem = contextMenu.querySelector('[data-action="move"]');
@@ -1144,6 +1154,7 @@ function deleteItemsByIds(ids) {
         }
     });
     if (removed > 0) {
+        pruneDanglingLinks();
         saveFavorites();
         renderFavoritesDock();
         persistJsonData(`${removed} Element(e) gelöscht!`, 'success');
@@ -1418,6 +1429,15 @@ function moveNode(sourceId, targetFolderId, newIndex = -1) {
         return;
     }
 
+    // Zyklus-Schutz: einen Ordner niemals in sich selbst oder einen seiner
+    // Nachfahren verschieben (würde den Teilbaum abkoppeln / eine Schleife bilden).
+    if (sourceId === targetFolderId ||
+        (sourceNode.type === 'folder' && findNodeById(sourceNode, targetFolderId))) {
+        showNotification('Verschieben nicht möglich: Zielordner liegt im verschobenen Ordner.', 'error');
+        renderView(currentNode);
+        return;
+    }
+
     const sourceParent = findParentOfNode(sourceId);
     if (!sourceParent) return;
 
@@ -1574,6 +1594,7 @@ function handleDeleteClick(id, cardElement) {
                         saveFavorites();
                         renderFavoritesDock();
                     }
+                    pruneDanglingLinks();
                     persistJsonData('Element gelöscht!', 'success');
                     renderView(currentNode);
                     updateBreadcrumb();
@@ -1871,6 +1892,33 @@ function findNodeById(startNode, targetId) {
         }
     }
     return null;
+}
+
+// Entfernt rekursiv alle Verknüpfungen, deren Ziel nicht mehr existiert
+// (z. B. nach dem Löschen des Zielknotens). Verhindert tote Link-Karten.
+function pruneDanglingLinks() {
+    if (!jsonData) return 0;
+    const validIds = new Set();
+    (function collect(node) {
+        if (!node) return;
+        validIds.add(node.id);
+        if (Array.isArray(node.items)) node.items.forEach(collect);
+    })(jsonData);
+
+    let pruned = 0;
+    (function walk(node) {
+        if (!Array.isArray(node.items)) return;
+        const before = node.items.length;
+        node.items = node.items.filter((child) => {
+            if (child.type === 'prompt-link' || child.type === 'folder-link') {
+                return child.targetId && validIds.has(child.targetId);
+            }
+            return true;
+        });
+        pruned += before - node.items.length;
+        node.items.forEach(walk);
+    })(jsonData);
+    return pruned;
 }
 
 function generateId() {
@@ -2442,6 +2490,7 @@ function openMoveItemModal(itemId) {
 
 function renderFolderTree(itemIdToMove) {
     moveItemFolderTreeEl.innerHTML = '';
+    const sourceNode = findNodeById(jsonData, itemIdToMove);
     const createTree = (node, parentElement, level = 0) => {
         if (node.type !== 'folder') return;
 
@@ -2461,7 +2510,10 @@ function renderFolderTree(itemIdToMove) {
         item.appendChild(name);
 
         const parentOfItemToMove = findParentOfNode(itemIdToMove);
-        if (node.id === itemIdToMove || node.id === parentOfItemToMove?.id) {
+        // Gesperrt: das Element selbst, sein aktueller Elternordner sowie – bei
+        // einem Ordner – der gesamte eigene Teilbaum (Zyklus-Schutz).
+        const isWithinSource = sourceNode && sourceNode.type === 'folder' && findNodeById(sourceNode, node.id);
+        if (node.id === itemIdToMove || node.id === parentOfItemToMove?.id || isWithinSource) {
             item.classList.add('disabled');
         } else {
             item.addEventListener('click', () => {
@@ -4225,10 +4277,15 @@ function updateColorSchemeButton() {
 
 function updateThemeColorForNode(node) {
     if (!node) return;
-    const isDark = !window.matchMedia('(prefers-color-scheme: light)').matches;
-    const mediaPref = isDark ? 'dark' : 'light';
-    const metaTheme = document.querySelector(`meta[name="theme-color"][media*="${mediaPref}"]`);
-    if (metaTheme) metaTheme.content = isDark ? '#0c0f1a' : '#f2f4f8';
+    // Respektiert die manuelle Farbschema-Wahl (data-color-scheme), nicht nur die
+    // Systempräferenz – sonst würde ein manuell gewähltes Schema bei jedem Render
+    // wieder von der Systemfarbe überschrieben.
+    const scheme = document.documentElement.dataset.colorScheme
+        || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const isDark = scheme !== 'light';
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+        meta.content = isDark ? '#0c0f1a' : '#f2f4f8';
+    });
 }
 
 // Initialisiere die Anwendung erst, wenn das gesamte DOM und alle Variablen geladen sind
