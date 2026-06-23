@@ -3298,7 +3298,7 @@ function applyFavoriteChipMetrics() {
         if (!Number.isFinite(widthCandidate) || widthCandidate <= 0) {
             widthCandidate = availableWidth;
         }
-        targetWidth = Math.min(chipMaxWidth, Math.max(compactMinWidth, widthCandidate));
+        targetWidth = Math.min(availableWidth, Math.min(chipMaxWidth, Math.max(compactMinWidth, widthCandidate)));
     } else {
         // Eingeklappt: einheitliche, komfortable Chipbreite. Die Reihe scrollt
         // horizontal, statt die Chips zusammenzuquetschen. Auf sehr schmalen
