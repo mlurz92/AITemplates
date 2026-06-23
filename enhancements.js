@@ -44,6 +44,7 @@
 
   const USAGE_KEY = 'pt-usage-stats-v1';
   const RECENT_LIMIT = 24;
+  const SEMANTIC_QUERY_CACHE_LIMIT = 50;
 
   const STOPWORDS = new Set(('und oder der die das den dem des ein eine einen einem eines auf für mit von zu im in an als ' +
     'ist sind war wird werden wie was wann wo wer warum nicht kein keine du ich er sie es wir ihr bitte mir mich dein deine ' +
@@ -260,6 +261,12 @@
     let scores = null;
     try { scores = await neuralRank(query, nodes); } catch (_) { scores = null; }
     if (!scores) scores = heuristicRank(query, nodes);
+    // LRU-artige Begrenzung: vermeidet unbegrenztes Wachstum des Query-Caches
+    // über lange Sitzungen (jede distinkte Suchanfrage legte bisher einen Eintrag an).
+    if (PT.semantic.queryCache.size >= SEMANTIC_QUERY_CACHE_LIMIT) {
+      PT.semantic.queryCache.delete(PT.semantic.queryCache.keys().next().value);
+    }
+    PT.semantic.queryCache.delete(query);
     PT.semantic.queryCache.set(query, scores);
     updateSemanticBadge();
     if (PT.search.scope === 'semantic' && currentQuery() === query) {
@@ -431,13 +438,27 @@ function lexicalScore(node, nq) {
     const cards = document.getElementById('cards-container');
     if (!cards) return;
     const nq = normalize(q);
+    if (!nq) return;
     cards.querySelectorAll('.card h3').forEach((h3) => {
       const text = h3.textContent;
-      const idx = normalize(text).indexOf(nq);
+      // normalize() kann die Länge ändern (ä→ae, ö→oe, ü→ue, ß→ss). Daher den
+      // Treffer auf der normalisierten Fassung suchen, aber die Original-Offsets
+      // über eine Index-Abbildung zurückrechnen, damit die Hervorhebung exakt sitzt.
+      let norm = '';
+      const map = []; // map[normIndex] -> originalIndex
+      for (let i = 0; i < text.length; i++) {
+        const piece = normalize(text[i]);
+        for (let k = 0; k < piece.length; k++) map.push(i);
+        norm += piece;
+      }
+      map.push(text.length); // Sentinel für das Ende
+      const idx = norm.indexOf(nq);
       if (idx < 0) return;
-      const before = text.slice(0, idx);
-      const match = text.slice(idx, idx + q.length);
-      const after = text.slice(idx + q.length);
+      const start = map[idx];
+      const end = map[idx + nq.length];
+      const before = text.slice(0, start);
+      const match = text.slice(start, end);
+      const after = text.slice(end);
       h3.innerHTML = '';
       h3.append(document.createTextNode(before));
       const mark = document.createElement('mark');
