@@ -486,6 +486,7 @@
         s.axis = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';
       }
       if (s.axis !== 'x') { NAV.swipe = null; return; } // vertikal → Scrollen zulassen
+      if (e.cancelable) e.preventDefault(); // Verhindert vertikales Scrollen während des Swipes
       s.dx = dx;
       const clamped = Math.max(-SWIPE_MAX, Math.min(SWIPE_MAX, dx));
       s.body.style.transition = 'none';
@@ -493,7 +494,7 @@
       s.card.classList.toggle('swipe-right-active', dx > SWIPE_TRIGGER * 0.5);
       s.card.classList.toggle('swipe-left-active', dx < -SWIPE_TRIGGER * 0.5);
       if (dx < -8) ensureActionTray(s.card);
-    }, { passive: true });
+    }, { passive: false });
 
     const finish = () => {
       const s = NAV.swipe;
