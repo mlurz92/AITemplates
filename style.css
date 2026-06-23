@@ -1628,6 +1628,32 @@ body.favorites-dock-visible .favorites-dock {
     }
 }
 
+/* === FAVORITES DOCK – echtes Bottom-Docking auf Mobile ===
+   Auf schmalen Viewports wird die Favoritenbar bündig an die untere Display-
+   Kante angedockt (volle Breite, eckige Unterkante). Der Safe-Area-Inset
+   (Home-Indicator) wird NICHT mehr als äußeres padding-bottom gesetzt – das
+   schob das Glas nach oben und ließ darunter einen toten, dunklen Streifen
+   stehen. Stattdessen füllt das Glas bis zur Kante und der Inset wird als
+   INNERES padding gehalten, sodass die Chips weiterhin über dem Home-Indicator
+   liegen. Desktop behält die schwebende, allseitig gerundete Karte. */
+@media (max-width: 720px) {
+    .favorites-dock {
+        padding-left: 0;
+        padding-right: 0;
+        padding-bottom: 0;
+    }
+
+    .favorites-shell {
+        width: 100%;
+    }
+
+    .favorites-dock-inner {
+        border-radius: 18px 18px 0 0;
+        border-bottom: 0;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .favorites-dock,
     .favorite-chip,
