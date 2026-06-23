@@ -3116,7 +3116,13 @@ function loadFavorites() {
     const storedFavorites = localStorage.getItem(favoritesKey);
     if (storedFavorites) {
         try {
-            favoritePrompts = JSON.parse(storedFavorites);
+            const parsed = JSON.parse(storedFavorites);
+            // Gegen beschädigte oder veraltete Daten absichern: nur ein Array
+            // valider String-IDs zulassen, damit nachgelagerte Aufrufe
+            // (indexOf/filter/push) niemals an unerwarteten Typen scheitern.
+            favoritePrompts = Array.isArray(parsed)
+                ? parsed.filter((id) => typeof id === 'string' && id.length > 0)
+                : [];
         } catch (e) {
             console.error("Fehler beim Laden der Favoriten:", e);
             favoritePrompts = [];
@@ -3236,12 +3242,6 @@ function handleWindowResize() {
 
 function updateDockPositioning() {
     const root = document.documentElement;
-    const computedStyle = getComputedStyle(root);
-    const safeInset = parseFloat(computedStyle.getPropertyValue('--safe-area-inset-bottom')) || 0;
-
-    if (favoritesDockEl) {
-        favoritesDockEl.style.setProperty('--favorites-safe-offset', `${safeInset}px`);
-    }
 
     if (topBarEl) {
         const topBarHeight = Math.ceil(topBarEl.getBoundingClientRect().height);
