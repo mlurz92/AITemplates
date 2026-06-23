@@ -329,11 +329,11 @@
       .filter((x) => x.sc > 0.1).sort((a, b) => b.sc - a.sc).map((x) => x.n);
   }
 
-  function lexicalScore(node, nq) {
-    const title = normalize(node.title || '');
-    const content = normalize(node.content || '');
-    const tags = (node.tags || []).map(normalize).join(' ');
-    let sc = 0;
+function lexicalScore(node, nq) {
+  const title = normalize(node.title || '');
+  const content = normalize(node.content || '');
+  const tags = Array.isArray(node.tags) ? node.tags.map(normalize).join(' ') : '';
+  let sc = 0;
     if (title === nq) sc += 100;
     if (title.startsWith(nq)) sc += 40;
     if (title.includes(nq)) sc += 25;
