@@ -324,7 +324,8 @@
   function handleGridKey(e) {
     // Nicht stören, wenn ein Modal offen ist, getippt wird oder Modifier aktiv sind.
     const modalOpen = document.querySelector('.modal.visible');
-    if (modalOpen || isTypingContext() || e.metaKey || e.ctrlKey || e.altKey) return;
+    const menuOpen = document.querySelector('.context-menu.visible');
+    if (modalOpen || menuOpen || isTypingContext() || e.metaKey || e.ctrlKey || e.altKey) return;
     const container = document.getElementById('cards-container');
     if (!container) return;
     const cards = getCards();
