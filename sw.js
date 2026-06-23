@@ -161,12 +161,12 @@ async function cacheFirst(request, cacheName) {
   const cached = await cache.match(request);
   if (cached) {
     // Im Hintergrund auffrischen, ohne den Treffer zu verzögern.
-    fetch(request).then((res) => { if (res && res.ok) cache.put(request, res.clone()); }).catch(() => {});
+    fetch(request).then((res) => { if (res && res.ok) cache.put(request, res.clone()).catch(() => {}); }).catch(() => {});
     return cached;
   }
   try {
     const response = await fetch(request);
-    if (response && (response.ok || response.type === 'opaque')) cache.put(request, response.clone());
+    if (response && (response.ok || response.type === 'opaque')) cache.put(request, response.clone()).catch(() => {});
     return response;
   } catch (err) {
     return cached || Response.error();
