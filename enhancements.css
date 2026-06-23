@@ -1,0 +1,400 @@
+/* =====================================================================
+ * Prompt-Templates – Enhancement Styles
+ * ---------------------------------------------------------------------
+ * Styles für die neuen Subsysteme (Vorschläge #4, #6, #7, #8, #10, #11).
+ * Greift bewusst auf die bestehenden Liquid-Glass-CSS-Variablen aus
+ * style.css zurück, damit Hell-/Dunkelmodus und Akzentfarben automatisch
+ * mitlaufen.
+ * ===================================================================== */
+
+/* ---------------------------------------------------------------------
+ * #10 · WebGL-Aurora
+ * ------------------------------------------------------------------- */
+.aurora-webgl-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  animation: aurora-webgl-fade-in 1.2s ease forwards;
+  will-change: opacity;
+}
+@keyframes aurora-webgl-fade-in { to { opacity: 1; } }
+
+/* Wenn der Shader aktiv ist, treten die CSS-Blobs in den Hintergrund. */
+.aurora-container.webgl-active .aurora-shape {
+  opacity: 0 !important;
+  transition: opacity 0.8s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aurora-webgl-canvas { animation: none; opacity: 1; }
+}
+
+/* ---------------------------------------------------------------------
+ * #7 · Erweiterte Such-Toolbar (Scopes + Filter-Chips)
+ * ------------------------------------------------------------------- */
+.search-advanced {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  animation: adv-fade 0.28s var(--ease-smooth, ease) both;
+}
+@keyframes adv-fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+.search-scopes {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 12px;
+  background: var(--glass-bg, rgba(18, 22, 42, 0.7));
+  border: 1px solid var(--glass-stroke, rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+.scope-btn {
+  position: relative;
+  border: none;
+  background: transparent;
+  color: var(--fg-2, #c7cad6);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, transform 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.scope-btn:hover { color: var(--fg-1, #fff); }
+.scope-btn.is-active {
+  color: #fff;
+  background: var(--btn-primary-gradient, linear-gradient(135deg, #5ac8fa, #5e5ce6));
+  box-shadow: 0 2px 10px rgba(94, 92, 230, 0.35);
+}
+.scope-btn:active { transform: scale(0.96); }
+.scope-badge {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 6px;
+  background: rgba(50, 215, 75, 0.9);
+  color: #04210b;
+}
+
+.search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.filter-chip {
+  border: 1px solid var(--glass-stroke, rgba(255, 255, 255, 0.12));
+  background: var(--glass-bg, rgba(18, 22, 42, 0.55));
+  color: var(--fg-2, #c7cad6);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s var(--ease-smooth, ease);
+  white-space: nowrap;
+}
+.filter-chip:hover { border-color: var(--glass-stroke-hover, rgba(94, 92, 230, 0.6)); color: var(--fg-1, #fff); }
+.filter-chip.is-active {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(94, 92, 230, 0.35), rgba(191, 90, 242, 0.3));
+  border-color: rgba(94, 92, 230, 0.7);
+}
+.filter-chip:active { transform: scale(0.95); }
+
+/* Trefferhervorhebung. */
+mark.search-hl {
+  background: linear-gradient(180deg, rgba(255, 214, 10, 0.25), rgba(255, 159, 10, 0.35));
+  color: inherit;
+  border-radius: 4px;
+  padding: 0 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ---------------------------------------------------------------------
+ * #7 · Ergebnis-Banner
+ * ------------------------------------------------------------------- */
+.results-banner {
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  margin-bottom: 4px;
+  animation: adv-fade 0.25s ease both;
+}
+.results-banner[hidden] { display: none; }
+.results-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: var(--glass-bg, rgba(18, 22, 42, 0.7));
+  border: 1px solid var(--glass-stroke, rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--shadow-2, 0 8px 24px rgba(0, 0, 0, 0.36));
+}
+.results-context { font-weight: 700; font-size: 14px; color: var(--fg-1, #fff); }
+.results-count { font-size: 12.5px; color: var(--fg-3, #8b90a0); margin-right: auto; }
+.results-clear {
+  border: none;
+  background: rgba(255, 69, 58, 0.16);
+  color: #ff7a70;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.15s;
+}
+.results-clear:hover { background: rgba(255, 69, 58, 0.28); }
+.results-clear:active { transform: scale(0.95); }
+
+/* ---------------------------------------------------------------------
+ * #8 · Smart Collections (Home-Leiste)
+ * ------------------------------------------------------------------- */
+.smart-collections {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 2px;
+}
+.smart-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--glass-stroke, rgba(255, 255, 255, 0.12));
+  background: var(--glass-bg, rgba(18, 22, 42, 0.6));
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  color: var(--fg-1, #fff);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.18s var(--timing-function-bounce, ease), border-color 0.2s, box-shadow 0.2s;
+}
+.smart-chip:hover {
+  transform: translateY(-2px);
+  border-color: var(--glass-stroke-hover, rgba(94, 92, 230, 0.7));
+  box-shadow: var(--shadow-glow-1, 0 0 28px rgba(94, 92, 230, 0.28));
+}
+.smart-chip:active { transform: scale(0.96); }
+.smart-chip-icon { font-size: 14px; line-height: 1; }
+.smart-chip-hash { color: var(--acc-teal, #5ac8fa); font-weight: 800; }
+.smart-chip-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg-3, #8b90a0);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 7px;
+}
+.smart-chip-tag .smart-chip-label { color: var(--fg-2, #c7cad6); }
+.smart-sep {
+  width: 1px;
+  align-self: stretch;
+  min-height: 22px;
+  background: var(--glass-stroke, rgba(255, 255, 255, 0.14));
+  margin: 0 4px;
+}
+
+/* ---------------------------------------------------------------------
+ * #8 · Tag-Chips auf Karten + Usage-Badge
+ * ------------------------------------------------------------------- */
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+  max-width: 100%;
+}
+.card-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 6px;
+  color: var(--acc-teal, #5ac8fa);
+  background: rgba(90, 200, 250, 0.14);
+  border: 1px solid rgba(90, 200, 250, 0.22);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.card-usage-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  color: #2a1500;
+  background: linear-gradient(135deg, #ffd60a, #ff9f0a);
+  box-shadow: 0 2px 8px rgba(255, 159, 10, 0.4);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------
+ * #8 · Tag-Editor im Prompt-Modal
+ * ------------------------------------------------------------------- */
+.tag-editor {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--glass-stroke, rgba(255, 255, 255, 0.1));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tag-editor-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 6px 4px 11px;
+  border-radius: 999px;
+  color: var(--fg-1, #fff);
+  background: linear-gradient(135deg, rgba(94, 92, 230, 0.28), rgba(191, 90, 242, 0.22));
+  border: 1px solid rgba(94, 92, 230, 0.45);
+}
+.tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.tag-remove:hover { background: rgba(255, 69, 58, 0.7); }
+.tag-remove:active { transform: scale(0.9); }
+.tag-editor-input {
+  width: 100%;
+  font-size: 16px; /* iOS-Zoom-Schutz */
+  padding: 9px 13px;
+  border-radius: 12px;
+  color: var(--fg-1, #fff);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-stroke, rgba(255, 255, 255, 0.12));
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.tag-editor-input:focus {
+  outline: none;
+  border-color: var(--glass-stroke-hover, rgba(94, 92, 230, 0.7));
+  box-shadow: 0 0 0 3px rgba(94, 92, 230, 0.25);
+}
+
+/* ---------------------------------------------------------------------
+ * #11 · Skeleton-Loading
+ * ------------------------------------------------------------------- */
+.skeleton-card {
+  border-radius: var(--radius-lg, 18px);
+  background: var(--glass-bg, rgba(18, 22, 42, 0.6));
+  border: 1px solid var(--glass-stroke, rgba(255, 255, 255, 0.08));
+  min-height: 150px;
+  aspect-ratio: var(--card-aspect-ratio, 10 / 7);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  animation: sk-pop 0.4s var(--timing-function-bounce, ease) both;
+  animation-delay: calc(var(--card-index, 0) * 45ms);
+}
+@keyframes sk-pop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+.sk-line {
+  height: 12px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 25%, rgba(255, 255, 255, 0.16) 37%, rgba(255, 255, 255, 0.06) 63%);
+  background-size: 400% 100%;
+  animation: sk-shimmer 1.4s ease-in-out infinite;
+}
+.sk-title { height: 18px; width: 70%; }
+.sk-short { width: 45%; }
+@keyframes sk-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .sk-line { animation: none; }
+}
+
+/* ---------------------------------------------------------------------
+ * #11 · Karten-Stagger jenseits des 12er-Limits aus style.css
+ * ------------------------------------------------------------------- */
+/* style.css definiert nth-child-Delays nur bis Karte 12; für höhere
+   Indizes übernimmt der von decorateCards() gesetzte --card-index. */
+.cards-container .card:nth-child(n + 13).is-visible {
+  animation-delay: calc(var(--card-index, 12) * 30ms);
+}
+
+/* ---------------------------------------------------------------------
+ * #11 · Ripple-Effekt
+ * ------------------------------------------------------------------- */
+.pt-ripple {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: scale(0);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 70%);
+  animation: pt-ripple-anim 0.6s ease-out forwards;
+  z-index: 4;
+  mix-blend-mode: screen;
+}
+@keyframes pt-ripple-anim {
+  to { transform: scale(2.4); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pt-ripple { display: none; }
+}
+
+/* ---------------------------------------------------------------------
+ * Light-Mode-Feinschliff
+ * ------------------------------------------------------------------- */
+html[data-color-scheme="light"] .card-usage-badge { color: #3a1f00; }
+html[data-color-scheme="light"] .sk-line {
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.05) 25%, rgba(0, 0, 0, 0.1) 37%, rgba(0, 0, 0, 0.05) 63%);
+  background-size: 400% 100%;
+}
+html[data-color-scheme="light"] .pt-ripple {
+  background: radial-gradient(circle, rgba(94, 92, 230, 0.3) 0%, rgba(94, 92, 230, 0) 70%);
+  mix-blend-mode: multiply;
+}
+html[data-color-scheme="light"] mark.search-hl {
+  background: linear-gradient(180deg, rgba(255, 214, 10, 0.4), rgba(255, 159, 10, 0.5));
+}

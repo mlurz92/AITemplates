@@ -4238,6 +4238,26 @@ if (document.readyState === 'loading') {
     initApp();
 }
 
+/* =====================================================================
+ * State-Bridge für den Enhancement-Layer (enhancements.js)
+ * ---------------------------------------------------------------------
+ * Top-Level `let`-Bindungen sind keine window-Eigenschaften. Diese Bridge
+ * spiegelt die für Erweiterungen relevanten Zustände als Getter/Setter auf
+ * window, sodass externe Module lesen UND schreiben können, ohne dass die
+ * interne Logik von script.js angefasst werden muss.
+ * ===================================================================== */
+try {
+    Object.defineProperties(window, {
+        jsonData: { configurable: true, get: () => jsonData, set: (v) => { jsonData = v; } },
+        currentNode: { configurable: true, get: () => currentNode, set: (v) => { currentNode = v; } },
+        pathStack: { configurable: true, get: () => pathStack, set: (v) => { pathStack = v; } },
+        currentSearchQuery: { configurable: true, get: () => currentSearchQuery, set: (v) => { currentSearchQuery = v; } },
+        favoritePrompts: { configurable: true, get: () => favoritePrompts, set: (v) => { favoritePrompts = v; } },
+    });
+} catch (e) {
+    console.warn('State-Bridge konnte nicht installiert werden:', e);
+}
+
 function setupPwaInstallPrompt() {
     if (!installAppBtn) return;
 
