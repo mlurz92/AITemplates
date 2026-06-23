@@ -3269,33 +3269,28 @@ function applyFavoriteChipMetrics() {
 
     // Sizing-Tokens werden vom Stylesheet verwaltet (inkl. responsiver Breakpoints).\n    // Um teure getComputedStyle-Aufrufe bei jedem Layout-Update (z. B. beim Auf-/Zuklappen)\n    // zu vermeiden, cachen wir die Werte und lesen sie nur bei einer Änderung der Viewport-Größe neu aus.\n    const viewportWidth = window.innerWidth;\n    const viewportHeight = window.innerHeight;\n\n    if (!applyFavoriteChipMetrics.cachedTokens ||\n        applyFavoriteChipMetrics.lastWidth !== viewportWidth ||\n        applyFavoriteChipMetrics.lastHeight !== viewportHeight) {\n\n        const dockStyles = getComputedStyle(favoritesDockEl);\n        const readToken = (name, fallback) => {\n            const value = parseFloat(dockStyles.getPropertyValue(name));\n            return Number.isFinite(value) && value > 0 ? value : fallback;\n        };\n\n        const baseMinWidth = readToken('--favorite-chip-min', FAVORITE_CHIP_MIN_WIDTH);\n        const compactMinWidth = Math.min(\n            baseMinWidth,\n            readToken('--favorite-chip-min-narrow', FAVORITE_CHIP_MIN_WIDTH_NARROW)\n        );\n        const chipMaxWidth = readToken('--favorite-chip-max', FAVORITE_CHIP_MAX_WIDTH);\n\n        applyFavoriteChipMetrics.cachedTokens = { baseMinWidth, compactMinWidth, chipMaxWidth };\n        applyFavoriteChipMetrics.lastWidth = viewportWidth;\n        applyFavoriteChipMetrics.lastHeight = viewportHeight;\n    }\n\n    const { baseMinWidth, compactMinWidth, chipMaxWidth } = applyFavoriteChipMetrics.cachedTokens;
 
-    let columns = Math.max(1, Math.floor((availableWidth + gap) / (baseMinWidth + gap)));
-    if (count > columns && baseMinWidth > compactMinWidth) {
-        const compactColumns = Math.max(1, Math.floor((availableWidth + gap) / (compactMinWidth + gap)));
-        columns = Math.max(columns, compactColumns);
-    }
-    columns = Math.min(columns, count);
+    let targetWidth;
+    if (expanded) {
+        // Erweitertes Dashboard: Spalten füllen die Breite gleichmäßig aus (Grid).
+        let columns = Math.max(1, Math.floor((availableWidth + gap) / (baseMinWidth + gap)));
+        if (count > columns && baseMinWidth > compactMinWidth) {
+            const compactColumns = Math.max(1, Math.floor((availableWidth + gap) / (compactMinWidth + gap)));
+            columns = Math.max(columns, compactColumns);
+        }
+        columns = Math.min(columns, count);
 
-    const widthBudget = availableWidth - gap * Math.max(0, columns - 1);
-    let widthCandidate = widthBudget / columns;
-
-    if (!Number.isFinite(widthCandidate) || widthCandidate <= 0) {
-        widthCandidate = availableWidth;
-    }
-
-    const hasOverflow = count > columns;
-    const minWidth = hasOverflow ? compactMinWidth : baseMinWidth;
-    const maxWidth = expanded ? chipMaxWidth : Math.min(chipMaxWidth, availableWidth);
-    const maxAllowedWidth = Math.min(maxWidth, availableWidth);
-    const minAllowedWidth = Math.min(minWidth, maxAllowedWidth);
-
-    let targetWidth = Math.min(maxAllowedWidth, Math.max(minAllowedWidth, widthCandidate));
-
-    if (!expanded && hasOverflow) {
-        targetWidth = Math.max(minAllowedWidth, targetWidth - 6);
-    } else if (!expanded && !hasOverflow && count > 0) {
-        const evenWidth = widthBudget / count;
-        targetWidth = Math.min(maxAllowedWidth, Math.max(minAllowedWidth, evenWidth));
+        const widthBudget = availableWidth - gap * Math.max(0, columns - 1);
+        let widthCandidate = widthBudget / columns;
+        if (!Number.isFinite(widthCandidate) || widthCandidate <= 0) {
+            widthCandidate = availableWidth;
+        }
+        targetWidth = Math.min(availableWidth, Math.min(chipMaxWidth, Math.max(compactMinWidth, widthCandidate)));
+    } else {
+        // Eingeklappt: einheitliche, komfortable Chipbreite. Die Reihe scrollt
+        // horizontal, statt die Chips zusammenzuquetschen. Auf sehr schmalen
+        // Viewports nie breiter als der sichtbare Bereich.
+        const comfortable = Math.min(chipMaxWidth, Math.max(baseMinWidth, idealWidth));
+        targetWidth = Math.min(availableWidth, comfortable);
     }
 
     const baseHeight = Math.max(58, Math.min(96, targetWidth * 0.45));

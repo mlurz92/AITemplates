@@ -1035,6 +1035,8 @@ body.favorites-dock-visible .cards-container {
     --favorite-chip-min: 140px;
     --favorite-chip-max: 236px;
     --favorite-chip-min-narrow: 112px;
+    /* Komfortbreite im eingeklappten Scroller (zwischen min und max). */
+    --favorite-chip-ideal: 208px;
     --favorite-chip-width: clamp(var(--favorite-chip-min), 20vw, var(--favorite-chip-max));
     --favorite-chip-base-height: clamp(56px, 11vw, 88px);
     --favorites-frame-pad-x: clamp(0.45rem, 1.8vw, 0.85rem);
@@ -1584,6 +1586,7 @@ body.favorites-dock-visible .favorites-dock {
         --favorite-chip-min: 132px;
         --favorite-chip-max: 210px;
         --favorite-chip-min-narrow: 116px;
+        --favorite-chip-ideal: 190px;
         --favorites-frame-pad-x: clamp(0.52rem, 5vw, 0.9rem);
         --favorites-frame-pad-y: clamp(0.35rem, 3.6vw, 0.6rem);
     }
@@ -1594,6 +1597,7 @@ body.favorites-dock-visible .favorites-dock {
         --favorite-chip-min: 138px;
         --favorite-chip-max: 198px;
         --favorite-chip-min-narrow: 120px;
+        --favorite-chip-ideal: 176px;
         --favorites-frame-pad-x: clamp(0.48rem, 6vw, 0.85rem);
         --favorites-frame-pad-y: clamp(0.32rem, 5.2vw, 0.55rem);
     }
