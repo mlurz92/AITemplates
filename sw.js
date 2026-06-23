@@ -14,7 +14,7 @@
  *   • templates.json (statischer Fallback)     → Stale-While-Revalidate
  * ===================================================================== */
 
-const SW_VERSION = 'v3-2026-06';
+const SW_VERSION = 'v4-2026-06';
 const SHELL_CACHE = `pt-shell-${SW_VERSION}`;
 const CDN_CACHE = `pt-cdn-${SW_VERSION}`;
 const RUNTIME_CACHE = `pt-runtime-${SW_VERSION}`;
@@ -26,9 +26,11 @@ const PRECACHE_URLS = [
   './index.html',
   './style.css',
   './enhancements.css',
+  './navigation.css',
   './script.js',
   './enhancements.js',
   './aurora-webgl.js',
+  './navigation.js',
   './manifest.json',
   './templates.json',
   './browserconfig.xml',
