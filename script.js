@@ -29,7 +29,7 @@ let createFolderModalEl, folderTitleInputEl, createFolderSaveBtn, createFolderCa
 let moveItemModalEl, moveItemFolderTreeEl, moveItemConfirmBtn, moveItemCancelBtn;
 let uploadJsonModalEl, uploadDropZoneEl, uploadJsonInputEl, uploadJsonSelectBtn, uploadJsonCancelBtn;
 let linkItemModalEl, linkItemListEl, linkItemConfirmBtn, linkItemCancelBtn, linkItemModalTitleEl;
-let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, downloadMenu, resetBtn, addBtn, addMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn, storageSourceBtn;
+let topBarEl, topbarBackBtn, fixedBackBtn, fullscreenBtn, fullscreenEnterIcon, fullscreenExitIcon, downloadBtn, downloadMenu, resetBtn, addBtn, addMenu, moreBtn, moreMenu, organizeBtn, organizeIcon, doneIcon, appLogoBtn, clearFavoritesBtn, storageSourceBtn;
 let modalEditBtn, modalSaveBtn, modalCloseBtn, copyModalButton, modalFavoriteBtn, starOutlineIcon, starFilledIcon;
 let favoritesDockEl, favoritesListEl, favoritesScrollAreaEl, favoritesToggleBtn, auroraContainerEl;
 let favoritesChipResizeObserver = null;
@@ -145,6 +145,8 @@ function initApp() {
     resetBtn = document.getElementById('reset-button');
     addBtn = document.getElementById('add-button');
     addMenu = document.getElementById('add-menu');
+    moreBtn = document.getElementById('more-button');
+    moreMenu = document.getElementById('more-menu');
     organizeBtn = document.getElementById('organize-button');
     appLogoBtn = document.getElementById('app-logo-button');
     clearFavoritesBtn = document.getElementById('clear-favorites-button');
@@ -872,9 +874,33 @@ function setupEventListeners() {
         addMenu.classList.toggle('hidden');
     });
 
+    if (moreBtn && moreMenu) {
+        moreBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const willOpen = moreMenu.classList.contains('hidden');
+            if (willOpen) buildMoreMenu();
+            moreMenu.classList.toggle('hidden');
+            moreBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        });
+        moreMenu.addEventListener('click', (e) => {
+            const item = e.target.closest('.more-menu-item');
+            if (!item) return;
+            closeMoreMenu();
+            const action = item._ptAction;
+            if (typeof action === 'function') action();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !moreMenu.classList.contains('hidden')) {
+                closeMoreMenu();
+                moreBtn.focus();
+            }
+        });
+    }
+
     document.addEventListener('click', (e) => {
         if (!addBtn.contains(e.target) && !addMenu.contains(e.target)) { addMenu.classList.add('hidden'); }
         if (downloadMenu && !downloadBtn.contains(e.target) && !downloadMenu.contains(e.target)) { downloadMenu.classList.add('hidden'); }
+        if (moreBtn && moreMenu && !moreBtn.contains(e.target) && !moreMenu.contains(e.target)) { closeMoreMenu(); }
     });
 
     addMenu.addEventListener('click', (e) => {
@@ -2846,6 +2872,75 @@ function copyPromptText(buttonElement = null) {
 
 function copyPromptTextForCard(node, buttonElement) {
     copyToClipboard(node.content || '', buttonElement);
+}
+
+function closeMoreMenu() {
+    if (!moreMenu) return;
+    moreMenu.classList.add('hidden');
+    if (moreBtn) moreBtn.setAttribute('aria-expanded', 'false');
+}
+
+/* Befüllt das mobile "Mehr"-Menü kontextbewusst: Es übernimmt nur die aktuell
+   verfügbaren Sekundäraktionen (Inline-`display`-Steuerung der Original-Buttons)
+   und leitet Klicks an deren bestehende Handler weiter – so bleiben alle
+   Funktionen ohne Logik-Duplikat erreichbar. */
+function buildMoreMenu() {
+    if (!moreMenu) return;
+    moreMenu.innerHTML = '';
+
+    const isAvailable = (btn) => !!btn && btn.style.display !== 'none' && !btn.disabled;
+    const visibleIcon = (btn) => (btn ? btn.querySelector('svg.icon:not(.hidden)') : null);
+
+    const addItem = (label, iconNode, action) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'add-menu-item more-menu-item';
+        item.setAttribute('role', 'menuitem');
+        if (iconNode) {
+            const icon = iconNode.cloneNode(true);
+            icon.classList.remove('hidden');
+            item.appendChild(icon);
+        }
+        const span = document.createElement('span');
+        span.textContent = label;
+        item.appendChild(span);
+        item._ptAction = action;
+        moreMenu.appendChild(item);
+    };
+
+    const colorSchemeBtn = document.getElementById('color-scheme-button');
+
+    if (isAvailable(organizeBtn)) {
+        addItem(organizeBtn.getAttribute('aria-label') || 'Karten organisieren', visibleIcon(organizeBtn), () => organizeBtn.click());
+    }
+    if (isAvailable(downloadBtn)) {
+        addItem('Download JSON', visibleIcon(downloadBtn), () => downloadCustomJson());
+        addItem('Upload JSON', null, () => openUploadJsonModal());
+    }
+    if (isAvailable(resetBtn)) {
+        addItem(resetBtn.getAttribute('aria-label') || 'Änderungen zurücksetzen', visibleIcon(resetBtn), () => resetBtn.click());
+    }
+    if (isAvailable(colorSchemeBtn)) {
+        addItem(colorSchemeBtn.getAttribute('aria-label') || 'Design wechseln', visibleIcon(colorSchemeBtn), () => colorSchemeBtn.click());
+    }
+    if (isAvailable(fullscreenBtn)) {
+        addItem(fullscreenBtn.getAttribute('aria-label') || 'Vollbildmodus', visibleIcon(fullscreenBtn), () => fullscreenBtn.click());
+    }
+    if (isAvailable(installAppBtn)) {
+        addItem(installAppBtn.getAttribute('aria-label') || 'Web-App installieren', visibleIcon(installAppBtn), () => installAppBtn.click());
+    }
+    if (isAvailable(clearFavoritesBtn)) {
+        addItem(clearFavoritesBtn.getAttribute('aria-label') || 'Alle Favoriten löschen', visibleIcon(clearFavoritesBtn), () => clearFavoritesBtn.click());
+    }
+
+    if (!moreMenu.children.length) {
+        const empty = document.createElement('div');
+        empty.className = 'add-menu-item';
+        empty.style.opacity = '0.6';
+        empty.style.cursor = 'default';
+        empty.textContent = 'Keine weiteren Aktionen';
+        moreMenu.appendChild(empty);
+    }
 }
 
 function copyToClipboard(text, buttonElement = null, node = null) {

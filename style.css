@@ -330,6 +330,31 @@ body::before {
 }
 .breadcrumb::-webkit-scrollbar { display: none; }
 
+/* === TOP BAR – Legibilität & mobiles Overflow-System ("Mehr"-Menü) ===
+   Kräftiger Kontrast für die Top-Bar-Icons (zuvor gedämpftes --fg-2, das die
+   Icons blass wirken ließ) und ein aufgeräumtes mobiles Layout: selten genutzte
+   Sekundäraktionen wandern auf schmalen Viewports in ein kontextbewusstes
+   "Mehr"-Menü, statt die Leiste zu überladen. */
+.top-bar .btn-ghost { color: var(--fg-1); }
+.breadcrumb:empty { margin: 0; }
+
+.more-container { position: relative; flex-shrink: 0; display: none; }
+.more-menu { min-width: 13.5rem; }
+.more-menu .add-menu-item { gap: 0.85rem; }
+.more-menu .add-menu-item svg.icon { width: 22px; height: 22px; flex-shrink: 0; }
+
+@media (max-width: 640px) {
+    #organize-button,
+    #reset-button,
+    .download-container,
+    #color-scheme-button,
+    #install-app-button,
+    #clear-favorites-button,
+    #fullscreen-button { display: none !important; }
+
+    .more-container { display: inline-flex; }
+}
+
 /* === BREADCRUMB - Enhanced Design === */
 .breadcrumb-link {
     color: var(--fg-1);
