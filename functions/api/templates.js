@@ -51,7 +51,7 @@ export async function onRequestGet(context) {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), { 
+    return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -74,7 +74,10 @@ export async function onRequestPost(context) {
   try {
     const payload = await request.json();
     if (!payload || !payload.data || typeof payload.data !== 'object') {
-      return new Response(JSON.stringify({ error: "Invalid payload format." }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Invalid payload format." }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const { data: newData, lastUpdated: clientLastUpdated } = payload;
@@ -113,7 +116,7 @@ export async function onRequestPost(context) {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), { 
+    return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
