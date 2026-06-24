@@ -168,63 +168,7 @@ mark.search-hl {
 .results-clear:active { transform: scale(0.95); }
 
 /* ---------------------------------------------------------------------
- * #8 · Smart Collections (Home-Leiste)
- * ------------------------------------------------------------------- */
-.smart-collections {
-  grid-column: 1 / -1;
-  justify-self: stretch;
-  width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  padding: 2px;
-}
-.smart-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid var(--glass-stroke, rgba(255, 255, 255, 0.12));
-  background: var(--glass-bg, rgba(18, 22, 42, 0.6));
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  color: var(--fg-1, #fff);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 7px 13px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: transform 0.18s var(--timing-function-bounce, ease), border-color 0.2s, box-shadow 0.2s;
-}
-.smart-chip:hover {
-  transform: translateY(-2px);
-  border-color: var(--glass-stroke-hover, rgba(94, 92, 230, 0.7));
-  box-shadow: var(--shadow-glow-1, 0 0 28px rgba(94, 92, 230, 0.28));
-}
-.smart-chip:active { transform: scale(0.96); }
-.smart-chip-icon { font-size: 14px; line-height: 1; }
-.smart-chip-hash { color: var(--acc-teal, #5ac8fa); font-weight: 800; }
-.smart-chip-count {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--fg-3, #8b90a0);
-  background: rgba(255, 255, 255, 0.08);
-  padding: 1px 6px;
-  border-radius: 7px;
-}
-.smart-chip-tag .smart-chip-label { color: var(--fg-2, #c7cad6); }
-.smart-sep {
-  width: 1px;
-  align-self: stretch;
-  min-height: 22px;
-  background: var(--glass-stroke, rgba(255, 255, 255, 0.14));
-  margin: 0 4px;
-}
-
-/* ---------------------------------------------------------------------
- * #8 · Tag-Chips auf Karten + Usage-Badge
+ * #8 · Tag-Chips auf Karten
  * ------------------------------------------------------------------- */
 .card-tags {
   display: flex;
@@ -246,24 +190,6 @@ mark.search-hl {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-}
-.card-usage-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 3;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 18px;
-  text-align: center;
-  color: #2a1500;
-  background: linear-gradient(135deg, #ffd60a, #ff9f0a);
-  box-shadow: 0 2px 8px rgba(255, 159, 10, 0.4);
-  pointer-events: none;
 }
 
 /* ---------------------------------------------------------------------
@@ -389,7 +315,6 @@ mark.search-hl {
 /* ---------------------------------------------------------------------
  * Light-Mode-Feinschliff
  * ------------------------------------------------------------------- */
-html[data-color-scheme="light"] .card-usage-badge { color: #3a1f00; }
 html[data-color-scheme="light"] .sk-line {
   background: linear-gradient(90deg, rgba(0, 0, 0, 0.05) 25%, rgba(0, 0, 0, 0.1) 37%, rgba(0, 0, 0, 0.05) 63%);
   background-size: 400% 100%;
