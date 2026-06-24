@@ -141,15 +141,10 @@
     try { localStorage.setItem(USAGE_KEY, JSON.stringify({ usage: PT.usage, recent: PT.recentOrder })); } catch (_) {}
   }, 400);
 
-  function recordUsage(id, { copied = false } = {}) {
-    if (!id) return;
-    const u = PT.usage[id] || { count: 0, last: 0 };
-    if (copied) u.count += 1;
-    u.last = Date.now();
-    PT.usage[id] = u;
-    PT.recentOrder = [id, ...PT.recentOrder.filter((x) => x !== id)].slice(0, RECENT_LIMIT);
-    saveUsage();
-  }
+  /* „Zuletzt verwendet" / „Häufig genutzt" werden bewusst NICHT mehr erfasst.
+     Die Funktion bleibt als No-op erhalten, damit bestehende Aufrufer unverändert
+     funktionieren. */
+  function recordUsage() { /* intentionally no-op */ }
 
   /* =================================================================
    * 2 · Semantische Suche  (#4)
@@ -419,16 +414,6 @@ function lexicalScore(node, nq) {
         });
         wrap.appendChild(tagRow);
       }
-
-      // „Häufig genutzt"-Indikator.
-      const u = PT.usage[resolved.id];
-      if (u && u.count >= 3 && !card.querySelector('.card-usage-badge')) {
-        const badge = document.createElement('span');
-        badge.className = 'card-usage-badge';
-        badge.title = `${u.count}× kopiert`;
-        badge.textContent = u.count > 99 ? '99+' : String(u.count);
-        card.appendChild(badge);
-      }
     });
   }
 
@@ -499,44 +484,9 @@ function lexicalScore(node, nq) {
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
   }
 
-  function renderSmartCollections(node) {
-    const cards = document.getElementById('cards-container');
-    if (!cards) return;
-    const atHome = node === window.jsonData && window.pathStack && window.pathStack.length === 0;
-    if (!atHome || isResultsMode() || currentQuery()) return;
-
-    const bar = document.createElement('section');
-    bar.className = 'smart-collections';
-    bar.setAttribute('aria-label', 'Intelligente Sammlungen');
-
-    const defs = smartDefs().filter((d) => d.count() > 0);
-    defs.forEach((def) => {
-      const chip = document.createElement('button');
-      chip.className = 'smart-chip';
-      chip.dataset.collection = def.key;
-      chip.innerHTML = `<span class="smart-chip-icon">${def.icon}</span><span class="smart-chip-label">${def.label}</span><span class="smart-chip-count">${def.count()}</span>`;
-      chip.addEventListener('click', () => openCollection(def));
-      bar.appendChild(chip);
-    });
-
-    const tags = allTagsWithCount();
-    if (tags.length) {
-      const sep = document.createElement('span');
-      sep.className = 'smart-sep';
-      sep.setAttribute('aria-hidden', 'true');
-      bar.appendChild(sep);
-      tags.slice(0, 12).forEach(([tag, count]) => {
-        const chip = document.createElement('button');
-        chip.className = 'smart-chip smart-chip-tag';
-        chip.dataset.tag = tag;
-        chip.innerHTML = `<span class="smart-chip-hash">#</span><span class="smart-chip-label">${escapeHtml(tag)}</span><span class="smart-chip-count">${count}</span>`;
-        chip.addEventListener('click', () => openTag(tag));
-        bar.appendChild(chip);
-      });
-    }
-
-    if (bar.children.length) cards.insertBefore(bar, cards.firstChild);
-  }
+  /* Die Smart-Collections-Leiste (Favoriten / Zuletzt verwendet / Häufig genutzt
+     samt Tag-Schnellzugriff) am oberen Rand der Startansicht wurde entfernt. */
+  function renderSmartCollections() { /* intentionally removed */ }
 
   function openCollection(def) {
     resetSearchExceptScope();
@@ -615,7 +565,6 @@ function lexicalScore(node, nq) {
       <div class="search-filters" role="group" aria-label="Filter">
         <button class="filter-chip is-active" data-filter="all">Alle</button>
         <button class="filter-chip" data-filter="favorites">★ Favoriten</button>
-        <button class="filter-chip" data-filter="recent">🕑 Zuletzt</button>
         <button class="filter-chip" data-filter="folders">🗂 Ordner</button>
         <button class="filter-chip" data-filter="prompts">📝 Prompts</button>
       </div>`;
