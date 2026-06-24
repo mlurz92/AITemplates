@@ -22,11 +22,9 @@
    * 0 · Zentraler Zustand & Hilfsfunktionen
    * ================================================================= */
   const PT = {
-    usage: {},                 // { [id]: { count, last } }
-    recentOrder: [],           // [id, …] – jüngste zuerst
     search: {
       scope: 'folder',         // 'folder' | 'global' | 'semantic'
-      filter: 'all',           // 'all' | 'favorites' | 'recent' | 'folders' | 'prompts'
+      filter: 'all',           // 'all' | 'favorites' | 'folders' | 'prompts'
       tag: null,               // aktiver Tag-Filter
       collection: null,        // aktive Smart-Collection-Definition
     },
@@ -42,8 +40,6 @@
   };
   window.PromptTemplatesEnhancements = PT;
 
-  const USAGE_KEY = 'pt-usage-stats-v1';
-  const RECENT_LIMIT = 24;
   const SEMANTIC_QUERY_CACHE_LIMIT = 50;
 
   const STOPWORDS = new Set(('und oder der die das den dem des ein eine einen einem eines auf für mit von zu im in an als ' +
@@ -128,19 +124,8 @@
   }
 
   /* =================================================================
-   * 1 · Usage- & Recency-Tracking  (#7 / #8)
-   * ================================================================= */
-  function loadUsage() {
-    try {
-      const raw = JSON.parse(localStorage.getItem(USAGE_KEY) || '{}');
-      PT.usage = raw.usage || {};
-      PT.recentOrder = raw.recent || [];
-    } catch (_) { PT.usage = {}; PT.recentOrder = []; }
-  }
-  const saveUsage = debounce(() => {
-    try { localStorage.setItem(USAGE_KEY, JSON.stringify({ usage: PT.usage, recent: PT.recentOrder })); } catch (_) {}
-  }, 400);
-
+   * 1 · Usage- & Recency-Tracking  (#7 / #8)  – entfernt
+   * ----------------------------------------------------------------- */
   /* „Zuletzt verwendet" / „Häufig genutzt" werden bewusst NICHT mehr erfasst.
      Die Funktion bleibt als No-op erhalten, damit bestehende Aufrufer unverändert
      funktionieren. */
@@ -289,7 +274,6 @@
 
     // Filter-Chips.
     if (s.filter === 'favorites') list = list.filter((n) => (window.favoritePrompts || []).includes(n.id));
-    else if (s.filter === 'recent') list = list.filter((n) => PT.recentOrder.includes(n.id));
     else if (s.filter === 'folders') list = list.filter((n) => n.type === 'folder' || n.type === 'folder-link');
     else if (s.filter === 'prompts') list = list.filter((n) => n.type === 'prompt' || n.type === 'prompt-link');
     return list;
@@ -299,11 +283,7 @@
     const q = currentQuery();
     const s = PT.search;
     if (!q) {
-      // Ohne Query: Recent-Filter chronologisch, Collections nach ihrer Logik.
-      if (s.filter === 'recent') {
-        const order = new Map(PT.recentOrder.map((id, i) => [id, i]));
-        return list.slice().sort((a, b) => (order.get(a.id) ?? 1e9) - (order.get(b.id) ?? 1e9));
-      }
+      // Ohne Query: Collections nach ihrer Logik.
       if (s.collection && s.collection.sort) return list.slice().sort(s.collection.sort);
       return list;
     }
@@ -455,61 +435,11 @@ function lexicalScore(node, nq) {
 
   /* =================================================================
    * 6 · Smart Collections  (#8)
-   * ================================================================= */
-  function smartDefs() {
-    return [
-      {
-        key: 'favorites', label: 'Favoriten', icon: '★',
-        fn: (n) => (window.favoritePrompts || []).includes(n.id),
-        count: () => (window.favoritePrompts || []).length,
-      },
-      {
-        key: 'recent', label: 'Zuletzt verwendet', icon: '🕑',
-        fn: (n) => PT.recentOrder.includes(n.id),
-        sort: (a, b) => (PT.recentOrder.indexOf(a.id)) - (PT.recentOrder.indexOf(b.id)),
-        count: () => PT.recentOrder.length,
-      },
-      {
-        key: 'frequent', label: 'Häufig genutzt', icon: '🔥',
-        fn: (n) => (PT.usage[n.id]?.count || 0) >= 2,
-        sort: (a, b) => (PT.usage[b.id]?.count || 0) - (PT.usage[a.id]?.count || 0),
-        count: () => Object.values(PT.usage).filter((u) => u.count >= 2).length,
-      },
-    ];
-  }
-
-  function allTagsWithCount() {
-    const map = new Map();
-    gatherAllNodes().forEach((n) => (n.tags || []).forEach((t) => map.set(t, (map.get(t) || 0) + 1)));
-    return [...map.entries()].sort((a, b) => b[1] - a[1]);
-  }
-
+   * ----------------------------------------------------------------- */
   /* Die Smart-Collections-Leiste (Favoriten / Zuletzt verwendet / Häufig genutzt
      samt Tag-Schnellzugriff) am oberen Rand der Startansicht wurde entfernt. */
   function renderSmartCollections() { /* intentionally removed */ }
 
-  function openCollection(def) {
-    resetSearchExceptScope();
-    PT.search.collection = def;
-    PT.search.scope = 'global';
-    haptic('light');
-    window.renderView(window.currentNode);
-  }
-  function openTag(tag) {
-    resetSearchExceptScope();
-    PT.search.tag = tag;
-    PT.search.scope = 'global';
-    haptic('light');
-    window.renderView(window.currentNode);
-  }
-  function resetSearchExceptScope() {
-    PT.search.collection = null;
-    PT.search.tag = null;
-    PT.search.filter = 'all';
-    window.currentSearchQuery = '';
-    const inp = document.getElementById('search-input');
-    if (inp) inp.value = '';
-  }
   function clearResults() {
     PT.search.collection = null;
     PT.search.tag = null;
@@ -928,7 +858,6 @@ function lexicalScore(node, nq) {
     }
     PT.booted = true;
 
-    loadUsage();
     showSkeletons();
 
     // WebGL-Aurora starten (CSS-Blobs bleiben bei Fehlschlag).
