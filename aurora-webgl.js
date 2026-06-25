@@ -62,7 +62,7 @@
                     fbm(p + 4.0 * q + vec2(8.3, 2.8) - t * 0.4));
       float f = fbm(p + 3.5 * r);
 
-      float band = smoothstep(0.15, 0.95, f);
+      float band = smoothstep(0.08, 0.88, f);
       vec3 col = mix(uColorA, uColorB, clamp(length(q), 0.0, 1.0));
       col = mix(col, uColorC, clamp(r.x * r.x + r.y * 0.4, 0.0, 1.0));
 
@@ -90,13 +90,13 @@
       a: [0.37, 0.36, 0.90], // Indigo
       b: [0.35, 0.84, 0.45], // Mint
       c: [0.75, 0.35, 0.95], // Violett
-      intensity: 0.95,
+      intensity: 1.18,
     },
     light: {
       a: [0.55, 0.58, 0.98],
       b: [0.55, 0.86, 0.70],
       c: [0.80, 0.62, 0.98],
-      intensity: 0.85,
+      intensity: 1.05,
     },
   };
 
