@@ -309,6 +309,125 @@ body::before {
               inset 0 -1px 0 var(--glass-specular-bottom);
   /* Performance: CSS Containment */
   contain: layout style;
+  /* Eigener Stacking-Context, damit der Aurora-Schimmer sauber hinter den
+     Bedienelementen, aber über dem Glas-Hintergrund liegt. */
+  isolation: isolate;
+}
+
+/* =====================================================================
+   TOP-BAR AURORA – durchgängiger, themengekoppelter Nordlicht-Schimmer
+   ---------------------------------------------------------------------
+   Ein dauerhaft laufender, ressourcenschonender Lichteffekt in der oberen
+   Leiste. Bewusst GPU-only umgesetzt: animiert werden ausschließlich
+   `transform` und `opacity` (Compositor-Thread, kein Layout/Paint pro Frame,
+   keine JS-Render-Loop). Drei zeitlich entkoppelte Schleier ergeben ein
+   organisch fließendes, nie exakt wiederkehrendes Aurora-Band, das sich über
+   die Akzentfarben automatisch an Hell-/Dunkel-Theme anpasst.
+   ===================================================================== */
+/* Alle echten Bedienelemente liegen garantiert über dem Schimmer. */
+.top-bar > *:not(.topbar-aurora) { position: relative; z-index: 1; }
+
+.topbar-aurora {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: inherit;
+  /* Farbig-additive Mischung -> Schleier „leuchten" durchs Glas. */
+  mix-blend-mode: screen;
+  opacity: 0.9;
+  /* Sanftes Ein-/Ausblenden zu den seitlichen Rändern der Leiste. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0%, #000 14%, #000 86%, transparent 100%);
+  contain: strict;
+}
+
+.topbar-aurora-layer {
+  position: absolute;
+  top: -120%;
+  left: -40%;
+  width: 80%;
+  height: 340%;
+  border-radius: 50%;
+  filter: blur(34px);
+  will-change: transform, opacity;
+  /* Form/Drift der Schleier ausschließlich per Transform -> compositor-only. */
+  transform: translate3d(0, 0, 0);
+  background: radial-gradient(closest-side,
+    var(--aurora-color, rgba(94,92,230,0.85)) 0%,
+    var(--aurora-color, rgba(94,92,230,0.55)) 38%,
+    transparent 72%);
+}
+
+/* Drei Schleier mit teilerfremden Laufzeiten -> die Überlagerung wiederholt
+   sich praktisch nie und wirkt dadurch lebendig statt mechanisch. */
+.topbar-aurora-layer--a {
+  --aurora-color: rgba(94, 92, 230, 0.85);   /* Indigo */
+  animation: topbar-aurora-drift-a 19s ease-in-out infinite;
+}
+.topbar-aurora-layer--b {
+  --aurora-color: rgba(90, 200, 250, 0.72);  /* Teal */
+  left: 18%;
+  animation: topbar-aurora-drift-b 23s ease-in-out infinite;
+}
+.topbar-aurora-layer--c {
+  --aurora-color: rgba(191, 90, 242, 0.70);  /* Violett */
+  left: 52%;
+  animation: topbar-aurora-drift-c 29s ease-in-out infinite;
+}
+
+/* Zusätzlicher, schneller Spekular-Sweep ("Schimmer") über die ganze Leiste. */
+.topbar-aurora::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.10) 48%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0.10) 52%,
+    transparent 62%);
+  transform: translate3d(-120%, 0, 0);
+  will-change: transform;
+  animation: topbar-aurora-sweep 11s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+
+@keyframes topbar-aurora-drift-a {
+  0%   { transform: translate3d(-12%, 6%, 0) scale(1);    opacity: 0.55; }
+  50%  { transform: translate3d(38%, -4%, 0) scale(1.18); opacity: 0.95; }
+  100% { transform: translate3d(-12%, 6%, 0) scale(1);    opacity: 0.55; }
+}
+@keyframes topbar-aurora-drift-b {
+  0%   { transform: translate3d(34%, -3%, 0) scale(1.05); opacity: 0.5; }
+  50%  { transform: translate3d(-26%, 5%, 0) scale(0.9);  opacity: 0.9; }
+  100% { transform: translate3d(34%, -3%, 0) scale(1.05); opacity: 0.5; }
+}
+@keyframes topbar-aurora-drift-c {
+  0%   { transform: translate3d(20%, 4%, 0) scale(0.95);  opacity: 0.6; }
+  50%  { transform: translate3d(-30%, -6%, 0) scale(1.2); opacity: 0.92; }
+  100% { transform: translate3d(20%, 4%, 0) scale(0.95);  opacity: 0.6; }
+}
+@keyframes topbar-aurora-sweep {
+  0%   { transform: translate3d(-120%, 0, 0); }
+  60%  { transform: translate3d(120%, 0, 0); }
+  100% { transform: translate3d(120%, 0, 0); }
+}
+
+/* Hellmodus: gedämpfter, satter Farbauftrag statt additivem Leuchten, damit der
+   Schimmer auf hellem Glas sichtbar und edel bleibt. */
+html[data-color-scheme="light"] .topbar-aurora {
+  mix-blend-mode: normal;
+  opacity: 0.5;
+}
+html[data-color-scheme="light"] .topbar-aurora-layer--a { --aurora-color: rgba(67, 64, 200, 0.55); }
+html[data-color-scheme="light"] .topbar-aurora-layer--b { --aurora-color: rgba(0, 143, 168, 0.42); }
+html[data-color-scheme="light"] .topbar-aurora-layer--c { --aurora-color: rgba(160, 70, 220, 0.40); }
+html[data-color-scheme="light"] .topbar-aurora::after {
+  background: linear-gradient(105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 60%);
 }
 
 .breadcrumb {
@@ -1801,6 +1920,11 @@ html[data-page-transition-direction="backward"]::view-transition-new(root) { ani
   .aurora-shape {
     animation: none !important;
   }
+
+  /* Aurora-Schimmer der Top-Bar: Bewegung aus, aber ein ruhiges, statisches
+     Farbband bleibt sichtbar (kein hartes Abschalten des Effekts). */
+  .topbar-aurora-layer { animation: none !important; }
+  .topbar-aurora::after { animation: none !important; opacity: 0; }
 }
 
 /* ============================================

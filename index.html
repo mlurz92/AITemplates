@@ -24,8 +24,14 @@
       (function(){
         var s = localStorage.getItem('user-color-scheme') || (window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
         document.documentElement.dataset.colorScheme = s;
+        var icon = s === 'dark' ? 'icons/favicon_animated.svg' : 'icons/favicon_animated_light.svg';
+        // App-Icon konsequent an das aktive Theme koppeln – schon vor dem ersten
+        // Frame, damit Favicon, Apple-Touch-Icon und In-App-Logo nie „falsch" blitzen.
         var logo = document.getElementById('app-logo-svg');
-        if(logo) logo.src = s === 'dark' ? 'icons/favicon_animated.svg' : 'icons/favicon_animated_light.svg';
+        if(logo) logo.src = icon;
+        ['link[rel~="icon"]','link[rel="apple-touch-icon"]'].forEach(function(sel){
+          document.querySelectorAll(sel).forEach(function(l){ l.href = icon; });
+        });
       }());
     </script>
   </head>
@@ -36,6 +42,11 @@
       <div class="aurora-shape shape3"></div>
     </div>
     <header id="top-bar" class="top-bar">
+      <div class="topbar-aurora" aria-hidden="true">
+        <span class="topbar-aurora-layer topbar-aurora-layer--a"></span>
+        <span class="topbar-aurora-layer topbar-aurora-layer--b"></span>
+        <span class="topbar-aurora-layer topbar-aurora-layer--c"></span>
+      </div>
       <button id="topbar-back-button" class="btn btn-ghost" aria-label="Zurück">
         <svg class="icon icon-arrow-left" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6"></polyline>
