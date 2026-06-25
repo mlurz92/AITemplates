@@ -4381,12 +4381,26 @@ function applyColorScheme(scheme, save = true) {
     document.documentElement.dataset.colorScheme = scheme;
     if (save) localStorage.setItem(COLOR_SCHEME_KEY, scheme);
     updateColorSchemeButton();
+    updateThemedAppIcon(scheme);
 
     // Meta-Theme-Color an das aktive Farbschema anpassen
     const isDark = scheme === 'dark';
     document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
         meta.content = isDark ? '#0c0f1a' : '#f2f4f8';
     });
+}
+
+// Das App-Icon konsequent an das aktive Theme koppeln: In-App-Logo, Browser-
+// Favicon und Apple-Touch-Icon teilen sich dieselbe themenpassende Quelle, damit
+// das Symbol „immer und überall" zum gewählten Hell-/Dunkel-Modus passt.
+function updateThemedAppIcon(scheme) {
+    const icon = scheme === 'light'
+        ? 'icons/favicon_animated_light.svg'
+        : 'icons/favicon_animated.svg';
+    const logo = document.getElementById('app-logo-svg');
+    if (logo && !logo.src.endsWith(icon)) logo.src = icon;
+    document.querySelectorAll('link[rel~="icon"], link[rel="apple-touch-icon"]')
+        .forEach((l) => { if (!l.href.endsWith(icon)) l.href = icon; });
 }
 
 function toggleColorScheme() {
