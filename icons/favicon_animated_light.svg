@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%" style="max-width: 512px; background: transparent;">
+    <defs>
+        <style>
+            /* Endless Loop Keyframes identisch für strukturelle Konsistenz */
+            @keyframes aurora-1-lt {
+                0%, 100% { transform: translate(0, 0) scale(1); }
+                50% { transform: translate(25px, 15px) scale(1.05); }
+            }
+            @keyframes aurora-2-lt {
+                0%, 100% { transform: translate(0, 0) scale(1); }
+                50% { transform: translate(-30px, 20px) scale(0.95); }
+            }
+            @keyframes aurora-3-lt {
+                0%, 100% { transform: translate(0, 0) scale(1); }
+                50% { transform: translate(15px, -25px) scale(1.04); }
+            }
+            @keyframes float-glass-lt {
+                0%, 100% { transform: translateY(0px); filter: drop-shadow(0 20px 30px rgba(0,0,0,0.12)); }
+                50% { transform: translateY(-16px); filter: drop-shadow(0 32px 42px rgba(0,0,0,0.08)); }
+            }
+            @keyframes pulse-core-lt {
+                0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(200, 168, 0, 0.4)); }
+                50% { transform: scale(1.12); filter: drop-shadow(0 0 35px rgba(200, 168, 0, 0.7)); }
+            }
+            @keyframes rotate-slow-lt {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+            @keyframes data-flow-lt {
+                0% { stroke-dashoffset: 40; }
+                100% { stroke-dashoffset: 0; }
+            }
+            @keyframes node-breathe-lt {
+                0%, 100% { opacity: 0.6; transform: scale(0.9); }
+                50% { opacity: 1; transform: scale(1.2); }
+            }
+
+            .bg-aurora-1-lt { animation: aurora-1-lt 12s ease-in-out infinite; }
+            .bg-aurora-2-lt { animation: aurora-2-lt 16s ease-in-out infinite; }
+            .bg-aurora-3-lt { animation: aurora-3-lt 20s ease-in-out infinite; }
+            .glass-card-lt { animation: float-glass-lt 6s ease-in-out infinite; transform-origin: center; }
+            .sparkle-core-lt { animation: pulse-core-lt 4s ease-in-out infinite, rotate-slow-lt 16s linear infinite; }
+            .stream-line-lt { animation: data-flow-lt 1.5s linear infinite; }
+            .node-lt { animation: node-breathe-lt 4s ease-in-out infinite; }
+        </style>
+
+        <clipPath id="squircle-lt">
+            <rect width="512" height="512" rx="115" />
+        </clipPath>
+
+        <filter id="blur-heavy-lt" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="65" />
+        </filter>
+
+        <linearGradient id="glass-fill-light" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85" />
+            <stop offset="40%" stop-color="#ffffff" stop-opacity="0.55" />
+            <stop offset="60%" stop-color="#000000" stop-opacity="0.02" />
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="0.25" />
+        </linearGradient>
+        
+        <linearGradient id="glass-stroke-light" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff" stop-opacity="1.0" />
+            <stop offset="100%" stop-color="#000000" stop-opacity="0.08" />
+        </linearGradient>
+
+        <linearGradient id="prompt-grad-light" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#008FA8" /> <stop offset="100%" stop-color="#4340C8" /> </linearGradient>
+
+        <radialGradient id="sparkle-grad-light" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#C8A800" /> <stop offset="100%" stop-color="#C8720A" /> </radialGradient>
+    </defs>
+
+    <g clip-path="url(#squircle-lt)">
+        <rect width="512" height="512" fill="#f2f4f8" />
+
+        <g filter="url(#blur-heavy-lt)">
+            <circle cx="100" cy="80" r="220" fill="#4340C8" opacity="0.25" class="bg-aurora-1-lt" />
+            <circle cx="460" cy="180" r="190" fill="#25A83A" opacity="0.18" class="bg-aurora-2-lt" />
+            <circle cx="256" cy="480" r="240" fill="#008FA8" opacity="0.20" class="bg-aurora-3-lt" />
+        </g>
+
+        <g stroke-linecap="round">
+            <path d="M 80 120 L 256 256" stroke="#4340C8" stroke-width="4" stroke-dasharray="8 8" opacity="0.5" class="stream-line-lt" />
+            <path d="M 440 100 L 256 256" stroke="#25A83A" stroke-width="4" stroke-dasharray="8 8" opacity="0.4" class="stream-line-lt" style="animation-duration: 2s;" />
+            <path d="M 120 420 L 256 256" stroke="#008FA8" stroke-width="4" stroke-dasharray="8 8" opacity="0.5" class="stream-line-lt" style="animation-duration: 1.8s;" />
+            <path d="M 420 400 L 256 256" stroke="#C8720A" stroke-width="4" stroke-dasharray="8 8" opacity="0.3" class="stream-line-lt" style="animation-duration: 2.2s;" />
+
+            <circle cx="80" cy="120" r="10" fill="#4340C8" class="node-lt" style="animation-delay: 0s;" />
+            <circle cx="440" cy="100" r="12" fill="#25A83A" class="node-lt" style="animation-delay: -1s;" />
+            <circle cx="120" cy="420" r="8" fill="#008FA8" class="node-lt" style="animation-delay: -2s;" />
+            <circle cx="420" cy="400" r="10" fill="#C8720A" class="node-lt" style="animation-delay: -3s;" />
+        </g>
+
+        <g class="glass-card-lt">
+            <rect x="56" y="96" width="400" height="320" rx="52" fill="url(#glass-fill-light)" />
+            <rect x="56" y="96" width="400" height="320" rx="52" fill="none" stroke="url(#glass-stroke-light)" stroke-width="4" />
+            
+            <path d="M 140 186 L 210 256 L 140 326" fill="none" stroke="url(#prompt-grad-light)" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" />
+            
+            <g transform="translate(320, 256)">
+                <g class="sparkle-core-lt">
+                    <path d="M 0 -85 Q 0 0 85 0 Q 0 0 0 85 Q 0 0 -85 0 Q 0 0 0 -85 Z" fill="url(#sparkle-grad-light)" />
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
