@@ -8,19 +8,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0c0f1a" media="(prefers-color-scheme: dark)">
     <meta name="theme-color" content="#f2f4f8" media="(prefers-color-scheme: light)">
-    <!-- Favicon - Klassisch für alle Browser -->
-    <link rel="icon" href="icons/favicon.ico" sizes="any">
-    <!-- Favicon - SVG für moderne Browser -->
-    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
-    <!-- Favicon - PNG für Browser ohne SVG-Support -->
-    <link rel="icon" href="icons/favicon-96x96.png" type="image/png" sizes="96x96">
-    <!-- Apple Touch Icon für iOS-Geräte -->
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <!-- Apple Meta-Tags -->
+    <link rel="icon" href="icons/favicon_animated.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/favicon_animated.svg">
     <meta name="apple-mobile-web-app-title" content="Prompt-Templates">
     <meta name="format-detection" content="telephone=no">
     <meta name="format-detection" content="address=no">
-    <!-- Windows Kachel Meta-Tags -->
     <meta name="msapplication-TileColor" content="#0c0f17">
     <meta name="msapplication-config" content="browserconfig.xml">
     <title>Prompt-Templates</title>
@@ -28,7 +20,14 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="enhancements.css">
     <link rel="stylesheet" href="navigation.css">
-    <script>(function(){var s=localStorage.getItem('user-color-scheme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');document.documentElement.dataset.colorScheme=s;}());</script>
+    <script>
+      (function(){
+        var s = localStorage.getItem('user-color-scheme') || (window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+        document.documentElement.dataset.colorScheme = s;
+        var logo = document.getElementById('app-logo-svg');
+        if(logo) logo.src = s === 'dark' ? 'icons/favicon_animated.svg' : 'icons/favicon_animated_light.svg';
+      }());
+    </script>
   </head>
   <body>
     <div id="aurora-container" class="aurora-container">
@@ -96,20 +95,19 @@
         </svg>
       </button>
       <div class="download-container">
-      <button id="download-button" class="btn btn-ghost" aria-label="JSON Optionen" style="display: none;">
-        <svg class="icon icon-download" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-      </button>
-      <div id="download-menu" class="add-menu hidden">
-        <button class="add-menu-item" data-action="download-json">Download JSON</button>
-        <button class="add-menu-item" data-action="upload-json">Upload JSON</button>
+        <button id="download-button" class="btn btn-ghost" aria-label="JSON Optionen" style="display: none;">
+          <svg class="icon icon-download" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        </button>
+        <div id="download-menu" class="add-menu hidden">
+          <button class="add-menu-item" data-action="download-json">Download JSON</button>
+          <button class="add-menu-item" data-action="upload-json">Upload JSON</button>
+        </div>
       </div>
-      </div>
-      <button id="storage-source-button" class="btn btn-ghost source-toggle" aria-label="Cloudflare KV Live-Synchronisierung aktiv">
-      </button>
+      <button id="storage-source-button" class="btn btn-ghost source-toggle" aria-label="Cloudflare KV Live-Synchronisierung aktiv"></button>
       <button id="color-scheme-button" class="btn btn-ghost" aria-label="Zum Hell-Modus wechseln">
         <svg class="icon icon-moon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
@@ -159,15 +157,14 @@
         <div id="more-menu" class="add-menu more-menu hidden" role="menu" aria-label="Weitere Aktionen"></div>
       </div>
       <button id="app-logo-button" class="btn btn-ghost" aria-label="Zur Startseite">
-        <img id="app-logo-svg" src="icons/favicon.svg" alt="App Logo" width="30" height="30">
+        <img id="app-logo-svg" src="icons/favicon_animated.svg" alt="App Logo" width="30" height="30">
       </button>
     </header>
-        <section id="view-toolbar" class="view-toolbar" aria-label="Suche">
+    <section id="view-toolbar" class="view-toolbar" aria-label="Suche">
       <div class="toolbar-search-wrap" hidden>
         <input id="search-input" class="toolbar-search" type="search" placeholder="Prompts &amp; Ordner suchen …" aria-label="Suche in aktuellem Ordner">
       </div>
     </section>
-    <!-- Pull-to-Refresh Indikator (Mobile) -->
     <div id="pull-to-refresh" class="pull-to-refresh" aria-hidden="true">
       <div class="ptr-spinner"></div>
       <span id="ptr-label">Zum Aktualisieren ziehen</span>
@@ -243,7 +240,6 @@
         </div>
       </div>
     </div>
-    
     <div id="upload-json-modal" class="modal hidden">
       <div class="modal-content card">
         <h2>JSON importieren</h2>
@@ -255,7 +251,6 @@
         </div>
       </div>
     </div>
-
     <button id="fixed-back" class="fixed-back hidden" aria-label="Zurück zur Home">
       <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="15 18 9 12 15 6"></polyline>
