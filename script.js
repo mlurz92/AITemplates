@@ -4399,7 +4399,9 @@ function updateThemedAppIcon(scheme) {
         : 'icons/favicon_animated.svg';
     const logo = document.getElementById('app-logo-svg');
     if (logo && !logo.src.endsWith(icon)) logo.src = icon;
-    document.querySelectorAll('link[rel~="icon"], link[rel="apple-touch-icon"]')
+    // Nur das Browser-Tab-Favicon folgt dem Theme; das apple-touch-/Home-Screen-
+    // Icon bleibt bewusst das stabile PNG (iOS rendert dort kein SVG).
+    document.querySelectorAll('link[rel~="icon"]:not([rel*="apple"])')
         .forEach((l) => { if (!l.href.endsWith(icon)) l.href = icon; });
 }
 

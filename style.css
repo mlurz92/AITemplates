@@ -40,6 +40,12 @@
   --acc-purple: #BF5AF2; /* Purple */
   --acc-teal: #5AC8FA;   /* Teal */
 
+  /* Aurora-Grundschleier (Dunkel-Default) – vier Farbfelder des Hintergrunds. */
+  --aurora-wash-1: rgba(94, 92, 230, 0.34);   /* Indigo */
+  --aurora-wash-2: rgba(90, 200, 250, 0.26);  /* Teal   */
+  --aurora-wash-3: rgba(191, 90, 242, 0.30);  /* Violett */
+  --aurora-wash-4: rgba(50, 215, 130, 0.16);  /* Mint   */
+
   /* Semantische Aktionsfarben (Cupertino) */
   --favorite-color: #FFD60A;
   --favorite-hover-bg: linear-gradient(135deg, rgba(255, 214, 10, 0.22), rgba(255, 159, 10, 0.16));
@@ -109,6 +115,10 @@ html {
 html, body {
   overscroll-behavior-y: none;
   height: 100%;
+  /* Basis-Hintergrundfarbe gehört auf <html>, damit der fixierte
+     .aurora-container (z-index:-1) NICHT hinter einer opaken Body-Fläche
+     verschwindet, sondern sichtbar zwischen html-Grund und Inhalt liegt. */
+  background-color: var(--bg-0);
   /* PWA Fullscreen: Nutze dynamic viewport height für sichere Bereiche */
   min-height: 100vh;
   min-height: 100dvh;
@@ -129,7 +139,8 @@ html, body {
 /* PWA Fullscreen: Body-Hintergrund bis zum sicheren Bereich */
 body {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--viewport-bottom-offset));
-  background: var(--bg-0);
+  /* Transparent, damit der Aurora-Hintergrund (z-index:-1) durchscheint. */
+  background: transparent;
 }
 
 body[data-display-mode='standalone'],
@@ -187,6 +198,28 @@ body::before {
   z-index: -1;
   transform: translateZ(0);
   overflow: hidden;
+}
+
+/* Immer sichtbarer Aurora-Grundschleier: Vier weiche, großflächige Farbfelder
+   sorgen dafür, dass der Hintergrund nie flach wirkt – unabhängig davon, ob die
+   WebGL-Schicht auf dem Gerät läuft. Die driftenden .aurora-shape-Blobs legen
+   sich als Bewegung darüber. Farben kommen aus Theme-Variablen. */
+.aurora-container::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 48% at 18% 6%,  var(--aurora-wash-1) 0%, transparent 60%),
+    radial-gradient(52% 44% at 88% 22%, var(--aurora-wash-2) 0%, transparent 62%),
+    radial-gradient(64% 56% at 62% 104%, var(--aurora-wash-3) 0%, transparent 64%),
+    radial-gradient(48% 40% at 38% 62%,  var(--aurora-wash-4) 0%, transparent 70%);
+  animation: aurora-wash-breathe 30s ease-in-out infinite;
+}
+
+@keyframes aurora-wash-breathe {
+  0%, 100% { transform: scale(1) translate3d(0, 0, 0); opacity: 1; }
+  50%      { transform: scale(1.06) translate3d(0, -1.5%, 0); opacity: 0.86; }
 }
 
 /* === AURORA ANIMATION - Cosmic Aurora Theme === */
@@ -343,38 +376,64 @@ body::before {
   contain: strict;
 }
 
+/* Jeder Schleier ist ein über die VOLLE Breite reichendes Aurora-Band (200 %
+   breit, Muster mit 50 %-Periode), das per `translateX` nahtlos durchläuft –
+   so entsteht ein gleichmäßig fließender Schein statt einzelner Farbkleckse. */
 .topbar-aurora-layer {
   position: absolute;
-  top: -120%;
-  left: -40%;
-  width: 80%;
-  height: 340%;
-  border-radius: 50%;
-  filter: blur(34px);
-  will-change: transform, opacity;
-  /* Form/Drift der Schleier ausschließlich per Transform -> compositor-only. */
+  top: -80%;
+  left: -50%;
+  width: 200%;
+  height: 260%;
+  filter: blur(26px);
+  will-change: transform;
   transform: translate3d(0, 0, 0);
-  background: radial-gradient(closest-side,
-    var(--aurora-color, rgba(94,92,230,0.85)) 0%,
-    var(--aurora-color, rgba(94,92,230,0.55)) 38%,
-    transparent 72%);
+  background-repeat: no-repeat;
 }
 
-/* Drei Schleier mit teilerfremden Laufzeiten -> die Überlagerung wiederholt
-   sich praktisch nie und wirkt dadurch lebendig statt mechanisch. */
+/* Hauptband – Indigo → Teal → Violett, weich überlappend und periodisch. */
 .topbar-aurora-layer--a {
-  --aurora-color: rgba(94, 92, 230, 0.85);   /* Indigo */
-  animation: topbar-aurora-drift-a 19s ease-in-out infinite;
+  background-image: linear-gradient(100deg,
+    transparent 2%,
+    rgba(94, 92, 230, 0.50) 10%,
+    rgba(90, 200, 250, 0.40) 20%,
+    transparent 30%,
+    rgba(191, 90, 242, 0.46) 40%,
+    transparent 50%,
+    rgba(94, 92, 230, 0.50) 60%,
+    rgba(90, 200, 250, 0.40) 70%,
+    transparent 80%,
+    rgba(191, 90, 242, 0.46) 90%,
+    transparent 98%);
+  animation: topbar-flow 26s linear infinite;
 }
+
+/* Gegenläufiges Tiefenband – Mint/Teal, versetzt und langsamer. */
 .topbar-aurora-layer--b {
-  --aurora-color: rgba(90, 200, 250, 0.72);  /* Teal */
-  left: 18%;
-  animation: topbar-aurora-drift-b 23s ease-in-out infinite;
+  top: -40%;
+  background-image: linear-gradient(80deg,
+    transparent 4%,
+    rgba(50, 215, 130, 0.28) 16%,
+    transparent 28%,
+    rgba(90, 200, 250, 0.34) 38%,
+    transparent 50%,
+    rgba(50, 215, 130, 0.28) 66%,
+    transparent 78%,
+    rgba(90, 200, 250, 0.34) 88%,
+    transparent 96%);
+  animation: topbar-flow-rev 34s linear infinite;
 }
+
+/* Schnelles, helles Glanzband für funkelnde Tiefe. */
 .topbar-aurora-layer--c {
-  --aurora-color: rgba(191, 90, 242, 0.70);  /* Violett */
-  left: 52%;
-  animation: topbar-aurora-drift-c 29s ease-in-out infinite;
+  filter: blur(18px);
+  background-image: linear-gradient(110deg,
+    transparent 8%,
+    rgba(180, 160, 255, 0.30) 24%,
+    transparent 42%,
+    rgba(180, 160, 255, 0.30) 74%,
+    transparent 92%);
+  animation: topbar-flow 18s linear infinite reverse;
 }
 
 /* Zusätzlicher, schneller Spekular-Sweep ("Schimmer") über die ganze Leiste. */
@@ -393,20 +452,16 @@ body::before {
   animation: topbar-aurora-sweep 11s cubic-bezier(0.45, 0, 0.2, 1) infinite;
 }
 
-@keyframes topbar-aurora-drift-a {
-  0%   { transform: translate3d(-12%, 6%, 0) scale(1);    opacity: 0.55; }
-  50%  { transform: translate3d(38%, -4%, 0) scale(1.18); opacity: 0.95; }
-  100% { transform: translate3d(-12%, 6%, 0) scale(1);    opacity: 0.55; }
+/* Nahtloser Horizontal-Loop: Das 200 % breite Band wird um exakt eine
+   Musterperiode (50 % der Eigenbreite = volle Leistenbreite) verschoben und
+   springt dann unsichtbar zurueck. */
+@keyframes topbar-flow {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
 }
-@keyframes topbar-aurora-drift-b {
-  0%   { transform: translate3d(34%, -3%, 0) scale(1.05); opacity: 0.5; }
-  50%  { transform: translate3d(-26%, 5%, 0) scale(0.9);  opacity: 0.9; }
-  100% { transform: translate3d(34%, -3%, 0) scale(1.05); opacity: 0.5; }
-}
-@keyframes topbar-aurora-drift-c {
-  0%   { transform: translate3d(20%, 4%, 0) scale(0.95);  opacity: 0.6; }
-  50%  { transform: translate3d(-30%, -6%, 0) scale(1.2); opacity: 0.92; }
-  100% { transform: translate3d(20%, 4%, 0) scale(0.95);  opacity: 0.6; }
+@keyframes topbar-flow-rev {
+  from { transform: translate3d(-50%, 0, 0); }
+  to   { transform: translate3d(0, 0, 0); }
 }
 @keyframes topbar-aurora-sweep {
   0%   { transform: translate3d(-120%, 0, 0); }
@@ -3145,6 +3200,9 @@ html[data-color-scheme="light"] {
   --glass-refraction: linear-gradient(145deg, rgba(255,255,255,0.60) 0%, transparent 35%, rgba(0,0,0,0.02) 65%, transparent 100%);
   --btn-primary-gradient: linear-gradient(135deg, var(--acc-teal) 0%, var(--acc-1) 55%, var(--acc-purple) 100%);
   --favorite-color: #C8A800; --delete-color: #D32F22; --edit-color: #25A83A; --move-color: #9633CC;
+  /* Hellmodus: zarter, luftiger Aurora-Wash – sichtbar, aber nie aufdringlich. */
+  --aurora-wash-1: rgba(94, 92, 230, 0.16); --aurora-wash-2: rgba(0, 143, 168, 0.13);
+  --aurora-wash-3: rgba(150, 51, 204, 0.14); --aurora-wash-4: rgba(37, 168, 58, 0.10);
 }
 html[data-color-scheme="light"] body::before { opacity: 0.07; }
 html[data-color-scheme="light"] .modal { background: rgba(0,0,0,0.20); }
@@ -3173,9 +3231,9 @@ html[data-color-scheme="light"] .card.is-multi-selected { outline: 2px solid rgb
 html[data-color-scheme="light"] .toolbar-search { background: rgba(255,255,255,0.88); border-color: rgba(0,0,0,0.12); color: var(--fg-1); }
 html[data-color-scheme="light"] .toolbar-search::placeholder { color: rgba(60,70,100,.45); }
 html[data-color-scheme="light"] .source-toggle.is-cloud::after { background: var(--acc-teal); }
-html[data-color-scheme="light"] .shape1 { opacity: 0.06; filter: blur(90px) saturate(1.5); }
-html[data-color-scheme="light"] .shape2 { opacity: 0.05; filter: blur(86px) saturate(1.4); }
-html[data-color-scheme="light"] .shape3 { opacity: 0.05; filter: blur(94px) saturate(1.3); }
+html[data-color-scheme="light"] .shape1 { opacity: 0.22; filter: blur(88px) saturate(1.45); }
+html[data-color-scheme="light"] .shape2 { opacity: 0.20; filter: blur(84px) saturate(1.35); }
+html[data-color-scheme="light"] .shape3 { opacity: 0.16; filter: blur(92px) saturate(1.25); }
 
 /* Force Dark Mode (when system preference is light but user wants dark) */
 html[data-color-scheme="dark"] {
@@ -3196,6 +3254,8 @@ html[data-color-scheme="dark"] {
   --glass-refraction: linear-gradient(145deg, rgba(255,255,255,0.14) 0%, transparent 38%, rgba(0,0,0,0.04) 65%, transparent 100%);
   --btn-primary-gradient: linear-gradient(135deg, var(--acc-teal) 0%, var(--acc-1) 55%, var(--acc-purple) 100%);
   --favorite-color: #FFD60A; --delete-color: #FF453A; --edit-color: #32D74B; --move-color: #BF5AF2;
+  --aurora-wash-1: rgba(94, 92, 230, 0.34); --aurora-wash-2: rgba(90, 200, 250, 0.26);
+  --aurora-wash-3: rgba(191, 90, 242, 0.30); --aurora-wash-4: rgba(50, 215, 130, 0.16);
 }
 html[data-color-scheme="dark"] body::before { opacity: 0.14; }
 html[data-color-scheme="dark"] .modal { background: rgba(0,0,0,0.55); }
@@ -3224,9 +3284,9 @@ html[data-color-scheme="dark"] .card.is-multi-selected { outline: 2px solid rgba
 html[data-color-scheme="dark"] .toolbar-search { background: rgba(8,14,24,.94); border-color: rgba(255,255,255,.18); color: var(--fg-1); }
 html[data-color-scheme="dark"] .toolbar-search::placeholder { color: rgba(220,230,255,.55); }
 html[data-color-scheme="dark"] .source-toggle.is-cloud::after { background: var(--acc-teal); }
-html[data-color-scheme="dark"] .shape1 { opacity: 0.14; filter: blur(70px); }
-html[data-color-scheme="dark"] .shape2 { opacity: 0.16; filter: blur(66px); }
-html[data-color-scheme="dark"] .shape3 { opacity: 0.13; filter: blur(76px); }
+html[data-color-scheme="dark"] .shape1 { opacity: 0.42; filter: blur(72px) saturate(1.4); }
+html[data-color-scheme="dark"] .shape2 { opacity: 0.40; filter: blur(68px) saturate(1.35); }
+html[data-color-scheme="dark"] .shape3 { opacity: 0.34; filter: blur(78px) saturate(1.25); }
 
 /* Color scheme toggle button active state */
 #color-scheme-button .icon-sun { color: var(--acc-4); }

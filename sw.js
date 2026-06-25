@@ -14,7 +14,7 @@
  *   • templates.json (statischer Fallback)     → Stale-While-Revalidate
  * ===================================================================== */
 
-const SW_VERSION = 'v5-2026-06';
+const SW_VERSION = 'v6-2026-06';
 const SHELL_CACHE = `pt-shell-${SW_VERSION}`;
 const CDN_CACHE = `pt-cdn-${SW_VERSION}`;
 const RUNTIME_CACHE = `pt-runtime-${SW_VERSION}`;
@@ -34,10 +34,13 @@ const PRECACHE_URLS = [
   './manifest.json',
   './templates.json',
   './browserconfig.xml',
-  // Beide Theme-Varianten des App-Icons vorhalten, damit das Symbol auch
-  // offline sofort und themenrichtig (Hell/Dunkel) verfügbar ist.
+  // Beide Theme-Varianten des animierten Icons (Tab-Favicon / In-App-Logo)
+  // sowie die Installations-PNGs (Home-Screen / Manifest) offline vorhalten.
   './icons/favicon_animated.svg',
   './icons/favicon_animated_light.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-maskable-512.png',
 ];
 
 /* Externe Hosts, deren Antworten Cache-First behandelt werden. */
