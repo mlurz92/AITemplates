@@ -32,7 +32,7 @@
         // Nur das Browser-Tab-Favicon themengekoppelt umschalten. Das
         // apple-touch-/Home-Screen-Icon bleibt das stabile PNG (iOS kann SVG
         // dort nicht rendern und erfasst das Icon ohnehin nur einmalig).
-        document.querySelectorAll('link[rel~="icon"]').forEach(function(l){ l.href = icon; });
+        document.querySelectorAll('link[rel~="icon"]:not([rel*="apple"])').forEach(function(l){ l.href = icon; });
       }());
     </script>
   </head>
