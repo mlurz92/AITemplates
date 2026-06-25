@@ -420,7 +420,6 @@ html[data-color-scheme="light"] .topbar-aurora {
   mix-blend-mode: normal;
   opacity: 0.5;
 }
-html[data-color-scheme="light"] .topbar-aurora-layer { filter: blur(30px); }
 html[data-color-scheme="light"] .topbar-aurora-layer--a { --aurora-color: rgba(67, 64, 200, 0.55); }
 html[data-color-scheme="light"] .topbar-aurora-layer--b { --aurora-color: rgba(0, 143, 168, 0.42); }
 html[data-color-scheme="light"] .topbar-aurora-layer--c { --aurora-color: rgba(160, 70, 220, 0.40); }
