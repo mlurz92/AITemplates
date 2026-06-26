@@ -117,6 +117,7 @@
      langsam driftende Aurora bleibt das optisch ruhig. */
   const TARGET_FPS = 30;
   let lastDrawTime = 0;
+  let elapsedTime = 0;
 
   function compile(type, src) {
     const sh = gl.createShader(type);
