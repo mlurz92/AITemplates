@@ -46,7 +46,7 @@
     float fbm(vec2 p){
       float v = 0.0; float amp = 0.5;
       mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
-      for (int i = 0; i < 6; i++){ v += amp * noise(p); p = m * p; amp *= 0.5; }
+      for (int i = 0; i < 4; i++){ v += amp * noise(p); p = m * p; amp *= 0.5; }
       return v;
     }
 
@@ -112,6 +112,13 @@
   let uniforms = {};
   let container = null;
 
+  /* Render-Loop auf ~30 fps drosseln: halbiert die Shader-Last auf 60-Hz-
+     Displays und reduziert sie auf 120 Hz+ noch deutlich stärker. Für eine
+     langsam driftende Aurora bleibt das optisch ruhig. */
+  const TARGET_FPS = 30;
+  let lastDrawTime = 0;
+  let elapsedTime = 0;
+
   function compile(type, src) {
     const sh = gl.createShader(type);
     gl.shaderSource(sh, src);
@@ -161,8 +168,8 @@
 
   function resize() {
     if (!canvas) return;
-    // DPR auf 1.5 deckeln – mehr bringt optisch nichts, kostet aber Füllrate.
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    // DPR auf 1.25 deckeln – mehr bringt optisch nichts, kostet aber Füllrate.
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
     const w = Math.floor(window.innerWidth * dpr);
     const h = Math.floor(window.innerHeight * dpr);
     if (canvas.width !== w || canvas.height !== h) {
@@ -194,8 +201,12 @@
   function loop(now) {
     if (!running) return;
     if (!visible) { rafId = null; return; } // Pausiert; wird durch resume() neu gestartet.
-    const t = (now - startTime) / 1000;
-    drawFrame(t);
+    // rAF läuft jedes Frame, gezeichnet wird aber nur im ~30-fps-Takt.
+    if (now - lastDrawTime >= 1000 / TARGET_FPS) {
+      lastDrawTime = now;
+      const t = (now - startTime) / 1000;
+      drawFrame(t);
+    }
     rafId = requestAnimationFrame(loop);
   }
 
