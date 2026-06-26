@@ -228,6 +228,88 @@ function initApp() {
     initKonfettiSystem();
     initCardTiltEffect();
     initDeviceOrientationParallax();
+
+    // Performance: Hintergrund-Animationen bei Inaktivität pausieren
+    initIdlePerformanceMode();
+}
+
+/* =====================================================================
+ * Idle-/Inaktivitäts-Erkennung für den Performance-Modus
+ * ---------------------------------------------------------------------
+ * Setzt `body.app-idle`, sobald der Nutzer IDLE_DELAY ms lang nicht
+ * interagiert hat. Das CSS koppelt sich an diese Klasse, um teure
+ * Top-Bar-/Hintergrund-Animationen zu pausieren. Zusätzlich wird die
+ * WebGL-Aurora schlafen gelegt, um GPU-Last im Leerlauf zu sparen.
+ * Bei verstecktem Tab wird sofort in den Idle-Zustand gewechselt.
+ * Aktivität (Pointer, Tastatur, Scroll, Wheel, Touch) oder ein
+ * Sichtbarwerden des Tabs verlässt den Idle-Zustand augenblicklich.
+ * ===================================================================== */
+function initIdlePerformanceMode() {
+    const IDLE_DELAY = 4000;
+    const ACTIVITY_THROTTLE = 250;
+    let idleTimerId = null;
+    let isIdle = false;
+    let lastActivityTs = 0;
+
+    function setAuroraVisible(visible) {
+        if (typeof window.AuroraWebGL?.setVisible === 'function') {
+            window.AuroraWebGL.setVisible(visible);
+        }
+    }
+
+    function enterIdle() {
+        if (isIdle) return;
+        isIdle = true;
+        document.body.classList.add('app-idle');
+        setAuroraVisible(false);
+    }
+
+    function leaveIdle() {
+        if (!isIdle) return;
+        isIdle = false;
+        document.body.classList.remove('app-idle');
+        setAuroraVisible(true);
+    }
+
+    function scheduleIdle() {
+        if (idleTimerId !== null) clearTimeout(idleTimerId);
+        idleTimerId = setTimeout(enterIdle, IDLE_DELAY);
+    }
+
+    function handleActivity() {
+        // Bei verstecktem Tab keine Aktivität verarbeiten – bleibt im Idle.
+        if (document.hidden) return;
+        const now = Date.now();
+        if (now - lastActivityTs < ACTIVITY_THROTTLE) return;
+        lastActivityTs = now;
+        leaveIdle();
+        scheduleIdle();
+    }
+
+    function handleVisibilityChange() {
+        if (document.hidden) {
+            // Tab versteckt: alles pausieren (Timer stoppen, Idle erzwingen).
+            if (idleTimerId !== null) {
+                clearTimeout(idleTimerId);
+                idleTimerId = null;
+            }
+            enterIdle();
+        } else {
+            // Tab wieder sichtbar: wie eine Interaktion behandeln.
+            lastActivityTs = 0;
+            leaveIdle();
+            scheduleIdle();
+        }
+    }
+
+    const activityEvents = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'];
+    activityEvents.forEach((eventName) => {
+        document.addEventListener(eventName, handleActivity, { passive: true, capture: true });
+    });
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Im aktiven Zustand starten.
+    scheduleIdle();
 }
 
 function createContextMenu() {

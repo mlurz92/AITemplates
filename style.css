@@ -302,6 +302,12 @@ body::before {
   transition: none;
 }
 
+/* Performance: WebGL-Aurora aktiv -> redundante CSS-Blob-Animationen stoppen.
+   Die WebGL-Schicht deckt die CSS-Blobs ab; ihre Blur-/Drift-Arbeit ist reine
+   Verschwendung, wenn der WebGL-Layer ohnehin laeuft. */
+.aurora-container.webgl-active .aurora-shape { animation: none !important; }
+.aurora-container.webgl-active::before { animation: none !important; }
+
 /* Aurora paused state - stops animations when not visible */
 .aurora-container.paused .aurora-shape {
   animation-play-state: paused;
@@ -405,7 +411,7 @@ body::before {
     transparent 80%,
     rgba(191, 90, 242, 0.46) 90%,
     transparent 98%);
-  animation: topbar-flow 26s linear infinite;
+  animation: topbar-flow 40s linear infinite;
 }
 
 /* Gegenläufiges Tiefenband – Mint/Teal, versetzt und langsamer. */
@@ -421,7 +427,7 @@ body::before {
     transparent 78%,
     rgba(90, 200, 250, 0.34) 88%,
     transparent 96%);
-  animation: topbar-flow-rev 34s linear infinite;
+  animation: topbar-flow-rev 52s linear infinite;
 }
 
 /* Schnelles, helles Glanzband für funkelnde Tiefe. */
@@ -433,7 +439,7 @@ body::before {
     transparent 42%,
     rgba(180, 160, 255, 0.30) 74%,
     transparent 92%);
-  animation: topbar-flow 18s linear infinite reverse;
+  animation: topbar-flow 30s linear infinite reverse;
 }
 
 /* Zusätzlicher, schneller Spekular-Sweep ("Schimmer") über die ganze Leiste. */
@@ -449,7 +455,7 @@ body::before {
     transparent 62%);
   transform: translate3d(-120%, 0, 0);
   will-change: transform;
-  animation: topbar-aurora-sweep 11s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  animation: topbar-aurora-sweep 18s cubic-bezier(0.45, 0, 0.2, 1) infinite;
 }
 
 /* Nahtloser Horizontal-Loop: Das 200 % breite Band wird um exakt eine
@@ -468,6 +474,20 @@ body::before {
   60%  { transform: translate3d(120%, 0, 0); }
   100% { transform: translate3d(120%, 0, 0); }
 }
+
+/* === Performance: Leerlauf-Drosselung ===
+   Bei Inaktivitaet (body.app-idle) werden die dauerhaft laufenden Top-Bar-
+   Aurora-Animationen pausiert. Sie liegen unter dem backdrop-filter-Blur der
+   Leiste, weshalb jede Bewegung ein erneutes Blur der gesamten Leiste pro Frame
+   erzwingt – die dominante Idle-CPU-Last. Pausiert bleiben die Pixel ruhig. */
+body.app-idle .topbar-aurora-layer--a,
+body.app-idle .topbar-aurora-layer--b,
+body.app-idle .topbar-aurora-layer--c,
+body.app-idle .topbar-aurora::after { animation-play-state: paused; }
+
+/* Sicherheitsnetz: auch die CSS-Aurora (Breathe/Drift) im Leerlauf anhalten. */
+body.app-idle .aurora-container::before,
+body.app-idle .aurora-shape { animation-play-state: paused; }
 
 /* Hellmodus: gedämpfter, satter Farbauftrag statt additivem Leuchten, damit der
    Schimmer auf hellem Glas sichtbar und edel bleibt. */
@@ -981,8 +1001,8 @@ html[data-color-scheme="light"] .topbar-aurora::after {
 .modal .modal-content {
   /* 5-Layer Liquid Glass */
   background: var(--glass-highlight), var(--glass-refraction), var(--glass-shadow-overlay), var(--glass-bg);
-  backdrop-filter: blur(32px) saturate(160%) brightness(1.04);
-  -webkit-backdrop-filter: blur(32px) saturate(160%) brightness(1.04);
+  backdrop-filter: blur(22px) saturate(160%) brightness(1.04);
+  -webkit-backdrop-filter: blur(22px) saturate(160%) brightness(1.04);
   border: 1px solid var(--glass-stroke);
   border-top-color: var(--glass-stroke-top);
   background-clip: padding-box;
@@ -1299,8 +1319,8 @@ body.favorites-dock-visible .favorites-dock {
         rgba(255,255,255,0.10) 0%, transparent 42%),
         linear-gradient(145deg, rgba(255,255,255,0.12) 0%, transparent 36%, rgba(0,0,0,0.06) 70%, transparent 100%),
         linear-gradient(180deg, rgba(14, 18, 36, 0.88) 0%, rgba(10, 14, 28, 0.72) 100%);
-    backdrop-filter: blur(32px) saturate(160%) brightness(1.04);
-    -webkit-backdrop-filter: blur(32px) saturate(160%) brightness(1.04);
+    backdrop-filter: blur(22px) saturate(160%) brightness(1.04);
+    -webkit-backdrop-filter: blur(22px) saturate(160%) brightness(1.04);
     box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.40),
                 0 16px 36px rgba(0, 0, 0, 0.30),
                 inset 0 1px 0 rgba(255, 255, 255, 0.20),
