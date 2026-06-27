@@ -579,12 +579,9 @@ Download als `templates.json` oder Import per Drag & Drop / Dateiauswahl
 ## 15. Performance-Architektur
 
 * **DOM-Caching** aller relevanten Knoten in `initApp`.
-* **Event-Delegation** für Karten-Events (Bubbling) und Favoriten-Chips — speicherschonend und ressourcenschonend bei vielen Elementen.
-* **CSS Container Queries & Browser-Native Sizing:** Jede Karte (`.card`) ist als `inline-size` Container deklariert. Die Schriftgröße der Titel (`.card h3`) passt sich automatisch via `font-size: clamp(0.85rem, 9cqw, 1.25rem)` an die Breite der Karte an. Dies eliminiert kostspielige JavaScript-Schleifen zur Textgrößenanpassung und verhindert Layout-Thrashing (kein wiederholtes Aufrufen von `getBoundingClientRect()`).
-* **DocumentFragment Batching:** Beim Rendern der Karten-Ansicht (`renderView`) werden alle erzeugten Karten-Elemente in ein einziges `DocumentFragment` eingehängt und geschlossen in einem einzigen DOM-Append gerendert. Das reduziert Paint- und Reflow-Zyklen auf ein absolutes Minimum.
-* **Dynamische GPU-Layer:** Das teure `will-change: transform` Attribut wird nicht mehr permanent auf allen Karten gehalten. Stattdessen wird es dynamisch nur bei Interaktion (`:hover`, `:active`) oder im aktiven Sortier-Modus (`.edit-mode .card`) zugeschaltet. Das verhindert Speicherüberlauf und Rendering-Flaschenhälse auf schwachen Mobilgeräten.
-* **Hintergrund-Hiding bei aktivem WebGL:** Sobald die WebGL-Aurora aktiv ist, werden die dahinter liegenden CSS-Gradienten-Formen via `display: none !important` vollständig ausgeblendet. Dies spart wertvolle GPU-Rendering-Zyklen und Akkulaufzeit.
-* **RequestAnimationFrame** für layout-intensive Berechnungen (Dock-Footprint, Parallax-Verschiebungen).
+* **Event-Delegation** für Karten-Events (Bubbling) — speicherschonend bei vielen Karten.
+* **RequestAnimationFrame** für layout-intensive Berechnungen (Dock-Footprint, Parallax,
+  Titel-Fit per Binärsuche).
 * **GPU-Auslagerung:** `translateZ(0)`, `contain`, hardwarebeschleunigte Aurora.
 * **Render-Budget:** max. 120 Karten pro Ansicht; Embeddings gecacht; neuronales Modell
   **lazy** geladen; semantischer Query-Cache LRU-begrenzt (50 Einträge).
@@ -596,26 +593,26 @@ Download als `templates.json` oder Import per Drag & Drop / Dateiauswahl
 
 ## 16. Code-Architektur & Dateistruktur
 
-Die App ist **framework-frei** und modularisiert aufgebaut. Um eine monolithische Entwicklung zu verhindern und die Code-Verständlichkeit zu maximieren, wurden logische Subsysteme aus `script.js` in eigenständige Module extrahiert. Die Interoperabilität dieser Module wird über eine globale **State-Bridge** gewährleistet.
+Die App ist **framework-frei**. Erweiterungen sind **additiv** umgesetzt: `script.js` bleibt
+der Kern; `enhancements.js` und `navigation.js` umhüllen definierte Hook-Funktionen
+(Monkey-Patching der globalen Funktionen) und ergänzen eigenständige Subsysteme.
 
 ```
 /
 ├── index.html              # Grundgerüst, SVG-Templates (<defs>), PWA-/Apple-Meta-Tags,
-│                           # Top-Bar-Container, Einbindung aller Styles & Skripte
-├── style.css               # Liquid-Glass-System, Themes, Grid-Queries, Top-Bar-Styles,
-│                           # Safe-Area-Docking, Dynamic-Animations, GPU-Layer
+│                           # Top-Bar inkl. "Mehr"-Menü-Container, Einbindung aller
+│                           # Styles & Skripte
+├── style.css               # Liquid-Glass-System, Themes, Grid, Top-Bar (inkl. mobiles
+│                           # Overflow-System), Favoritenbar-Docking, Animationen
 ├── enhancements.css        # Styles für Suche, Tags, Smart Folders, Skeletons, Ripples
 ├── navigation.css          # Styles für Breadcrumb-Popover, Tastatur-Fokus, Wischgesten
-├── script.js               # Kern-Controller: State, Dom-Caching, View-Rendering,
-│                           # Navigation-Kern, "Mehr"-Menü-Aufbau und State-Bridge
-├── animations.js           # Sub-Modul: Partikel, Glow, Tilt, Haptik, Neigungs-Parallaxe
-├── drag-drop.js            # Sub-Modul: HTML5 Drag & Drop und SortableJS Zone-Intents
-├── favorites.js            # Sub-Modul: Favoriten-Dock Layout-Berechnungen und Event-Delegation
-├── modals.js               # Sub-Modul: Dialog-Modals (Detail, Create, Move, Link) und JSON-Handler
-├── sync.js                 # Sub-Modul: Cloudflare-Worker API-Sync, BroadcastChannel, Offline-Caches
-├── enhancements.js         # Schicht 1: Suche, Tags & Smart Folders, Deep-Links, SW-Registrierung
-├── navigation.js           # Schicht 2: Desktop-Verlauf, Breadcrumb-Sprünge, Tastatur-Nav, Wisch-Gestik
-├── aurora-webgl.js         # WebGL-Shader-Aurora (Echtzeit-Hintergrund)
+├── script.js               # Kern: State, Rendering, Navigation, Sync, Modals, DnD,
+│                           #  "Mehr"-Menü-Aufbau + State-Bridge (window-Getter/Setter)
+├── enhancements.js         # Schicht 1: Suche (#4/#7), Tags & Smart Folders (#8),
+│                           # Deep-Links (#6), Mikrointeraktionen (#11), SW-Registrierung
+├── navigation.js           # Schicht 2: Desktop-Verlauf, Breadcrumb-Sprünge,
+│                           # Tastatursteuerung, Karten-Wischgesten
+├── aurora-webgl.js         # WebGL-Shader-Aurora
 ├── sw.js                   # Service Worker (Offline-Caching)
 ├── manifest.json           # PWA-Manifest
 ├── browserconfig.xml       # Windows-Kachel-Konfiguration
@@ -627,15 +624,17 @@ Die App ist **framework-frei** und modularisiert aufgebaut. Um eine monolithisch
 ```
 
 ### 16.1 State-Bridge (Integrationsmechanik)
-Da die Skripte klassisch (ohne ES-Module-CORS-Sperren in lokalen `file://`-Sandboxes) geladen werden, deklariert `script.js` seine Zustände mit blockbasiertem `let`. Am Ende der Datei spiegelt eine erweiterte **State-Bridge** alle geteilten Zustände, DOM-Knoten-Referenzen und Konfigurationen über `Object.defineProperties` als Getter/Setter direkt auf das globale `window`-Objekt (z.B. `window.jsonData`, `window.currentNode`, `window.containerEl`, `window.isSyncInFlight` etc.). 
-
-Dies erlaubt es den Sub-Skripten (`animations.js`, `drag-drop.js`, `favorites.js`, `modals.js`, `sync.js`), lesend und schreibend auf den globalen Zustand zuzugreifen und Aktionen auszuführen, ohne die Kapselung von `script.js` aufzubrechen. Funktionen sind als klassische Skript-Deklarationen ohnehin global verfügbar.
+`script.js` deklariert seinen Zustand mit `let` (nicht auf `window` sichtbar). Am Ende von
+`script.js` spiegelt eine **State-Bridge** die relevanten Zustände (`jsonData`,
+`currentNode`, `pathStack`, `currentSearchQuery`, `favoritePrompts`) über
+`Object.defineProperties` als Getter/Setter auf `window`. So lesen **und** schreiben die
+Erweiterungs-Schichten diese Zustände, ohne die interne Logik anzufassen. Funktionen sind
+als Klassik-Skript-Deklarationen ohnehin global und werden gezielt umhüllt.
 
 ### 16.2 Schichtenmodell & Lade-Reihenfolge
-Die Skripte werden per `defer` in der exakten sequentiellen Reihenfolge geladen, um Abhängigkeiten aufzulösen:
-`script.js` → `animations.js` → `drag-drop.js` → `favorites.js` → `modals.js` → `sync.js` → `aurora-webgl.js` → `enhancements.js` → `navigation.js`.
-
-Die Kerninitialisierung findet in `initApp()` auf `DOMContentLoaded` statt, wenn alle Skripte geladen und ihre Methoden auf `window` registriert sind. Die Erweiterungsschichten (`enhancements.js` und `navigation.js`) patchen Kernfunktionen (Monkey-Patching) sauber übereinander.
+`script.js` → `aurora-webgl.js` → `enhancements.js` → `navigation.js` (alle `defer`).
+Jede Schicht wartet bei Bedarf auf die vorherige (Boot-Polling) und stapelt ihre
+Funktions-Wrapper sauber übereinander (z. B. mehrfach umhülltes `renderView`).
 
 ### 16.3 Mobiles „Mehr"-Menü (Implementierungsdetail)
 Das Overflow-Menü ist Teil des Kerns (`script.js`) und folgt demselben bewährten Popover-
