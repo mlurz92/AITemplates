@@ -150,15 +150,22 @@ body[data-display-mode='fullscreen'] {
 
 
 
-/* Nur gezielte GPU-Layer: kein globales transform, damit fixed-Elemente zuverlässig fixiert bleiben */
 .top-bar,
 .favorites-dock,
-.card,
 .modal .modal-content,
 .fixed-back {
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+}
+
+.card {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card:hover, .card:active, .cards-container.edit-mode .card {
+  will-change: transform;
 }
 
 body::before {
@@ -305,8 +312,8 @@ body::before {
 /* Performance: WebGL-Aurora aktiv -> redundante CSS-Blob-Animationen stoppen.
    Die WebGL-Schicht deckt die CSS-Blobs ab; ihre Blur-/Drift-Arbeit ist reine
    Verschwendung, wenn der WebGL-Layer ohnehin laeuft. */
-.aurora-container.webgl-active .aurora-shape { animation: none !important; }
-.aurora-container.webgl-active::before { animation: none !important; }
+.aurora-container.webgl-active .aurora-shape { display: none !important; }
+.aurora-container.webgl-active::before { display: none !important; }
 
 /* Aurora paused state - stops animations when not visible */
 .aurora-container.paused .aurora-shape {
@@ -675,7 +682,8 @@ html[data-color-scheme="light"] .topbar-aurora::after {
   grid-template-columns: repeat(auto-fit, minmax(var(--card-min-width), 1fr));
   gap: clamp(0.8rem, 2.2vw, 1.6rem);
   padding: clamp(0.8rem, 2.5vw, 1.8rem);
-  padding-inline: clamp(0.8rem, 2.5vw, 1.8rem);
+  padding-left: calc(clamp(0.8rem, 2.5vw, 1.8rem) + var(--safe-area-inset-left));
+  padding-right: calc(clamp(0.8rem, 2.5vw, 1.8rem) + var(--safe-area-inset-right));
   /* --top-bar-height enthält bereits den safe-area-inset-top (die Top-Bar liegt
      fix bei top:0 und ihr padding/min-height schließt den Inset ein). Daher darf
      der Inset hier NICHT erneut addiert werden – sonst entsteht auf Geräten mit
@@ -716,7 +724,7 @@ html[data-color-scheme="light"] .topbar-aurora::after {
 
 @media (max-width: 720px) {
   .cards-container {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 
   .source-toggle {
@@ -758,6 +766,7 @@ html[data-color-scheme="light"] .topbar-aurora::after {
   perspective: 1000px;
   /* Performance: CSS Containment for better rendering */
   contain: layout style paint;
+  container-type: inline-size;
   /* Performance: Skip rendering for off-screen cards */
   content-visibility: auto;
   contain-intrinsic-size: 220px 154px;
@@ -851,8 +860,18 @@ html[data-color-scheme="light"] .topbar-aurora::after {
   -webkit-hyphens: auto;
   hyphens: auto;
   text-wrap: pretty;
-  font-size: clamp(0.95rem, 1.8vw, 1.2rem);
+  font-size: clamp(0.85rem, 9cqw, 1.25rem);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
   max-height: none;
+}
+
+.prompt-card h3 {
+  -webkit-line-clamp: 4;
+}
+
+.folder-card h3 {
+  -webkit-line-clamp: 3;
 }
 
 .folder-card .card-content-wrapper { justify-content: space-between; align-items: center; }
@@ -1882,6 +1901,8 @@ body.favorites-dock-visible .favorites-dock {
         border-radius: 18px 18px 0 0;
         border-bottom: 0;
         padding-bottom: env(safe-area-inset-bottom, 0px);
+        padding-left: env(safe-area-inset-left, 0px);
+        padding-right: env(safe-area-inset-right, 0px);
     }
 }
 
@@ -2799,7 +2820,7 @@ body.has-toolbar .cards-container { padding-top: calc(var(--top-bar-height) + cl
     max-height: 92dvh;
     border-radius: 22px 22px 0 0;
     border-bottom: none;
-    padding: 1.4rem 1.6rem 2rem;
+    padding: 1.4rem 1.6rem calc(2rem + var(--safe-area-inset-bottom, 0px));
     transform: translateY(100%) translateZ(0);
     /* Drag Handle */
     padding-top: 2rem;
