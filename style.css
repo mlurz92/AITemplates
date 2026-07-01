@@ -146,6 +146,12 @@ body {
 body[data-display-mode='standalone'],
 body[data-display-mode='fullscreen'] {
   --viewport-bottom-offset: 0px;
+  /* iOS-Standalone-PWAs legen den Home-Indicator-Bereich außerhalb des
+     normalen Layout-Viewports an. Ein zusätzliches Body-Padding erzeugt dort
+     einen scrollbaren „Chin“, während fixierte Bottom-Elemente schon vorher
+     enden. Im installierten Modus übernimmt die jeweilige Komponente ihre
+     Safe-Area selbst. */
+  padding-bottom: 0;
 }
 
 
@@ -1882,6 +1888,16 @@ body.favorites-dock-visible .favorites-dock {
         border-radius: 18px 18px 0 0;
         border-bottom: 0;
         padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    body[data-display-mode='standalone'] .favorites-dock,
+    body[data-display-mode='fullscreen'] .favorites-dock {
+        /* In iOS Home-Screen-PWAs endet `position: fixed; bottom: 0` am
+           Layout-Viewport – also oberhalb des Home-Indicator-Bereichs. Den
+           Dock-Container im Standalone-Modus um genau diesen Safe-Area-Inset
+           nach unten verlängern; die innere Safe-Area-Polsterung hält die
+           Chips trotzdem oberhalb des Indicators. */
+        bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
     }
 }
 
