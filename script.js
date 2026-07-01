@@ -3366,16 +3366,35 @@ function calculateViewportBottomOffset() {
     return Math.round(keyboardOrChromeOffset);
 }
 
+function measureSafeAreaInset(edge = 'bottom') {
+    if (typeof document === 'undefined' || !document.body) return 0;
+
+    const property = edge === 'top' ? 'paddingTop' : 'paddingBottom';
+    const probe = document.createElement('div');
+    probe.style.position = 'fixed';
+    probe.style.visibility = 'hidden';
+    probe.style.pointerEvents = 'none';
+    probe.style[property] = `env(safe-area-inset-${edge}, 0px)`;
+    document.body.appendChild(probe);
+
+    const measured = parseFloat(getComputedStyle(probe)[property]) || 0;
+    probe.remove();
+    return Math.round(measured);
+}
+
 function updateViewportMetrics() {
     const root = document.documentElement;
     const mode = detectDisplayMode();
     const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
     const viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
     const bottomOffset = mode === 'browser' ? calculateViewportBottomOffset() : 0;
+    const safeAreaBottom = mode === 'browser' ? 0 : measureSafeAreaInset('bottom');
+    const appViewportHeight = mode === 'browser' ? viewportHeight : viewportHeight + safeAreaBottom;
 
-    root.style.setProperty('--app-vh', `${Math.round(viewportHeight)}px`);
+    root.style.setProperty('--app-vh', `${Math.round(appViewportHeight)}px`);
     root.style.setProperty('--app-vw', `${Math.round(viewportWidth)}px`);
     root.style.setProperty('--viewport-bottom-offset', `${bottomOffset}px`);
+    root.style.setProperty('--resolved-safe-area-inset-bottom', `${safeAreaBottom}px`);
 
     if (document.body) {
         document.body.setAttribute('data-display-mode', mode);

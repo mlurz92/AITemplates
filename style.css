@@ -96,6 +96,7 @@
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --resolved-safe-area-inset-bottom: 0px;
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
   --app-vh: 100dvh;
   --app-vw: 100vw;
@@ -153,8 +154,6 @@ body[data-display-mode='fullscreen'] {
      Safe-Area selbst. */
   padding-bottom: 0;
 }
-
-
 
 /* Nur gezielte GPU-Layer: kein globales transform, damit fixed-Elemente zuverlässig fixiert bleiben */
 .top-bar,
