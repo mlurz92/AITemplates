@@ -1891,12 +1891,12 @@ body.favorites-dock-visible .favorites-dock {
 
     body[data-display-mode='standalone'] .favorites-dock,
     body[data-display-mode='fullscreen'] .favorites-dock {
-        /* Echte Viewport-Korrektur statt Abdeckung: iOS kann fixed-bottom in
-           Standalone-PWAs am sicheren Layout-Viewport enden lassen. Das Dock
-           wird deshalb um den real gemessenen Home-Indicator-Inset nach unten
-           positioniert; seine eigene Innenpolsterung hält die Chips weiterhin
-           im bedienbaren Bereich. */
-        bottom: calc(-1 * var(--resolved-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
+        /* In iOS Home-Screen-PWAs endet `position: fixed; bottom: 0` am
+           Layout-Viewport – also oberhalb des Home-Indicator-Bereichs. Den
+           Dock-Container im Standalone-Modus um genau diesen Safe-Area-Inset
+           nach unten verlängern; die innere Safe-Area-Polsterung hält die
+           Chips trotzdem oberhalb des Indicators. */
+        bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
     }
 }
 
