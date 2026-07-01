@@ -96,6 +96,7 @@
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
   --safe-area-inset-right: env(safe-area-inset-right, 0px);
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --resolved-safe-area-inset-bottom: 0px;
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
   --app-vh: 100dvh;
   --app-vw: 100vw;
@@ -146,9 +147,13 @@ body {
 body[data-display-mode='standalone'],
 body[data-display-mode='fullscreen'] {
   --viewport-bottom-offset: 0px;
+  /* iOS-Standalone-PWAs legen den Home-Indicator-Bereich außerhalb des
+     normalen Layout-Viewports an. Ein zusätzliches Body-Padding erzeugt dort
+     einen scrollbaren „Chin“, während fixierte Bottom-Elemente schon vorher
+     enden. Im installierten Modus übernimmt die jeweilige Komponente ihre
+     Safe-Area selbst. */
+  padding-bottom: 0;
 }
-
-
 
 /* Nur gezielte GPU-Layer: kein globales transform, damit fixed-Elemente zuverlässig fixiert bleiben */
 .top-bar,
@@ -1882,6 +1887,16 @@ body.favorites-dock-visible .favorites-dock {
         border-radius: 18px 18px 0 0;
         border-bottom: 0;
         padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    body[data-display-mode='standalone'] .favorites-dock,
+    body[data-display-mode='fullscreen'] .favorites-dock {
+        /* Echte Viewport-Korrektur statt Abdeckung: iOS kann fixed-bottom in
+           Standalone-PWAs am sicheren Layout-Viewport enden lassen. Das Dock
+           wird deshalb um den real gemessenen Home-Indicator-Inset nach unten
+           positioniert; seine eigene Innenpolsterung hält die Chips weiterhin
+           im bedienbaren Bereich. */
+        bottom: calc(-1 * var(--resolved-safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)));
     }
 }
 
