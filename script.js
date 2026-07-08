@@ -2959,6 +2959,23 @@ const SCHAEFER_ATTACHMENT_PROMPT_IDS = new Set([
     'ac587666-78b3-441a-89ce-f9229ce52e6a', // Neuer Befund wie Prof. Schäfer
 ]);
 
+/* Fallback zur ID-Prüfung: Die IDs stammen aus der statischen templates.json,
+   die Live-Daten kommen aber aus dem KV-Store (functions/api/templates.js) und
+   können bei Bearbeitung/Neuanlage abweichende IDs bekommen. Der Titel bleibt
+   der stabilere Anker, daher zusätzlich darüber matchen. */
+const SCHAEFER_ATTACHMENT_PROMPT_TITLES = new Set([
+    'Prof. Schäfer Verlaufsbefund',
+    'Prof. Schäfer Befundstil',
+    'Prof. Schäfer Befundstil Revision',
+    'Neuer Befund wie Prof. Schäfer',
+]);
+
+function isSchaeferAttachmentPrompt(nodeId, nodeTitle) {
+    if (nodeId && SCHAEFER_ATTACHMENT_PROMPT_IDS.has(nodeId)) return true;
+    if (nodeTitle && SCHAEFER_ATTACHMENT_PROMPT_TITLES.has(nodeTitle)) return true;
+    return false;
+}
+
 const SCHAEFER_ATTACHMENT_FILES = [
     '/docs/Befundbeispiele_Prof_Schaefer_CT.txt',
     '/docs/Befundbeispiele_Prof_Schaefer_MRT.txt',
@@ -2984,20 +3001,26 @@ function loadSchaeferAttachmentsText() {
 
 /* Ergänzt den Prompt-Text bei Bedarf um die Prof.-Schäfer-Beispielbefunde
    und kopiert das Ergebnis anschließend in die Zwischenablage. */
-async function copyNodeContentToClipboard(nodeId, text, buttonElement, node = null) {
-    if (nodeId && SCHAEFER_ATTACHMENT_PROMPT_IDS.has(nodeId)) {
+async function copyNodeContentToClipboard(nodeId, text, buttonElement, node = null, nodeTitle = null) {
+    if (isSchaeferAttachmentPrompt(nodeId, nodeTitle || node?.title)) {
         const attachmentsText = await loadSchaeferAttachmentsText();
         if (attachmentsText) {
             copyToClipboard(`${text}\n\n---\n\n${attachmentsText}`, buttonElement, node);
-            return;
+        } else {
+            // Beispielbefunde konnten nicht geladen werden: NICHT unvollständig
+            // (nur Prompt-Text) als Erfolg melden, da der Prompt ohne sie nicht
+            // funktioniert – stattdessen explizit als Fehler kennzeichnen.
+            showNotification('Beispielbefunde konnten nicht geladen werden. Prompt wurde nicht kopiert.', 'error');
         }
+        return;
     }
     copyToClipboard(text, buttonElement, node);
 }
 
 function copyPromptText(buttonElement = null) {
     const nodeId = modalEl ? modalEl.getAttribute('data-id') : null;
-    copyNodeContentToClipboard(nodeId, promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button'));
+    const node = nodeId ? findNodeById(jsonData, nodeId) : null;
+    copyNodeContentToClipboard(nodeId, promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button'), node);
 }
 
 function copyPromptTextForCard(node, buttonElement) {
