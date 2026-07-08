@@ -2948,12 +2948,60 @@ function clearAllFavorites() {
     }
 }
 
+/* Prompts, die im Text explizit auf die beigefügten Prof.-Schäfer-
+   Beispielbefunde verweisen ("Analysiere die beigefügten Beispielbefunde...").
+   Beim Kopieren dieser Prompts werden die beiden Beispielbefund-Dokumente
+   (CT + MRT) automatisch an den Prompt-Text angehängt. */
+const SCHAEFER_ATTACHMENT_PROMPT_IDS = new Set([
+    'c7ee20ed-54f5-4b5a-89b4-4f62230ef783', // Prof. Schäfer Verlaufsbefund
+    '268f28ff-a8d8-4e11-aa4d-bc993771c35a', // Prof. Schäfer Befundstil
+    'c0f99c18-b4b5-4426-b453-e41c5a3efda1', // Prof. Schäfer Befundstil Revision
+    'ac587666-78b3-441a-89ce-f9229ce52e6a', // Neuer Befund wie Prof. Schäfer
+]);
+
+const SCHAEFER_ATTACHMENT_FILES = [
+    '/docs/Befundbeispiele_Prof_Schaefer_CT.txt',
+    '/docs/Befundbeispiele_Prof_Schaefer_MRT.txt',
+];
+
+let schaeferAttachmentsPromise = null;
+function loadSchaeferAttachmentsText() {
+    if (!schaeferAttachmentsPromise) {
+        schaeferAttachmentsPromise = Promise.all(
+            SCHAEFER_ATTACHMENT_FILES.map((path) => fetch(path).then((res) => {
+                if (!res.ok) throw new Error(`Konnte ${path} nicht laden (${res.status})`);
+                return res.text();
+            }))
+        ).then((texts) => texts.map((t) => t.trim()).join('\n\n---\n\n'))
+         .catch((err) => {
+            console.error('Fehler beim Laden der Prof. Schäfer Beispielbefunde:', err);
+            schaeferAttachmentsPromise = null;
+            return null;
+         });
+    }
+    return schaeferAttachmentsPromise;
+}
+
+/* Ergänzt den Prompt-Text bei Bedarf um die Prof.-Schäfer-Beispielbefunde
+   und kopiert das Ergebnis anschließend in die Zwischenablage. */
+async function copyNodeContentToClipboard(nodeId, text, buttonElement, node = null) {
+    if (nodeId && SCHAEFER_ATTACHMENT_PROMPT_IDS.has(nodeId)) {
+        const attachmentsText = await loadSchaeferAttachmentsText();
+        if (attachmentsText) {
+            copyToClipboard(`${text}\n\n---\n\n${attachmentsText}`, buttonElement, node);
+            return;
+        }
+    }
+    copyToClipboard(text, buttonElement, node);
+}
+
 function copyPromptText(buttonElement = null) {
-    copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button'));
+    const nodeId = modalEl ? modalEl.getAttribute('data-id') : null;
+    copyNodeContentToClipboard(nodeId, promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button'));
 }
 
 function copyPromptTextForCard(node, buttonElement) {
-    copyToClipboard(node.content || '', buttonElement);
+    copyNodeContentToClipboard(node.id, node.content || '', buttonElement, node);
 }
 
 function closeMoreMenu() {
@@ -3869,7 +3917,7 @@ function renderFavoritesDock() {
                 navigateToNode(node);
                 return;
             }
-            copyToClipboard(node.content || '', button, node);
+            copyNodeContentToClipboard(node.id, node.content || '', button, node);
         });
         
         // Add sparkle effect to favorite chip
