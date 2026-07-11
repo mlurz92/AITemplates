@@ -221,10 +221,6 @@ function initApp() {
     loadJsonData();
     updateParallax();
 
-    // Beispielbefund-Dateien vorladen, damit beim Kopieren eines Prof.-Schäfer-
-    // Prompts das Share-Sheet noch innerhalb der User-Geste geöffnet werden kann.
-    loadSchaeferAttachmentFiles();
-
     // Initialize enhanced animation systems
     setupAuroraVisibilityObserver();
     initParticlesSystem();
@@ -2952,142 +2948,12 @@ function clearAllFavorites() {
     }
 }
 
-/* Prompts, die im Text explizit auf die beigefügten Prof.-Schäfer-
-   Beispielbefunde verweisen ("Analysiere die beigefügten Beispielbefunde...").
-   Beim Kopieren dieser Prompts werden die beiden Beispielbefund-Dokumente
-   (CT + MRT) als echte Dateien mitgegeben: Der Prompt-Text landet in der
-   Zwischenablage, die Dateien werden über die Web Share API als Datei-
-   Anhänge geteilt (iOS/Android-Share-Sheet). Wo Datei-Sharing nicht
-   unterstützt wird, werden die Dateien stattdessen heruntergeladen, und
-   als letzte Stufe (Download nicht möglich) wird der Dokumenten-Text wie
-   bisher an den Prompt-Text angehängt. */
-const SCHAEFER_ATTACHMENT_PROMPT_IDS = new Set([
-    'c7ee20ed-54f5-4b5a-89b4-4f62230ef783', // Prof. Schäfer Verlaufsbefund
-    '268f28ff-a8d8-4e11-aa4d-bc993771c35a', // Prof. Schäfer Befundstil
-    'c0f99c18-b4b5-4426-b453-e41c5a3efda1', // Prof. Schäfer Befundstil Revision
-    'ac587666-78b3-441a-89ce-f9229ce52e6a', // Neuer Befund wie Prof. Schäfer
-]);
-
-/* Fallback zur ID-Prüfung: Die IDs stammen aus der statischen templates.json,
-   die Live-Daten kommen aber aus dem KV-Store (functions/api/templates.js) und
-   können bei Bearbeitung/Neuanlage abweichende IDs bekommen. Der Titel bleibt
-   der stabilere Anker, daher zusätzlich darüber matchen. */
-const SCHAEFER_ATTACHMENT_PROMPT_TITLES = new Set([
-    'Prof. Schäfer Verlaufsbefund',
-    'Prof. Schäfer Befundstil',
-    'Prof. Schäfer Befundstil Revision',
-    'Neuer Befund wie Prof. Schäfer',
-]);
-
-function isSchaeferAttachmentPrompt(nodeId, nodeTitle) {
-    if (nodeId && SCHAEFER_ATTACHMENT_PROMPT_IDS.has(nodeId)) return true;
-    if (nodeTitle && SCHAEFER_ATTACHMENT_PROMPT_TITLES.has(nodeTitle)) return true;
-    return false;
-}
-
-const SCHAEFER_ATTACHMENT_FILES = [
-    '/docs/Befundbeispiele_Prof_Schaefer_CT.txt',
-    '/docs/Befundbeispiele_Prof_Schaefer_MRT.txt',
-];
-
-/* Lädt beide Beispielbefund-Dokumente einmalig als File-Objekte (für Share/
-   Download) und hält sie im Speicher. Bei Fehlschlag wird der Cache geleert,
-   damit ein späterer Versuch erneut laden kann. */
-let schaeferAttachmentFilesPromise = null;
-function loadSchaeferAttachmentFiles() {
-    if (!schaeferAttachmentFilesPromise) {
-        schaeferAttachmentFilesPromise = Promise.all(
-            SCHAEFER_ATTACHMENT_FILES.map(async (path) => {
-                const res = await fetch(path);
-                if (!res.ok) throw new Error(`Konnte ${path} nicht laden (${res.status})`);
-                const blob = await res.blob();
-                const name = path.split('/').pop();
-                return new File([blob], name, { type: 'text/plain' });
-            })
-        ).catch((err) => {
-            console.error('Fehler beim Laden der Prof. Schäfer Beispielbefunde:', err);
-            schaeferAttachmentFilesPromise = null;
-            return null;
-        });
-    }
-    return schaeferAttachmentFilesPromise;
-}
-
-/* Übergibt die Beispielbefund-Dokumente in Dateiform:
-   1. Web Share API mit files (iOS/Android/teilw. Desktop) – echte Anhänge.
-   2. Fallback: Download beider Dateien (Desktop ohne Share-Sheet).
-   Rückgabe: true, wenn die Dateien den Nutzer erreicht haben (oder er den
-   Share-Dialog bewusst abgebrochen hat), sonst false. */
-async function shareOrDownloadSchaeferFiles(files) {
-    if (navigator.canShare && navigator.canShare({ files })) {
-        try {
-            await navigator.share({ files, title: 'Befundbeispiele Prof. Schäfer (CT + MRT)' });
-            showNotification('Beispielbefund-Dateien geteilt.', 'success');
-            return true;
-        } catch (err) {
-            if (err && err.name === 'AbortError') {
-                // Nutzer hat das Share-Sheet bewusst geschlossen – kein Fallback-Download aufdrängen.
-                return true;
-            }
-            console.warn('Web Share mit Dateien fehlgeschlagen, weiche auf Download aus:', err);
-        }
-    }
-    try {
-        files.forEach((file) => {
-            const url = URL.createObjectURL(file);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = file.name;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 10000);
-        });
-        showNotification('Beispielbefund-Dateien heruntergeladen – bitte zusammen mit dem Prompt anhängen.', 'info');
-        return true;
-    } catch (err) {
-        console.error('Download der Beispielbefund-Dateien fehlgeschlagen:', err);
-        return false;
-    }
-}
-
-/* Kopiert den Prompt-Text in die Zwischenablage und gibt bei den Prof.-
-   Schäfer-Prompts die Beispielbefunde zusätzlich in Dateiform mit (Share/
-   Download). Nur wenn keine Dateiübergabe möglich ist, wird der Dokumenten-
-   Text ersatzweise an den Prompt-Text angehängt. */
-async function copyNodeContentToClipboard(nodeId, text, buttonElement, node = null, nodeTitle = null) {
-    if (isSchaeferAttachmentPrompt(nodeId, nodeTitle || node?.title)) {
-        const files = await loadSchaeferAttachmentFiles();
-        if (!files) {
-            // Beispielbefunde konnten nicht geladen werden: NICHT unvollständig
-            // (nur Prompt-Text) als Erfolg melden, da der Prompt ohne sie nicht
-            // funktioniert – stattdessen explizit als Fehler kennzeichnen.
-            showNotification('Beispielbefunde konnten nicht geladen werden. Prompt wurde nicht kopiert.', 'error');
-            return;
-        }
-        // Erst den Text kopieren (verbraucht die User-Geste nicht), dann im
-        // selben Gesten-Fenster das Share-Sheet öffnen bzw. den Download starten.
-        copyToClipboard(text, buttonElement, node);
-        const delivered = await shareOrDownloadSchaeferFiles(files);
-        if (!delivered) {
-            // Letzte Stufe: Dokumenten-Text an den Prompt anhängen, damit die
-            // Beispielbefunde den Nutzer in jedem Fall erreichen.
-            const texts = await Promise.all(files.map((f) => f.text()));
-            copyToClipboard(`${text}\n\n---\n\n${texts.map((t) => t.trim()).join('\n\n---\n\n')}`, buttonElement, node);
-        }
-        return;
-    }
-    copyToClipboard(text, buttonElement, node);
-}
-
 function copyPromptText(buttonElement = null) {
-    const nodeId = modalEl ? modalEl.getAttribute('data-id') : null;
-    const node = nodeId ? findNodeById(jsonData, nodeId) : null;
-    copyNodeContentToClipboard(nodeId, promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button'), node);
+    copyToClipboard(promptFullTextEl.value, buttonElement || document.getElementById('copy-prompt-modal-button'));
 }
 
 function copyPromptTextForCard(node, buttonElement) {
-    copyNodeContentToClipboard(node.id, node.content || '', buttonElement, node);
+    copyToClipboard(node.content || '', buttonElement);
 }
 
 function closeMoreMenu() {
@@ -4003,7 +3869,7 @@ function renderFavoritesDock() {
                 navigateToNode(node);
                 return;
             }
-            copyNodeContentToClipboard(node.id, node.content || '', button, node);
+            copyToClipboard(node.content || '', button, node);
         });
         
         // Add sparkle effect to favorite chip
