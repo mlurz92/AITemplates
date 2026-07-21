@@ -75,6 +75,7 @@ const FAVORITE_ACCENTS = [
 let svgTemplateFolder, svgTemplateExpand, svgTemplateCopy, svgTemplateCheckmark, svgTemplateDelete, svgTemplateEdit, svgTemplateMove;
 
 let sortableInstance = null;
+let favoritesSortableInstance = null;
 let contextMenu = null;
 let contextMenuItemMarkup = null;
 let dragSource = null;
@@ -1221,6 +1222,43 @@ function handleKeyDown(e) {
         } else if (moveItemModalEl.classList.contains('visible')) {
             closeModal(moveItemModalEl);
         }
+        return;
+    }
+
+    handleFavoriteHotkey(e);
+}
+
+/**
+ * Zifferntasten-Hotkeys für die Favoritenleiste: 1–9 kopieren die Vorlagen an
+ * Position 1–9, die 0 die Vorlage an Position 10. Nur aktiv, wenn kein
+ * Eingabefeld fokussiert und kein Dialog geöffnet ist – so bleibt die Sucheingabe
+ * unangetastet – und ausschließlich ohne Zusatztasten, um Browser-Shortcuts
+ * (z. B. Strg+1 für Tabs) nicht zu überschreiben.
+ */
+function handleFavoriteHotkey(e) {
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.isComposing) return;
+    if (!/^[0-9]$/.test(e.key)) return;
+
+    const active = document.activeElement;
+    if (active) {
+        const tag = active.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || active.isContentEditable) {
+            return;
+        }
+    }
+
+    // Bei geöffneten Dialogen keine Kopieraktion auslösen.
+    if ((modalEl && modalEl.classList.contains('visible'))
+        || (createFolderModalEl && createFolderModalEl.classList.contains('visible'))
+        || (moveItemModalEl && moveItemModalEl.classList.contains('visible'))
+        || (linkItemModalEl && linkItemModalEl.classList.contains('visible'))
+        || (contextMenu && contextMenu.classList.contains('visible'))) {
+        return;
+    }
+
+    const index = e.key === '0' ? 9 : Number(e.key) - 1;
+    if (activateFavoriteByHotkey(index)) {
+        e.preventDefault();
     }
 }
 
@@ -3820,8 +3858,29 @@ function renderFavoritesDock() {
         button.className = 'favorite-chip';
         button.dataset.id = id;
         button.dataset.type = 'favorite';
-        button.setAttribute('aria-label', node.type === 'folder' ? `Öffne: ${node.title}` : `Kopiere: ${node.title}`);
         button.dataset.titleFull = node.title || '';
+
+        // Aufsteigende Nummerierung von links nach rechts (entspricht der Sortierung).
+        // Die ersten zehn Chips sind zusätzlich per Zifferntaste (1–9, 0 = 10)
+        // direkt in die Zwischenablage kopierbar.
+        const position = index + 1;
+        const hotkeyDigit = index < 9 ? String(position) : (index === 9 ? '0' : null);
+        button.dataset.position = String(position);
+        if (hotkeyDigit) {
+            button.dataset.hotkey = hotkeyDigit;
+        } else {
+            delete button.dataset.hotkey;
+        }
+
+        const hotkeyHint = hotkeyDigit
+            ? (node.type === 'folder' ? ` – Taste ${hotkeyDigit}: öffnen` : ` – Taste ${hotkeyDigit}: kopieren`)
+            : '';
+        button.setAttribute('aria-label', (node.type === 'folder' ? `Öffne: ${node.title}` : `Kopiere: ${node.title}`) + hotkeyHint);
+        if (hotkeyDigit) {
+            button.title = node.type === 'folder'
+                ? `${node.title}\nTaste ${hotkeyDigit}: Ordner öffnen`
+                : `${node.title}\nTaste ${hotkeyDigit}: In die Zwischenablage kopieren`;
+        }
 
         const accent = FAVORITE_ACCENTS[index % FAVORITE_ACCENTS.length];
         if (accent) {
@@ -3836,7 +3895,8 @@ function renderFavoritesDock() {
 
         const badge = document.createElement('span');
         badge.className = 'favorite-chip-badge';
-        badge.textContent = (node.title || '').trim().charAt(0)?.toUpperCase() || '★';
+        badge.textContent = String(position);
+        badge.setAttribute('aria-hidden', 'true');
 
         const textWrap = document.createElement('span');
         textWrap.className = 'favorite-chip-text';
@@ -3864,14 +3924,8 @@ function renderFavoritesDock() {
 
         button.append(badge, textWrap);
 
-        button.addEventListener('click', () => {
-            if (node.type === 'folder') {
-                navigateToNode(node);
-                return;
-            }
-            copyToClipboard(node.content || '', button, node);
-        });
-        
+        button.addEventListener('click', () => activateFavoriteChip(button));
+
         // Add sparkle effect to favorite chip
         addSparklesToFavoriteChip(button);
 
@@ -3885,8 +3939,101 @@ function renderFavoritesDock() {
 
     favoritesListEl.appendChild(fragment);
 
+    setupFavoritesSortable();
     updateDockPositioning();
     requestFavoritesLayoutFrame();
+}
+
+/**
+ * Aktiviert einen Favoriten-Chip: Ordner werden geöffnet, Prompts in die
+ * Zwischenablage kopiert. Gemeinsame Logik für Klick und Tastatur-Hotkey.
+ */
+function activateFavoriteChip(button) {
+    if (!button) return;
+    const id = button.dataset.id;
+    if (!id) return;
+    const node = findNodeById(jsonData, id);
+    if (!node) return;
+    if (node.type === 'folder') {
+        navigateToNode(node);
+        return;
+    }
+    copyToClipboard(node.content || '', button, node);
+}
+
+/**
+ * Kopiert die Vorlage an Position `index` (0-basiert) der Favoritenleiste in
+ * die Zwischenablage bzw. öffnet den Ordner. Wird von den Zifferntasten
+ * (1–9 → Positionen 1–9, 0 → Position 10) ausgelöst.
+ */
+function activateFavoriteByHotkey(index) {
+    if (!favoritesDockEl || favoritesDockEl.classList.contains('hidden')) return false;
+    if (!favoritesListEl) return false;
+    const chips = favoritesListEl.querySelectorAll('.favorite-chip');
+    const chip = chips[index];
+    if (!chip) return false;
+
+    // Bei horizontal scrollender oder eingeklappter Leiste den angesprochenen
+    // Chip sichtbar machen, damit das Kopieren nachvollziehbar bestätigt wird.
+    if (typeof chip.scrollIntoView === 'function' && !favoritesDockEl.classList.contains('expanded')) {
+        chip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+
+    activateFavoriteChip(chip);
+    return true;
+}
+
+/**
+ * Aktiviert Drag&Drop-Sortierung der Favoritenleiste. Wird nach jedem Rendern
+ * neu aufgesetzt, da die Liste vollständig neu erzeugt wird. Die neue
+ * Reihenfolge wird persistiert und die Leiste – inkl. Nummerierung, Akzentfarben
+ * und Hotkey-Zuordnung – anschließend neu gerendert.
+ */
+function setupFavoritesSortable() {
+    if (!favoritesListEl || typeof Sortable === 'undefined') return;
+
+    if (favoritesSortableInstance) {
+        favoritesSortableInstance.destroy();
+        favoritesSortableInstance = null;
+    }
+
+    if (favoritePrompts.length < 2) return;
+
+    favoritesSortableInstance = new Sortable(favoritesListEl, {
+        animation: 200,
+        draggable: '.favorites-list-item',
+        delay: 160,
+        delayOnTouchOnly: true,
+        touchStartThreshold: 6,
+        forceFallback: true,
+        fallbackTolerance: 4,
+        ghostClass: 'favorite-chip-ghost',
+        dragClass: 'favorite-chip-drag',
+        chosenClass: 'favorite-chip-chosen',
+        scroll: true,
+        scrollSensitivity: 48,
+        scrollSpeed: 12,
+        onStart: () => {
+            if (favoritesDockEl) favoritesDockEl.classList.add('is-reordering');
+        },
+        onEnd: () => {
+            if (favoritesDockEl) favoritesDockEl.classList.remove('is-reordering');
+
+            const newOrder = Array.from(favoritesListEl.querySelectorAll('.favorite-chip'))
+                .map((chip) => chip.dataset.id)
+                .filter(Boolean);
+
+            const changed = newOrder.length === favoritePrompts.length
+                && newOrder.some((id, i) => id !== favoritePrompts[i]);
+
+            if (changed) {
+                favoritePrompts = newOrder;
+                saveFavorites();
+                showNotification('Favoriten-Reihenfolge gespeichert!', 'success');
+                renderFavoritesDock();
+            }
+        },
+    });
 }
 
 

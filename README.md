@@ -1,18 +1,8 @@
 # 🌌 Prompt-Templates — Die ultimative Prompt-Management Web-App
 
-**Prompt-Templates** ist eine hochmoderne, performante und visuell herausragende
-Single-Page-Application (SPA) zur Verwaltung, Organisation, semantischen Suche und
-blitzschnellen Nutzung von Text- und KI-Prompts. Die Anwendung verbindet eine
-**Apple-Cupertino-Liquid-Glass-Ästhetik** mit einer **GPU-gerenderten WebGL-Aurora**,
-einem **neuronalen Such-System**, **teilbaren Deep-Links**, einem **Tag- & Smart-Folder-
-System**, einer **vollständigen Tastatur- und Gestensteuerung**, einem **für Mobilgeräte
-optimierten, aufgeräumten Bedien-Layout** sowie **vollwertigem Offline-Betrieb als
-installierbare PWA**.
+**Prompt-Templates** ist eine installierbare, vollständig offline-fähige Progressive Web App (PWA) zum **Ordnen, Durchsuchen, Verwalten und blitzschnellen Kopieren** von KI-Prompt-Vorlagen. Die Anwendung ist als **Vanilla-JavaScript-Applikation** ohne Build-Schritt konzipiert, kombiniert jedoch ein ambitioniertes **„Liquid Glass"-Designsystem**, eine **echtzeit-gerenderte WebGL-Aurora**, eine **neuronale semantische Suche**, ein **hybrides Cloud-Sync** über Cloudflare KV und eine bis ins letzte Detail durchdachte **Mobile-First-Bedienung** mit Tastatur-, Gesten- und Haptik-Feedback.
 
-Dieses Dokument beschreibt den **vollständigen aktuellen Stand** der Anwendung —
-jeden Bildschirm, jede Komponente, jede Interaktion, jede Datei und jede Design-
-Entscheidung — lückenlos und systematisch kategorisiert. Es ist bewusst **kein
-Changelog**, sondern eine vollständige Momentaufnahme des Ist-Zustands.
+Dieses Dokument beschreibt den **vollständigen aktuellen Stand** der Anwendung — jeden Screen, jede Komponente, jede Interaktion, jede Datei und jeden Fallback-Pfad. Es ist bewusst **kein Changelog**, sondern eine vollständige Momentaufnahme des Ist-Zustands.
 
 ---
 
@@ -22,701 +12,543 @@ Changelog**, sondern eine vollständige Momentaufnahme des Ist-Zustands.
 2. [Design-Philosophie: Liquid Glass & WebGL-Aurora](#2-design-philosophie-liquid-glass--webgl-aurora)
 3. [Mobile-First & PWA-Exzellenz](#3-mobile-first--pwa-exzellenz)
 4. [UI- & UX-Komponenten im Detail](#4-ui--ux-komponenten-im-detail)
-5. [Suche: Lexikalisch, Global & Semantisch](#5-suche-lexikalisch-global--semantisch)
-6. [Tags & Smart Folders](#6-tags--smart-folders)
-7. [Navigation: Routing, Verlauf & Breadcrumb-Sprünge](#7-navigation-routing-verlauf--breadcrumb-sprünge)
-8. [Bedienung: Tastatursteuerung & Karten-Wischgesten](#8-bedienung-tastatursteuerung--karten-wischgesten)
-9. [Mikrointeraktionen, Haptik & Skeletons](#9-mikrointeraktionen-haptik--skeletons)
-10. [Offline-Betrieb & Service Worker](#10-offline-betrieb--service-worker)
-11. [Datenhaltung, Cloud-Sync & Datenmodell](#11-datenhaltung-cloud-sync--datenmodell)
-12. [Weitere Funktionen & Produktivität](#12-weitere-funktionen--produktivität)
-13. [Tastaturkürzel & Gesten — Gesamtreferenz](#13-tastaturkürzel--gesten--gesamtreferenz)
-14. [Barrierefreiheit](#14-barrierefreiheit)
-15. [Performance-Architektur](#15-performance-architektur)
-16. [Code-Architektur & Dateistruktur](#16-code-architektur--dateistruktur)
-17. [Betrieb, Deployment & Konfiguration](#17-betrieb-deployment--konfiguration)
-18. [Graceful Degradation & Fallback-Matrix](#18-graceful-degradation--fallback-matrix)
-19. [Qualitätssicherung & Tests](#19-qualitätssicherung--tests)
+5. [Die Favoritenleiste (Favorites-Dock) — Hotkeys & Drag&Drop](#5-die-favoritenleiste-favorites-dock--hotkeys--dragdrop)
+6. [Suche: Lexikalisch, Global & Semantisch](#6-suche-lexikalisch-global--semantisch)
+7. [Tags](#7-tags)
+8. [Navigation: Routing, Verlauf & Breadcrumb-Sprünge](#8-navigation-routing-verlauf--breadcrumb-sprünge)
+9. [Bedienung: Tastatursteuerung & Karten-Wischgesten](#9-bedienung-tastatursteuerung--karten-wischgesten)
+10. [Karten-Verwaltung: Erstellen, Bearbeiten, Verschieben, Verknüpfen](#10-karten-verwaltung-erstellen-bearbeiten-verschieben-verknüpfen)
+11. [Mikrointeraktionen, Haptik & Skeletons](#11-mikrointeraktionen-haptik--skeletons)
+12. [Offline-Betrieb & Service Worker](#12-offline-betrieb--service-worker)
+13. [Datenhaltung, Cloud-Sync & Datenmodell](#13-datenhaltung-cloud-sync--datenmodell)
+14. [Theme-System & Vollbild](#14-theme-system--vollbild)
+15. [Tastaturkürzel & Gesten — Gesamtreferenz](#15-tastaturkürzel--gesten--gesamtreferenz)
+16. [Barrierefreiheit](#16-barrierefreiheit)
+17. [Performance-Architektur](#17-performance-architektur)
+18. [Code-Architektur & Dateistruktur](#18-code-architektur--dateistruktur)
+19. [Betrieb, Deployment & Konfiguration](#19-betrieb-deployment--konfiguration)
+20. [Graceful Degradation & Fallback-Matrix](#20-graceful-degradation--fallback-matrix)
 
 ---
 
 ## 1. Überblick & Kernkonzept
 
-Prompt-Templates organisiert Prompts in einer **hierarchischen Ordnerstruktur**. Es gibt
-zwei elementare Knotentypen — **Ordner** (Navigation) und **Prompts** (kopierbare Texte) —
-sowie deren **Verknüpfungen** (Symlinks), mit denen ein Element ohne Duplikat in mehreren
-Ordnern erscheinen kann. Über diese Basis legt die App mehrere Produktivitäts- und
-Erlebnis-Schichten:
+### 1.1 Was die App tut
 
-* **Sofort-Kopieren:** Ein Tap auf eine Prompt-Karte kopiert den Inhalt direkt in die
-  Zwischenablage — der Kern-Workflow ist auf minimale Latenz getrimmt.
-* **Drei Suchmodi:** Filtern im aktuellen Ordner, globale Suche über den gesamten Baum
-  und **semantische Suche** mit neuronalen Embeddings (mit heuristischem Offline-Fallback).
-* **Wissensorganisation:** Frei vergebbare **Tags** und automatisch generierte
-  **Smart Folders** (Favoriten, Zuletzt verwendet, Häufig genutzt, Tag-Sammlungen).
-* **Komplette Bedienbarkeit:** **Tastatursteuerung** des gesamten Karten-Grids, **echter
-  Browser-Verlauf** auf Desktop, **Breadcrumb-Sprungvorschau** und **Karten-Wischgesten**
-  auf Touch-Geräten.
-* **Mobil perfektioniert:** Eine **aufgeräumte, niemals überladene Top-Bar** mit einem
-  kontextbewussten **„Mehr"-Overflow-Menü**, bündig angedockter Favoritenbar und
-  pixelgenauer **Safe-Area-Behandlung** (Notch / Dynamic Island / Home-Indicator).
-* **Geräteübergreifend:** Echtzeit-Synchronisierung über einen Cloudflare-Worker (KV),
-  lokaler Offline-Cache und installierbare PWA mit Service-Worker.
-* **Premium-Erlebnis:** GPU-Aurora, Liquid-Glass-Material, Mikrointeraktionen, Haptik,
-  3D-Tilt, Partikel und butterweiche View-Transitions.
+Die App präsentiert eine **hierarchische Bibliothek** aus **Ordnern** und **Prompt-Karten**. Der Nutzer navigiert durch die Ordnerstruktur wie durch ein Dateisystem, öffnet Prompts in einem Modal, **kopiert sie mit einem Tipp in die Zwischenablage** und legt häufig benötigte Vorlagen in einer **Favoritenleiste** ab, aus der sie noch schneller — per Klick oder per **Zifferntasten-Hotkey** — kopiert werden können.
 
-Die App ist bewusst **framework-frei** (kein React/Vue) für maximale Kontrolle und
-minimale Ladezeit. Schwergewichtige Fähigkeiten (z. B. das neuronale Suchmodell) werden
-**lazy** und nur bei Bedarf nachgeladen. Sämtliche Erweiterungen sind **additiv** als
-eigene Schichten implementiert, ohne die Kernlogik zu verändern.
+Die mitgelieferte Bibliothek (`templates.json`) umfasst standardmäßig **12 thematische Hauptordner** (KI-Steuerung & Verhalten, Content-Erstellung, Code-Entwicklung, Radiologie, Recherche, Immobilien, Finanzen, Berichte, Jailbreak, Prompt-Engineering, System-Prompts, Fun) mit insgesamt **25 Ordnern** und **97 Prompt-Vorlagen** in bis zu **drei Verschachtelungsebenen**.
+
+### 1.2 Leitprinzipien
+
+| Prinzip | Umsetzung |
+|---|---|
+| **Kein Build, keine Abhängigkeitshölle** | Reines HTML/CSS/JS. Öffnen von `index.html` genügt. Drei kleine CDN-Bibliotheken (Vivus, SortableJS, GSAP+Flip) werden lazy geladen und sind allesamt optional (Graceful Degradation). |
+| **Additive Schichten statt Monolith** | Kernlogik in `script.js`; `enhancements.js` und `navigation.js` erweitern sie ausschließlich über dokumentierte Hook-Punkte (Function-Wrapping), ohne die Kernlogik umzuschreiben. |
+| **Mobile-First, Desktop-Perfekt** | Jede Interaktion existiert in einer Touch- und einer Maus/Tastatur-Variante. Safe-Areas, Notch, Dynamic Island und iOS-Standalone werden pixelgenau behandelt. |
+| **Alles degradiert sauber** | Kein WebGL? CSS-Blobs. Kein neuronales Modell? Heuristik. Offline? Service-Worker-Cache. Kein Clipboard-API? `execCommand`-Fallback. |
+| **Optimistische, konfliktsichere Persistenz** | Änderungen wandern sofort in die UI und werden gegen einen Zeitstempel-basierten Konfliktschutz in Cloudflare KV geschrieben; parallel offene Tabs synchronisieren sich per `BroadcastChannel`. |
 
 ---
 
 ## 2. Design-Philosophie: Liquid Glass & WebGL-Aurora
 
-### 2.1 Das 5-Layer Liquid Glass System
-Jedes gehobene UI-Element (Karten, Modals, Top-Bar, Favorites-Dock, Banner, Chips,
-Popover, „Mehr"-Menü) nutzt eine geschichtete CSS-Komposition, die physisches Glas
-simuliert:
+Das visuelle Konzept ist ein durchgängiges **„Liquid Glass"**-System: getönte, unscharfe Glasflächen mit feiner Körnung, farbigen Akzent-Auren und weichen, tiefen Schatten, die über einer lebendigen, farbströmenden Hintergrund-Aurora schweben.
 
-1. **Highlight (Lichtreflexion):** Radialer Gradient an der oberen linken Kante
-   (`--glass-highlight`).
-2. **Refraktion (Lichtbrechung):** Diagonaler Gradient (`--glass-refraction`).
-3. **Shadow-Overlay (innere Tiefe):** Abgedunkelter Bereich unten rechts
-   (`--glass-shadow-overlay`).
-4. **Base Background (Grundfärbung):** Halbtransparenter Basiston (`--glass-bg`).
-5. **Backdrop-Filter:** `backdrop-filter: blur(...) saturate(...) brightness(...)` erzeugt
-   den iOS-Vibrant-Look, ergänzt durch **Specular-Highlights** und Drop-Shadows.
+### 2.1 Das mehrschichtige Glas-System
 
-Sämtliche Materialwerte sind als zentrale **CSS Custom Properties** in `:root` definiert
-und werden bei Theme-Wechsel über `html[data-color-scheme="light|dark"]` umgeschaltet.
+Jede Oberfläche (Top-Bar, Karte, Modal, Kontextmenü, Toast, Favoriten-Chip) ist aus denselben Bausteinen aufgebaut:
+
+1. **Backdrop-Blur** – `backdrop-filter: blur()` + Sättigungsanhebung erzeugen die Milchglas-Tiefe.
+2. **Getönte Grundfläche** – halbtransparente Verläufe (`linear-gradient(165deg, …)`) statt flacher Farben.
+3. **Rauschtextur** – eine dezente `--glass-noise`-Überlagerung (`::after`) verhindert Banding und gibt echtes Materialgefühl.
+4. **Akzent-Aura** – ein radialer Glow (`::before`), der bei Hover/Fokus sanft aufleuchtet.
+5. **Mehrlagige Schatten** – kombinierte Drop- und Glow-Shadows für schwebende Tiefe.
+
+Diese Bausteine werden über **CSS Custom Properties** (Design-Tokens) zentral gesteuert — Farben, Akzente, Radien, Dauern (`--duration-1/2/3`), Easing-Kurven (`--ease-smooth`) und Glas-Parameter sind an einer Stelle definiert und ziehen sich konsistent durch die gesamte Oberfläche.
 
 ### 2.2 WebGL-Aurora (Echtzeit-Shader)
-Der kosmische Hintergrund wird durch eine **echtzeit-gerenderte Aurora** auf Basis eines
-**Fragment-Shaders** erzeugt (`aurora-webgl.js`):
 
-* **Technik:** Vollbild-Triangle, Fragment-Shader mit **fraktalem Brownschen Rauschen
-  (FBM)** und **Domain-Warping** — zwei überlagerte, gewarpte Rauschfelder erzeugen weiche,
-  driftende Nordlicht-Schleier.
-* **Theme-adaptiv:** Eigene Akzent-Paletten für Hell-/Dunkelmodus; bei jedem Theme-Wechsel
-  live umgestellt.
-* **Performance & Akkuschonung:** DPR auf 1.5 gedeckelt, `low-power`-Kontext, Render-Loop
-  pausiert automatisch bei Tab-Wechsel (`visibilitychange`).
-* **Reduced Motion:** Bei `prefers-reduced-motion: reduce` ein einziges statisches Standbild.
-* **Sauberer Fallback:** Ohne WebGL bleiben die CSS-Aurora-Blobs (`.shape1–3`) sichtbar.
+Der Hintergrund (`#aurora-container`) enthält zunächst drei statische, weichgezeichnete CSS-Blobs (`.shape1–3`). Sobald die App bootet, **ersetzt `aurora-webgl.js` diese durch eine echtzeitgerenderte Aurora**:
+
+* **Fragment-Shader mit Fraktalem Brownschem Rauschen (FBM) + Domain-Warping** erzeugt weiche, driftende Nordlicht-Schleier.
+* **Zwei überlagerte, gewarpte FBM-Felder** ergeben organisch fließende Bänder; die Farben kommen als Uniforms aus **schema-abhängigen Paletten** (Indigo/Mint/Violett im Dark-, dezenter aufgehellt im Light-Mode).
+* **Vertikaler Verlauf + Vignette**: oben dichter, unten ausgedünnt, an den Rändern sanft ausgeblendet.
+* **Adaptive Performance**: Render-Loop auf **~30 fps gedrosselt**, `devicePixelRatio` auf **1.25 gedeckelt**, `powerPreference: 'low-power'`.
+* **Batterieschonung**: Bei `visibilitychange` (Tab im Hintergrund) pausiert die Loop komplett und nimmt bei Rückkehr wieder auf.
+* **`prefers-reduced-motion`**: Es wird **ein einziges statisches Frame** gezeichnet, keine Animationsschleife.
+* **Sauberer Fallback**: Ohne WebGL-Kontext bleiben die CSS-Blobs unverändert sichtbar — kein Eingriff, kein Fehler.
+
+Öffentliche API: `window.AuroraWebGL { start, stop, setScheme, setVisible, isActive }`. Bei Theme-Wechsel färbt die App die Aurora über `setScheme()` um.
 
 ### 2.3 Farb- & Theme-System
-* **Cupertino-Palette:** Apple System Colors als semantische Akzente.
-* **Hell-/Dunkelmodus:** systembasiert (`prefers-color-scheme`) **und** manuell per Toggle
-  (`data-color-scheme`), persistiert in `localStorage` (`user-color-scheme`). Ein
-  Inline-Skript im `<head>` setzt das Schema **vor dem ersten Paint** (kein Flash).
-* **Dynamische `theme-color`:** Die Statusleisten-Farbe wird je Ansicht aktualisiert und
-  respektiert dabei die **manuelle** Schema-Wahl (nicht nur die Systempräferenz).
+
+Zwei vollwertige Themes (**Dark** & **Light**) sind über `document.documentElement.dataset.colorScheme` umschaltbar. Ein **Inline-Skript im `<head>`** setzt das Theme **noch vor dem ersten Frame** (aus `localStorage` bzw. `prefers-color-scheme`), damit weder Oberfläche noch Favicon/Logo je „falsch" aufblitzen. Das animierte App-Icon existiert in einer Dark- und einer Light-Variante und wird themengekoppelt getauscht (das stabile PNG bleibt als Apple-Touch-/Home-Screen-Icon erhalten, da iOS dort kein SVG rendert).
 
 ---
 
 ## 3. Mobile-First & PWA-Exzellenz
 
-### 3.1 Safe Area, Notch & Dynamic Island (pixelgenau)
-Die Anwendung ist konsequent **edge-to-edge** ausgelegt (`viewport-fit=cover`) und behandelt
-die System-Sicherheitsbereiche exakt, ohne tote Lücken:
+### 3.1 Safe Area, Notch & Dynamic Island
 
-* **Top-Bar als einzige Quelle der Wahrheit:** Die `fixed` positionierte Top-Bar reicht
-  unter die Notch/Dynamic Island; ihr `padding-top` und `min-height` schließen
-  `env(safe-area-inset-top)` ein. JavaScript misst die **tatsächliche** gerenderte Höhe und
-  schreibt sie in `--top-bar-height` (inkl. Inset). **Alle** darunter platzierten Elemente
-  (Karten-Grid, Header, Such-Toolbar, Pull-to-Refresh, fixierter Zurück-Button) richten sich
-  ausschließlich an `--top-bar-height` aus — der Inset wird **niemals doppelt** addiert.
-  Dadurch entsteht auf Geräten mit großer Notch (z. B. iPhone 14 Pro Max, ~59 px) keine
-  überflüssige Leerfläche zwischen Statusleiste und Inhalt. Bereits der erste Paint sitzt
-  korrekt, weil der `--top-bar-height`-Fallback den Inset einschließt, bevor JS misst.
-* **Bündig angedockte Favoritenbar:** Auf Mobilgeräten dockt die Favoritenbar **bündig an
-  die untere Display-Kante** (volle Breite, eckige Unterkante). Das Glas-Panel füllt bis zur
-  Kante; der `env(safe-area-inset-bottom)`-Home-Indicator-Abstand wird als **inneres**
-  Padding gehalten, sodass die Chips sicher über dem Home-Indicator liegen, **ohne** einen
-  toten dunklen Streifen darunter. Auf Desktop bleibt die schwebende, allseitig gerundete
-  Karte erhalten.
-* **Grid-Polster:** Das Karten-Grid reserviert unten genug Platz, damit Inhalte nicht hinter
-  der Favoritenbar verschwinden (`--favorites-footprint`, per ResizeObserver gemessen).
+* Das Viewport-Meta nutzt `viewport-fit=cover` und `interactive-widget=resizes-content`, damit die App unter Notch/Home-Indicator korrekt bis an die Kanten reicht und die Tastatur den Content staucht statt zu überlagern.
+* Ein **Display-Mode-Detektor** (`detectDisplayMode`) unterscheidet **Browser-Tab**, **Standalone (installiert)** und **Fullscreen** und schaltet passende Layout-Metriken (obere/untere Safe-Area-Insets, Statusleisten-Höhe) live um.
+* iOS-Standalone-Besonderheiten (nutzbarer Bereich, untere Home-Indicator-Zone) werden über echte Viewport-Metriken (`updateViewportMetrics`) und CSS-Variablen aufgelöst, sodass keine „toten Streifen" entstehen.
 
 ### 3.2 Natives Interaktions-Gefühl
-* **Auto-Zoom-Schutz:** Alle Eingabefelder (inkl. Tag-Editor und Suchfeld) `font-size: 16px`.
-* **Overscroll:** Bounce per `overscroll-behavior-y: none` deaktiviert.
-* **Touch-Targets:** Unter `@media (pointer: coarse)` mindestens `44×44px`.
-* **Tap-Feedback:** `:active`-States, Ripple-Effekt und Haptik statt grauem Tap-Highlight.
-* **DVH:** Modal-/Container-Höhen nutzen `dvh` für ruckelfreies Tastatur-Verhalten.
+
+* **Pull-to-Refresh**: Am oberen Rand nach unten ziehen löst (via `setupPullToRefresh`) einen echten Cloud-Refresh aus; ein Spinner mit Label (`#pull-to-refresh`) gibt Rückmeldung.
+* **Haptik**: `triggerHapticFeedback()` nutzt die Vibration-API in abgestuften Intensitäten (light/medium/heavy) und ist an Kopieren, Favorisieren und Navigieren gekoppelt.
+* **Kein Text-/Nummern-Auto-Detect**, kein unerwünschtes Zoomen, `user-scalable=no` für App-Feeling.
+* **Touch-optimierte Trefferflächen** und `content-visibility`-basierte Off-Screen-Optimierung.
 
 ### 3.3 Installierbarkeit
-* Vollständiges Web-App-Manifest (`manifest.json`): Icons (192/512, regulär + maskable),
-  `display: standalone`, Scope, Theme-/Background-Farbe.
-* Install-Button fängt `beforeinstallprompt` ab; reagiert auf `appinstalled`.
-* Service Worker (`sw.js`) macht die App vollständig offline-fähig (siehe §10).
+
+* **Vollständiges Web-App-Manifest** (`manifest.json`): Name, Short-Name, `display: standalone`, Theme-/Background-Color, Kategorien, `id`/`scope`, sowie Icons in 192px, 512px, **maskable 512px** und animiertem SVG.
+* **Ein-Klick-Installation**: `beforeinstallprompt` wird abgefangen (`setupPwaInstallPrompt`); ein dedizierter **Installieren-Button** in der Top-Bar erscheint nur, wenn eine Installation tatsächlich möglich ist.
+* **Microsoft-Tiles** via `browserconfig.xml`, Apple-Touch-Icon und themengekoppelte Favicons runden die Plattformabdeckung ab.
 
 ---
 
 ## 4. UI- & UX-Komponenten im Detail
 
-### 4.1 Top-Bar (responsiv & aufgeräumt)
-Die `fixed` positionierte Top-Bar ist der Liquid-Glass-Ankerpunkt der App. Sie enthält den
-**kontextsensitiven Zurück-Button** (am Wurzelknoten unsichtbar, behält aber seinen Platz,
-um Layout-Sprünge zu vermeiden), die **Breadcrumb-Navigation** (horizontal scrollbar, jeder
-Schritt klickbar und mit Sprung-Chevron, siehe §7.3), das **Hinzufügen-Menü**
-(Prompt/Ordner/Verknüpfungen), den **Organisieren-Toggle**, **Zurücksetzen**, das
-**JSON-Menü** (Download/Upload), den **Cloud-Status-Indikator**, den **Theme-Toggle**, den
-**Install-Button**, **Favoriten-leeren**, den **Vollbild-Toggle**, den **Such-Toggle** und
-das **App-Logo** (Home).
+### 4.1 Top-Bar (`#top-bar`)
 
-**Kräftige, gut lesbare Icons:** Die Icons der Top-Bar verwenden vollen Kontrast
-(`--fg-1`) statt der gedämpften Sekundärfarbe, sodass sie auf dem Glas-Material klar und
-scharf erscheinen.
+Die schwebende Glas-Kopfzeile trägt eine eigene, animierte **Topbar-Aurora** (drei geschichtete Layer) und beherbergt — je nach Kontext und Viewport ein- oder ausgeblendet — folgende Steuerungen:
+
+| Element | Funktion |
+|---|---|
+| **Zurück** (`#topbar-back-button`) | Schließt ein offenes Modal oder navigiert eine Ebene nach oben. |
+| **Breadcrumb** (`#breadcrumb`) | Zeigt den aktuellen Pfad; jeder Schritt ist anklickbar, jeder Ordnerschritt trägt einen **Sprung-Chevron** (siehe 8.3). |
+| **Organisieren** (`#organize-button`) | Schaltet den Sortier-/Verschiebe-Modus ein (Icon wechselt zu „Fertig"). |
+| **Hinzufügen** (`#add-button`) | Öffnet ein Menü: Neuer Prompt, Neuer Ordner, Prompt verknüpfen, Ordner verknüpfen. |
+| **Zurücksetzen** (`#reset-button`) | Verwirft lokale Änderungen (nur sichtbar, wenn Daten vorliegen). |
+| **JSON-Optionen** (`#download-button`) | Menü: Download JSON / Upload JSON. |
+| **Speicherquelle** (`#storage-source-button`) | Statusanzeige der aktiven Cloudflare-KV-Live-Synchronisierung. |
+| **Theme** (`#color-scheme-button`) | Wechselt Dark/Light (Mond-/Sonnen-Icon). |
+| **Installieren** (`#install-app-button`) | PWA-Installation (nur wenn verfügbar). |
+| **Favoriten löschen** (`#clear-favorites-button`) | Leert die gesamte Favoritenleiste (mit Bestätigung); nur sichtbar bei vorhandenen Favoriten. |
+| **Vollbild** (`#fullscreen-button`) | Aktiviert/verlässt den Vollbildmodus. |
+| **Suche** (`#search-toggle-button`) | Blendet die Such-Toolbar ein/aus. |
+| **Mehr** (`#more-button`) | Mobiles Overflow-Menü. |
+| **Logo** (`#app-logo-button`) | Springt zur Startseite (Home). |
 
 #### Mobiles Overflow-System („Mehr"-Menü)
-Damit die Leiste auf schmalen Viewports (`≤ 640 px`) niemals überladen wirkt, greift ein
-**kontextbewusstes Overflow-System**:
 
-* **Direkt erreichbare Primäraktionen:** Zurück, Breadcrumb, **Hinzufügen (＋)**, **Suche**
-  und **Startseite (Logo)** bleiben jederzeit in der Leiste.
-* **Sekundäraktionen im „Mehr"-Menü (⋯):** Organisieren, JSON-Download/-Upload,
-  Zurücksetzen, Theme-Wechsel, Vollbild, Installieren und Favoriten-leeren wandern in ein
-  schwebendes Glas-Menü.
-* **Kontextbewusster Aufbau:** Das Menü wird bei jedem Öffnen **dynamisch** neu erzeugt und
-  enthält ausschließlich die **aktuell verfügbaren** Aktionen — ermittelt anhand des
-  Inline-`display`-Status der Original-Buttons. Jeder Eintrag **leitet den Klick an den
-  bestehenden Handler des Original-Buttons weiter** (kein Logik-Duplikat). JSON-Download/
-  -Upload werden als zwei direkte Einträge angeboten.
-* **Robuste Darstellung:** Das Menü ist rechtsbündig verankert, in der Breite begrenzt
-  (`min(18rem, calc(100vw − 5rem))`) und bricht lange Beschriftungen um, sodass es nie über
-  den linken Bildschirmrand hinausragt; bei vielen Aktionen oder geringer (Landscape-)Höhe
-  wird es scrollbar (`max-height` + `overflow-y`).
-* **Barrierefrei:** `aria-haspopup`, `aria-expanded`, `role="menu"`/`role="menuitem"`;
-  Schließen per Außenklick, Auswahl oder **Escape** (Fokus kehrt zum ⋯-Button zurück).
-* **Sync-Status mobil ausgeblendet:** Der reine Cloud-Status-Indikator wird auf Mobilgeräten
-  nicht angezeigt (die Synchronisierung läuft unverändert im Hintergrund). Die mobile Leiste
-  zeigt damit nur: Zurück · Breadcrumb · ＋ · Suche · ⋯ · Logo.
-* **Desktop unverändert:** Ab `> 640 px` sind alle Buttons direkt sichtbar; das ⋯-Menü ist
-  ausgeblendet.
+Auf schmalen Viewports werden Sekundäraktionen nicht abgeschnitten, sondern in ein **kontextbewusstes „Mehr"-Menü** (`#more-menu`) ausgelagert. `buildMoreMenu()` übernimmt beim Öffnen **nur die aktuell tatsächlich verfügbaren** Aktionen (anhand der Inline-`display`-Zustände der Originalbuttons) und leitet Klicks an deren bestehende Handler weiter — es gibt also keine Logik-Duplikate, alle Funktionen bleiben erreichbar.
 
 ### 4.2 Karten (Prompt- & Ordner-Karten)
-Das Grid (`cards-container`) skaliert dynamisch via `auto-fit`/`minmax` mit Clamp-Werten.
 
-* **Zwei Typen:** Ordner-Karten (Navigation) und Prompt-Karten (Kopieren).
-* **3D-Tilt:** Auf Desktop maus-positions-abhängiger 3D-Tilt mit Glow.
-* **Gestaffeltes Einblenden:** Karten erscheinen nacheinander mit Bounce; jenseits der
-  ersten 12 übernimmt ein per JS gesetzter `--card-index`.
-* **Schnell-Aktionen:** Hover/Edit-Mode blendet runde Buttons ein (Editieren, Löschen,
-  Expandieren, Kopieren).
-* **Kontextmenü:** Rechtsklick / Long-Press öffnet ein schwebendes Menü (Favorisieren,
-  Umbenennen, Verschieben, Löschen) — auch für Mehrfachauswahl. Das Menü stellt sein
-  Item-Markup robust wieder her, falls zuvor das Leerflächen-Menü aktiv war.
-* **Karten-Dekorationen:** Tag-Chips (bis zu 3), Usage-Badge (Kopier-Häufigkeit ab 3),
-  Treffer-Hervorhebung (`<mark>`) bei aktiver Suche.
-* **Tastatur-Fokusring:** Bei Tastaturnavigation umrandet ein deutlicher Indigo-Glow die
-  fokussierte Karte (`.kbd-focus`, siehe §8.1).
-* **Wisch-Affordanzen (Touch):** Rechts-Wisch = Favoriten-Flash, Links-Wisch enthüllt einen
-  Aktionstray (siehe §8.2).
+Das Karten-Grid (`#cards-container`) rendert für jedes Kind des aktuellen Ordners eine Karte:
 
-### 4.3 Favorites-Dock
-Smartes Dock am unteren Rand: Chips mit individueller Akzentfarbe, Fluid-Layout
-(`full`/`compact`), Swipe-to-Expand, Resize-Observer-gesteuerte Footprint-Berechnung,
-Sparkle-Mikroanimation. Selbstheilend: ungültige Favoriten werden beim Rendern entfernt.
-Auf Mobilgeräten ist das Dock **bündig an die Display-Unterkante angedockt** (volle Breite,
-eckige Unterkante, Home-Indicator-Abstand als inneres Padding, siehe §3.1); auf Desktop
-schwebt es als allseitig gerundete, zentrierte Karte.
+* **Ordnerkarten** tragen ein animiertes Ordner-Icon und navigieren beim Tippen hinein.
+* **Prompt-Karten** öffnen beim Tippen das Prompt-Modal; ein direkter **Kopier-Button** auf der Karte kopiert ohne Umweg.
+* **Verknüpfungen** (`prompt-link` / `folder-link`) verweisen auf ein Ziel an anderer Stelle und werden über `resolveLinkedNode()` transparent aufgelöst; hängende Verweise werden per `pruneDanglingLinks()` bereinigt.
+* **Tag-Chips** (bis zu 3) erscheinen automatisch auf Karten mit Tags.
+* **Stagger-Einblendung**: Karten werden über eine `--card-index`-Verzögerung nacheinander eingeblendet.
+* **Mehrfachauswahl**: Karten lassen sich (Kontextmenü/Selektion) mehrfach markieren, um gebündelt zu favorisieren, zu verschieben oder zu löschen.
+* **Tastaturfokus-Ring** (`.kbd-focus`) und **Wisch-Zustände** (`.swipe-*`) sind vollständig gestylt.
 
-### 4.4 Modal-System & Overlays
-iOS-Sheets, die von unten gleiten: **Prompt-Detail**, **Ordner erstellen**, **Verknüpfen**,
-**Verschieben**, **JSON-Import**.
+### 4.3 Modal-System & Overlays
 
-* **Prompt-Modal:** Voller Text (read-only/editierbar), Favoriten-, Edit-, Speichern-,
-  Kopier- und Schließen-Buttons.
-* **Tag-Editor:** Direkt unter dem Prompt-Text; entfernbare Tag-Chips + Eingabefeld;
-  Änderungen werden sofort persistiert/synchronisiert; im „Neuer Prompt"-Modus ausgeblendet.
-* **Verschieben-Dialog:** Ordnerbaum mit Einrückung; gesperrt werden das Element selbst,
-  sein aktueller Elternordner **und der gesamte eigene Teilbaum** (Zyklus-Schutz).
+Alle Overlays teilen sich das Glas-Modal-Muster (`.modal` + `.modal-content.card`) und werden mit `openModal()`/`closeModal()` gesteuert (inklusive Hash-Spiegelung, siehe 8.1):
 
-### 4.5 Such-Toolbar
-Schwebendes Glas-Panel mit Suchfeld und erweiterter Steuerung: Scope-Umschalter (Ordner/
-Global/Semantik) und Filter-Chips (Alle/Favoriten/Zuletzt/Ordner/Prompts).
+* **Prompt-Modal** (`#prompt-modal`): Titel-Feld (im Edit-Modus), großes readonly-Textfeld mit dem Prompt, sowie Buttons **Favorisieren**, **Bearbeiten**, **Speichern**, **Kopieren**, **Schließen**. Im Bearbeiten-Modus wird der Text editierbar und der Titel einblendbar. Unter dem Text sitzt der **Tag-Editor** (Chips + Eingabefeld).
+* **Neuer Ordner** (`#create-folder-modal`): Namenseingabe + Erstellen/Abbrechen.
+* **Verknüpfung hinzufügen** (`#link-item-modal`): Ordnerbaum zur Zielauswahl.
+* **Verschieben nach…** (`#move-item-modal`): Ordnerbaum als Verschiebeziel.
+* **JSON importieren** (`#upload-json-modal`): **Drag&Drop-Ablagezone** *oder* Dateiauswahl; validiert das Schema vor dem Import.
 
-### 4.6 Ergebnis-Banner & Smart-Collections-Leiste
-* **Ergebnis-Banner:** Bei aktiver Suche/Sammlung Kontext (z. B. „Semantische Suche ·
-  neuronal", „# medizin"), Trefferzahl und Zurücksetzen-Button.
-* **Smart-Collections-Leiste:** Auf der Startseite Sammlungs-Chips + Tag-Wolke (siehe §6).
+Modale schließen per **Escape**, **Backdrop-Klick** und (kontextabhängig) **Browser-Zurück**.
 
-### 4.7 Breadcrumb-Sprung-Popover
-Ein schwebendes Glas-Popover, das die Unterordner eines Breadcrumb-Schritts zum
-Direktsprung anbietet (siehe §7.3).
+### 4.4 Such-Toolbar (`#view-toolbar`)
 
-### 4.8 Benachrichtigungen (Toasts)
-Zentrale `showNotification`-Komponente: Typen `info`/`success`/`error`, Häkchen-Icon bei
-Erfolg, automatisches Ausblenden.
+Ein einklappbares Suchfeld (`#search-input`), das der Suchknopf ein-/ausblendet. Direkt darunter baut die Enhancement-Schicht eine **erweiterte Steuerleiste** aus **Scope-Tabs** (Ordner/Global/Semantik) und **Filter-Chips** (Alle/Favoriten/Ordner/Prompts) — Details in Abschnitt 6.
+
+### 4.5 Ergebnis-Banner
+
+Sobald ein Such-, Tag- oder Filterkontext aktiv ist, erscheint über den Treffern ein **Ergebnis-Banner** mit Kontextbeschreibung (z. B. „Semantische Suche · neuronal · ‚Bericht'"), **Trefferzahl** und einem **Zurücksetzen**-Button.
+
+### 4.6 Breadcrumb-Sprung-Popover
+
+Jeder Ordner-Schritt im Breadcrumb erhält einen **Chevron-Button** (bzw. auf Touch: Long-Press), der ein **Popover** mit allen direkten Unterordnern öffnet — inklusive Kind-Anzahl — für einen Direktsprung an beliebige Stelle des Baums (siehe 8.3).
+
+### 4.7 Benachrichtigungen (Toasts)
+
+`showNotification(message, type)` zeigt Glas-Toasts (`#notification-area`) in den Typen **info**, **success** und **error** mit automatischer Ausblendung; ein laufender Timeout wird sauber ersetzt, sodass sich Meldungen nicht stapeln.
+
+### 4.8 Kontextmenü
+
+Rechtsklick (Desktop) bzw. Long-Press (Touch) auf Karten und Favoriten-Chips öffnet ein Glas-Kontextmenü mit Aktionen wie **Favorisieren/Entfernen**, **Umbenennen**, **Verschieben**, **Löschen** — kontextabhängig ein-/ausgeblendet (z. B. keine Umbenennung für Favoriten-Chips, andere Optionen für Ordner). Ein separates Menü für den leeren Bereich bietet **Organisieren umschalten**, **Neuer Prompt**, **Neuer Ordner**.
+
+### 4.9 Fester Zurück-Button
+
+Ein zusätzlicher, fixierter **Zurück-zur-Home-Button** (`#fixed-back`) erscheint kontextabhängig für schnelle Rückkehr aus der Tiefe der Struktur.
 
 ---
 
-## 5. Suche: Lexikalisch, Global & Semantisch
+## 5. Die Favoritenleiste (Favorites-Dock) — Hotkeys & Drag&Drop
 
-Dreistufiges System (`enhancements.js`), implementiert durch Umhüllung von
-`getVisibleNodesForCurrentView` und `renderView`.
+Die **Favoritenleiste** (`#favorites-dock`) ist die zentrale Produktivitätskomponente: eine schwebende, horizontal scrollende Chip-Leiste am unteren Rand, in der die am häufigsten benötigten Prompts (und Ordner) als farbige **Favoriten-Chips** liegen. Sie erscheint automatisch, sobald mindestens ein Favorit existiert, und blendet sich vollständig aus, wenn keiner mehr vorhanden ist.
 
-### 5.1 Such-Bereiche (Scopes)
-| Scope | Verhalten |
-|-------|-----------|
-| **Ordner** | Filtert nur den aktuell geöffneten Ordner (Standard). |
-| **Global** | Durchsucht den gesamten Baum. |
-| **Semantik** | Neuronale Ähnlichkeitssuche über den gesamten Baum. |
+### 5.1 Aufbau eines Favoriten-Chips
 
-Das Schließen der Suche setzt Scope, Filter und Sammlung zurück und kehrt sauber zur
-Ordneransicht zurück (deckt Toggle, Escape und Außenklick ab).
+Jeder Chip (`.favorite-chip`) besteht aus:
 
-### 5.2 Filter-Chips
-**Alle**, **★ Favoriten**, **🕑 Zuletzt**, **🗂 Ordner**, **📝 Prompts** — schränken die
-Kandidatenmenge zusätzlich ein.
+* einem **Positions-Badge** mit der **aufsteigenden Nummer** des Chips,
+* dem **Titel** (bis zu drei Zeilen, dynamisch skaliert),
+* einer **Vorschauzeile** des Prompt-Inhalts (bei Prompts),
+* einer **rotierenden Akzentfarbe** aus einer 8er-Palette (jeder Chip erhält je nach Position seine eigene Farbe: Rahmen, weicher Hintergrund, Glow, Badge),
+* einer **Sparkle-Hover-Animation** und der **Kopier-Erfolgs-Animation** (grünes Aufleuchten).
 
-### 5.3 Semantische Suche (neuronale Embeddings)
-* **Neuronaler Pfad:** Beim ersten semantischen Suchlauf wird **lazy** Transformers.js
-  (`@huggingface/transformers`) geladen und das quantisierte Modell
-  **`Xenova/all-MiniLM-L6-v2`** (`dtype: 'q8'`) initialisiert. Pro Knoten (Titel + Inhalt +
-  Tags) wird ein **Embedding** berechnet, **pro Sitzung nach Inhalts-Hash gecacht** und per
-  **Kosinus-Ähnlichkeit** gerankt.
-* **Inkrementelles Ranking:** Während das Modell rechnet, erscheint sofort ein
-  **heuristisches Vorschau-Ranking**; sobald neuronale Scores vorliegen, rendert die Ansicht
-  automatisch neu.
-* **Begrenzter Query-Cache:** Score-Ergebnisse pro Suchanfrage werden zwischengespeichert,
-  aber **LRU-artig auf 50 Einträge begrenzt**, damit der Speicher über lange Sitzungen nicht
-  unbegrenzt wächst.
-* **Heuristischer Offline-Fallback:** Ohne Netz/Modell greift ein lexikalisch-semantischer
-  Scorer (Token-Overlap + **deutsche Synonym-Expansion** + **Fuzzy/Levenshtein** +
-  Titel-Gewichtung). Die App ist damit **immer** semantisch durchsuchbar.
-* **Modus-Anzeige:** Ein Badge am „Semantik"-Tab signalisiert „AI" (neuronal) bzw. „≈"
-  (Heuristik); der Banner nennt den genutzten Modus.
+Das Layout ist **vollständig adaptiv**: Chip-Breite, Höhe, Titel-/Vorschau-Zeilenzahl und Schriftskalierung werden über einen `ResizeObserver` und mehrere Layout-Frames (`applyFavoriteChipMetrics`, `fitFavoriteChipText`, `syncFavoriteChipHeight`) live an den verfügbaren Platz angepasst. Off-Screen-Chips nutzen `content-visibility: auto` für Rendering-Ersparnis.
 
-### 5.4 Lexikalische Suche & Hervorhebung
-Gewichtetes Scoring (exakter Titel-Match > Titel-Präfix > Titel-Teilstring > Tag-Treffer >
-Inhalts-Treffer > Token-Teiltreffer). Treffer im Kartentitel werden mit
-`<mark class="search-hl">` markiert. Da die Normalisierung Umlaute/ß längenverändernd
-ersetzt (`ä→ae`, `ö→oe`, `ü→ue`, `ß→ss`), bildet die Hervorhebung die normalisierten
-Trefferindizes **exakt auf die Original-Offsets zurück** — so sitzt das `<mark>` auch bei
-Titeln mit Umlauten (z. B. „Über Bilder", „Größe ändern") immer korrekt auf dem Treffer.
+### 5.2 Kopieren per Klick
 
-### 5.5 Robustheit
-Jeder Suchpfad ist in `try/catch` gekapselt; bei Fehler fällt die App auf die einfache
-`includes`-Filterung zurück.
+* **Tipp auf einen Prompt-Chip** kopiert dessen Inhalt sofort in die Zwischenablage, zeigt die grüne Erfolgs-Animation, aktualisiert die `aria-label` („Kopiert: …") und löst Haptik aus.
+* **Tipp auf einen Ordner-Chip** navigiert stattdessen in den Ordner.
 
----
+### 5.3 ⭐ Hotkeys: Kopieren per Zifferntaste
 
-## 6. Tags & Smart Folders
+Jeder Favoriten-Chip trägt eine **aufsteigende Nummerierung von links nach rechts**, die **exakt der Sortierreihenfolge** in der Leiste entspricht. Diese Nummer ist zugleich der **Hotkey**:
 
-### 6.1 Tags
-* **Datenmodell:** Prompts (optional auch Ordner) tragen ein optionales `tags: string[]`.
-* **Bearbeitung:** Tag-Editor im Prompt-Modal (Hinzufügen per Enter, Entfernen per ×),
-  case-/umlaut-insensitive Duplikatsperre.
-* **Persistenz:** Teil von `jsonData`, Sync und Export.
-* **Sichtbarkeit:** Tag-Chips auf Karten und als anklickbare Filter.
+* **Tasten `1`–`9`** kopieren die Vorlagen an **Position 1–9** in die Zwischenablage.
+* **Taste `0`** kopiert die Vorlage an **Position 10**.
+* Das **Badge auf jedem Chip** zeigt die Positionsnummer an und macht die Tastenzuordnung damit unmittelbar sichtbar; `title`-Tooltip und `aria-label` kündigen den jeweiligen Hotkey zusätzlich an (z. B. „Kopiere: … – Taste 3: kopieren").
+* Ist der adressierte Favorit ein **Ordner**, öffnet der Hotkey — analog zum Klick — diesen Ordner statt zu kopieren.
+* Der angesprochene Chip **scrollt bei eingeklappter/horizontal scrollender Leiste sanft ins Sichtfeld** und zeigt dieselbe **Kopier-Erfolgs-Animation** wie beim Klick, sodass die Aktion nachvollziehbar bestätigt wird.
 
-### 6.2 Smart Folders (virtuelle Sammlungen)
-Auf der Startseite über den Karten: **★ Favoriten**, **🕑 Zuletzt verwendet**,
-**🔥 Häufig genutzt** und eine **Tag-Wolke** (Top 12 nach Häufigkeit). Ein Klick öffnet die
-Sammlung als virtuelle, globale Ergebnisansicht. Sammlungen sind rein abgeleitet und
-verändern die echte Ordnerstruktur nicht.
+**Sichere Auslösung** — die Hotkeys greifen bewusst nur dann, wenn sie niemanden stören:
 
-### 6.3 Usage- & Recency-Tracking
-Lokal in `localStorage` (`pt-usage-stats-v1`): `{ usage: { [id]: { count, last } },
-recent: [id, …] }`. Erfasst Kopiervorgänge (Zähler) und Öffnungen (Zeitstempel). Speist
-Smart Folders, Usage-Badges und den „Zuletzt"-Filter. Die jüngste Liste ist auf 24 Einträge
-begrenzt; Schreibvorgänge sind entprellt.
+* **kein Eingabefeld fokussiert** (kein `input`, `textarea`, `select` oder `contenteditable`) — die Sucheingabe und alle Textfelder bleiben unangetastet;
+* **kein Dialog offen** (weder Prompt-, Ordner-, Verknüpfungs- noch Verschiebe-Modal, kein Kontextmenü);
+* **keine Zusatztaste gedrückt** (kein `Strg`/`Ctrl`, `Alt`, `Meta`/`Cmd`, `Shift`) — Browser-Shortcuts wie `Strg+1` zum Tab-Wechsel bleiben damit vollständig erhalten;
+* die **Favoritenleiste ist sichtbar**.
+
+### 5.4 ⭐ Drag&Drop: Reihenfolge sortieren
+
+Die Reihenfolge der Favoriten lässt sich **einfach per Drag&Drop** direkt in der Leiste umsortieren (realisiert mit **SortableJS**):
+
+* **Desktop**: Chip mit der Maus greifen und an die gewünschte Position ziehen — der Reorder startet unmittelbar bei der ersten Bewegung; ein reiner Klick (ohne nennenswerte Bewegung) löst weiterhin das Kopieren aus.
+* **Touch**: Ein **kurzer Wisch** scrollt die Leiste wie gewohnt; ein **kurzes Halten (~160 ms) und Ziehen** startet den Reorder. So bleiben Scrollen und Sortieren konfliktfrei getrennt (`delay: 160`, `delayOnTouchOnly`, `touchStartThreshold`).
+* Während des Ziehens wird die **Scroll-Snap-Rastung deaktiviert**, der gezogene Chip erhält eine **angehobene Drag-Optik** (leichte Skalierung/Rotation, kräftiger Schatten) und der Zielplatz eine **gestrichelte Geist-Markierung** (`ghostClass`/`dragClass`/`chosenClass`).
+* Beim Loslassen wird die **neue Reihenfolge sofort persistiert** (`localStorage`), eine Bestätigung „Favoriten-Reihenfolge gespeichert!" erscheint, und die Leiste rendert **komplett neu** — dabei werden **Positions-Badges, Akzentfarben *und* die Hotkey-Zuordnung automatisch neu vergeben**, sodass Nummerierung und Tastenkürzel stets der sichtbaren Reihenfolge entsprechen.
+* Die Sortier-Instanz wird nach jedem Rendern frisch aufgesetzt und **erst ab zwei Favoriten** aktiviert. Ist SortableJS (z. B. offline und noch nicht gecacht) nicht verfügbar, bleibt die Leiste voll funktionsfähig — lediglich das Umsortieren per Drag entfällt (Graceful Degradation).
+
+### 5.5 Weitere Dock-Eigenschaften
+
+* **Erweitern/Einklappen**: Bei Überlauf erscheint ein **Toggle** (`#favorites-expand-toggle`), der die Leiste in eine **mehrzeilige Rasteransicht** aufklappt; auf Touch öffnet/schließt auch eine **vertikale Wischgeste** das Dashboard.
+* **Overflow-Marker**: Links/rechts zeigen dezente Verläufe an, dass weiter gescrollt werden kann; die Scrollleiste blendet sich bei Interaktion ein und nach kurzer Ruhe wieder aus.
+* **Footprint-Messung**: Die tatsächliche Dock-Höhe wird gemessen und als `--favorites-footprint` bereitgestellt, damit der Content darüber nie verdeckt wird.
+* **Favorisieren von überall**: aus dem Prompt-Modal (Stern-Button), dem Kontextmenü, per Tastatur (`f`) oder per Rechts-Wisch auf einer Karte.
+* **Alles löschen**: der Stern-mit-Schrägstrich-Button in der Top-Bar leert die Leiste nach Rückfrage.
+
+Die Favoritenliste selbst wird als Array von Knoten-IDs unter dem `localStorage`-Schlüssel `favoritePrompts` gehalten und beim Laden gegen beschädigte/veraltete Daten abgesichert (nur nicht-leere String-IDs). Verweise auf zwischenzeitlich gelöschte Knoten werden beim Rendern automatisch aus der Liste entfernt.
 
 ---
 
-## 7. Navigation: Routing, Verlauf & Breadcrumb-Sprünge
+## 6. Suche: Lexikalisch, Global & Semantisch
 
-### 7.1 Hash-Deep-Links
-* **URL-Schema:** `#/n/<ordnerId>/<ordnerId>/…`, zusätzlich `…/p/<promptId>` bei offenem
-  Prompt-Modal.
-* **Eingehende Links:** Beim Laden und bei `hashchange` werden die Ziel-IDs aufgelöst, die
-  vollständige Vorfahren-Kette via `buildPath` rekonstruiert und dorthin navigiert; ein
-  verlinktes Prompt-Modal wird bei Bedarf geöffnet.
-* **Doppel-Navigations-Schutz:** Stimmt der Zustand bereits mit dem Hash überein, wird die
-  Navigation übersprungen.
+Die Suche ist ein eigenes Subsystem in `enhancements.js`, das sich über den Hook `getVisibleNodesForCurrentView` in die Render-Pipeline einklinkt.
 
-### 7.2 Echter Browser-Verlauf auf Desktop
-`navigation.js` implementiert einen vollwertigen Vor-/Zurück-Verlauf auf Desktop:
+### 6.1 Such-Bereiche (Scopes)
 
-* **Mechanik:** Bei jeder echten Nutzer-Navigation (Karten-/Breadcrumb-/Home-/Zurück-Klick)
-  wird ein **echter History-Eintrag** angelegt. Da die Deep-Link-Schicht den aktuellen
-  Eintrag per `replaceState` normalisiert, stellt der Verlaufs-Controller den vorigen
-  Eintrag wieder her und legt anschließend per `pushState` einen neuen an — so bleibt die
-  komplette Ordnerhistorie erhalten.
-* **Bedienung:** Browser-**Zurück/Vorwärts**-Buttons **und Maus-Seitentasten** blättern
-  durch die besuchten Ordner. Zurück aus einem geöffneten Prompt schließt das Modal.
-* **Mobile bleibt unverändert:** Die bestehende, pfadbasierte `pushState`-History für
-  Mobilgeräte wird nicht angetastet (Controller ist desktop-exklusiv).
-* **View-Transitions:** Alle Wechsel laufen über `performViewTransition` (View-Transitions-
-  API, sonst direkter DOM-Tausch).
+Drei umschaltbare Tabs unter dem Suchfeld:
 
-### 7.3 Breadcrumb-Sprungvorschau
-Jeder Breadcrumb-Schritt, der Unterordner besitzt, erhält ein **▾-Chevron**. Klick (oder
-**Long-Press** auf dem Schritt unter Touch) öffnet ein **Glas-Popover** mit den
-Unterordnern des Schritts — inkl. Ordner-Icon, Titel und Kind-Anzahl. Ein Klick springt
-direkt in den Zielordner (vollständige Pfad-Rekonstruktion). Das Popover wird im Viewport
-gehalten und schließt bei Außenklick, Escape oder Scrollen.
+* **Ordner** – durchsucht nur den aktuell geöffneten Ordner.
+* **Global** – durchsucht die **gesamte** Bibliothek.
+* **Semantik** – bedeutungsbasierte Suche über die gesamte Bibliothek (siehe 6.3). Ein Badge zeigt an, ob gerade das **neuronale Modell** („AI") oder die **Heuristik** („≈") aktiv ist.
 
-### 7.4 Weitere Navigationswege
-* **Breadcrumb-Schritte** selbst sind klickbar (Sprung auf diese Ebene).
-* **App-Logo** und **Fixed-Back-Button** springen zur Startseite.
-* **Favoriten-Ordner-Chips** navigieren direkt in den Ordner.
-* **Karten-Klick** auf Ordner navigiert hinein; auf Prompt kopiert (Detailbutton öffnet das
-  Modal).
+### 6.2 Filter-Chips
+
+Orthogonal zu den Scopes filtern vier Chips die Ergebnismenge: **Alle**, **★ Favoriten**, **🗂 Ordner**, **📝 Prompts**.
+
+### 6.3 Semantische Suche (neuronale Embeddings + Heuristik-Fallback)
+
+* **Neuronaler Pfad**: Bei aktivem Semantik-Scope wird lazy **Transformers.js** (`@huggingface/transformers`) geladen und das Modell **`Xenova/all-MiniLM-L6-v2`** (q8-quantisiert, browsergecacht) initialisiert. Knoten-Texte werden zu **Embeddings** verarbeitet (gecacht nach Inhalts-Hash) und per **Cosinus-Ähnlichkeit** gegen die Query gerankt.
+* **Heuristik-Fallback**: Ist das Modell nicht verfügbar (offline, Ladefehler), greift **sofort** ein rein lokaler Scorer aus **Token-Overlap + Synonym-Expansion + Fuzzy-Matching (Levenshtein)** mit Titel-Gewichtung — es gibt also immer sofort brauchbare Ergebnisse, während das neuronale Ergebnis ggf. nachreicht.
+* **Robustheit**: Debouncing (220 ms), **LRU-begrenzter Query-Cache** (max. 50 Einträge), deutsche Umlaut-Normalisierung (ä→ae etc.), Stopword-Filter und ein Synonym-Wörterbuch (u. a. mit Medizin-/Radiologie-Begriffen).
+
+### 6.4 Lexikalische Suche & Trefferhervorhebung
+
+Im Ordner-/Global-Scope läuft ein gewichteter lexikalischer Scorer: exakte Titeltreffer (100) > Titel-Präfix (40) > Titel-Teiltreffer (25) > Tag-Treffer (18) > Inhaltstreffer (8), mit tokenweisem Teil-Matching als Rückfallebene. Treffer im Kartentitel werden **präzise hervorgehoben** (`<mark class="search-hl">`) — inklusive einer Index-Rückrechnung, damit die Markierung trotz Umlaut-Normalisierung exakt sitzt.
+
+### 6.5 Kontext-Ende
+
+Jede echte Navigation (Ordner öffnen, Home, Breadcrumb, Zurück) sowie das Schließen der Suche setzen Scope, Filter, Tag und Query sauber zurück, sodass man nie in einem „hängengebliebenen" Suchzustand landet.
 
 ---
 
-## 8. Bedienung: Tastatursteuerung & Karten-Wischgesten
+## 7. Tags
 
-### 8.1 Vollständige Tastatursteuerung des Karten-Grids
-`navigation.js` macht das gesamte Grid per Tastatur bedienbar (aktiv, sobald eine Pfeiltaste
-gedrückt wird; pausiert automatisch, wenn ein Modal offen ist, in einem Eingabefeld getippt
-wird oder ein Modifier wie ⌘/Ctrl aktiv ist — damit Kürzel wie ⌘K erhalten bleiben):
+* **Tag-Editor im Prompt-Modal**: Unter dem Prompt-Text lassen sich **Tags als Chips** hinzufügen (Enter) und wieder entfernen (×). Änderungen werden debounced in die Cloud persistiert.
+* **Tag-Chips auf Karten**: Bis zu drei Tags erscheinen automatisch auf jeder Karte.
+* **Tag-Filter in der Suche**: Tags fließen sowohl in die lexikalische als auch in die semantische Bewertung ein und lassen sich als Filterkontext nutzen.
+
+---
+
+## 8. Navigation: Routing, Verlauf & Breadcrumb-Sprünge
+
+### 8.1 Hash-Deep-Links (teilbare URLs)
+
+Der aktuelle Zustand wird kontinuierlich in den URL-Hash gespiegelt: `#/n/<id>/<id>/…` für den Ordnerpfad, optional `…/p/<id>` für ein geöffnetes Prompt-Modal. So sind **einzelne Ordner und Prompts als Link teilbar** und beim Laden wird der Deep-Link rekonstruiert (`applyInitialDeepLink` → `navigateToPath`). Ein `hashLock` verhindert Rückkopplungsschleifen aus selbst ausgelösten `hashchange`-Events.
+
+### 8.2 Echter Browser-Verlauf auf Desktop
+
+`navigation.js` verwandelt Navigationsschritte in **echte History-Einträge** (`pushState`/`replaceState`), sodass **Browser-Zurück/Vor** und die **Maus-Seitentasten** korrekt durch den Ordnerbaum blättern. Ein gezieltes „User-Nav"-Flag unterscheidet echte Nutzeraktionen von reinen Re-Renders. Mobile behält seine eigene, schlankere Navigationslogik.
+
+### 8.3 Breadcrumb-Sprungvorschau
+
+Jeder Ordner-Schritt im Breadcrumb bekommt einen **Chevron** (bzw. Long-Press auf Touch), der ein **Popover** aller direkten Unterordner mit Kind-Anzahl öffnet — für Direktsprünge an jede Stelle. Das Popover positioniert sich viewport-sicher und schließt bei Außenklick, Escape oder Scroll.
+
+### 8.4 Weitere Navigationswege
+
+* **View-Transitions** (`performViewTransition`) sorgen für sanfte, richtungsabhängige Übergänge zwischen Ansichten (mit GSAP/Flip, wenn verfügbar).
+* **Zurück-Edge-Geste** am linken Rand (Touch) und **fester Home-Button** ergänzen die Rückkehrpfade.
+
+---
+
+## 9. Bedienung: Tastatursteuerung & Karten-Wischgesten
+
+### 9.1 Vollständige Tastatursteuerung des Karten-Grids
+
+Ein sichtbarer Fokusring (`.kbd-focus`) wandert per Tastatur durch das Grid:
 
 | Taste | Aktion |
-|-------|--------|
-| **← / →** | Fokus eine Karte nach links/rechts |
-| **↑ / ↓** | Fokus eine Zeile nach oben/unten (Spaltenzahl wird live aus dem Layout gemessen) |
-| **Home / End** | Fokus auf erste/letzte Karte |
-| **Enter** | Ordner öffnen (hineinnavigieren) bzw. Prompt-Detail öffnen |
-| **Leertaste** | Prompt kopieren (bei Ordner: hineinnavigieren) |
-| **f** | Fokussiertes Element favorisieren/entfavorisieren |
-| **e** | Umbenennen (Inline-Edit der Karte) |
-| **Entf / Backspace** | Element löschen (mit Bestätigung) |
+|---|---|
+| **Pfeiltasten** | Fokus nach links/rechts/oben/unten (spaltenbewusst berechnet). |
+| **Home / End** | Erste / letzte Karte. |
+| **Enter** | Ordner öffnen bzw. Prompt-Modal öffnen. |
+| **Leertaste** | Prompt direkt kopieren (bzw. Ordner öffnen). |
+| **f / F** | Fokussierte Karte favorisieren/entfernen. |
+| **e / E** | Karte umbenennen. |
+| **Entf / Rücktaste** | Karte löschen. |
 
-Die fokussierte Karte erhält einen deutlichen **Indigo-Fokusring** (`.kbd-focus`) und wird
-sanft in den sichtbaren Bereich gescrollt. Mausinteraktion hebt den Tastaturfokus auf;
-nach jedem Neu-Rendern wird der Fokus zurückgesetzt.
+Die Steuerung deaktiviert sich automatisch, wenn ein Modal offen ist, in einem Feld getippt wird oder Modifier-Tasten aktiv sind. Mausinteraktion hebt den Tastaturfokus auf, um Doppelfokus zu vermeiden; nach jedem Render wird der Fokus zurückgesetzt.
 
-### 8.2 Karten-Wischgesten (Touch)
-Auf Touch-Geräten reagieren Karten auf horizontale Wischgesten (vertikales Scrollen bleibt
-unbeeinträchtigt; der linke Bildschirmrand ist der Zurück-Geste vorbehalten):
+### 9.2 Zifferntasten-Hotkeys der Favoritenleiste
 
-* **Wisch nach rechts → Favorisieren:** löst den Favoriten-Status um, zeigt einen
-  **Favoriten-Flash** (aufleuchtender Stern) und ein haptisches Feedback; die Karte schnappt
-  zurück.
-* **Wisch nach links → Aktionstray:** enthüllt hinter dem Karteninhalt drei runde
-  Aktions-Buttons — **Bearbeiten** (Umbenennen), **Verschieben** (öffnet den Ordnerbaum-
-  Dialog) und **Löschen**. Der Tray bleibt geöffnet, bis eine Aktion gewählt oder daneben
-  getippt wird.
+Zusätzlich zur Grid-Steuerung kopieren **`1`–`9` und `0`** die Favoriten an Position 1–10 (Details in Abschnitt 5.3). Beide Tastatur-Subsysteme koexistieren konfliktfrei (unterschiedliche Tastenräume, gleiche Schutzbedingungen).
 
-Die container-weite „Wisch-rechts = Zurück"-Geste ignoriert auf einer Karte begonnene
-Wischbewegungen, sodass sich Karten- und Navigationsgesten nicht in die Quere kommen.
-Beide Gesten respektieren `prefers-reduced-motion`.
+### 9.3 Karten-Wischgesten (Touch)
+
+* **Nach rechts wischen** → Karte **favorisieren** (mit Stern-Flash-Animation und Haptik).
+* **Nach links wischen** → **Aktions-Tray** öffnet sich mit **Bearbeiten / Verschieben / Löschen**.
+* Die Achse wird intelligent erkannt (horizontal vs. vertikal), sodass normales Scrollen unberührt bleibt; am linken Rand hat die Zurück-Edge-Geste Vorrang. Tippen außerhalb schließt offene Trays.
 
 ---
 
-## 9. Mikrointeraktionen, Haptik & Skeletons
+## 10. Karten-Verwaltung: Erstellen, Bearbeiten, Verschieben, Verknüpfen
 
-* **Skeleton-Loading:** Vor dem ersten Render schimmernde Skeleton-Karten (gestaffelt; ohne
-  Shimmer bei Reduced Motion).
-* **Ripple-Effekt:** Karten, Buttons und Chips erzeugen bei Druck einen radialen Ripple
-  (theme-abhängiges `mix-blend-mode`).
-* **Haptik-Bridges:** `triggerHapticFeedback` an Kernaktionen gekoppelt — Kopieren (medium),
-  Favorisieren/Navigieren/Filterwahl/Wischen (light/medium) — mit `navigator.vibrate`-Fallback.
-* **Bestehende Effekte:** Partikelsystem, Glow-Burst, Konfetti, 3D-Tilt,
-  Device-Orientation-Parallax, GSAP-/Flip-Dock-Animationen, Vivus-„Zeichnen" der Icons.
-* **Reduced Motion:** Zentraler Handler drosselt Aurora-Parallax, Animationen und Effekte.
+* **Erstellen**: Über das Hinzufügen-Menü **neue Prompts** und **neue Ordner** anlegen.
+* **Bearbeiten**: Prompt-Titel und -Inhalt im Modal editieren und speichern; Karten inline umbenennen (`startRenamingCard` mit Rename-Input und Escape-Abbruch).
+* **Verschieben**: Über das Verschiebe-Modal (Ordnerbaum) oder per Drag&Drop im Organisieren-Modus.
+* **Organisieren-Modus**: Aktiviert **SortableJS** auf dem Karten-Grid für **Umsortieren per Drag&Drop**; das Ziehen einer Karte auf eine andere kann Karten zu einem **neuen Ordner kombinieren** oder eine Karte **in einen Ordner** verschieben (mit Highlight-Rückmeldung des Drop-Ziels). Die neue Reihenfolge wird persistiert.
+* **Verknüpfen**: **Prompt-** und **Ordner-Verknüpfungen** verweisen auf ein Ziel an anderer Stelle; das Original bleibt die Quelle der Wahrheit.
+* **Löschen**: Einzeln oder als Mehrfachauswahl; entfernt zugleich zugehörige Favoriten und bereinigt hängende Verknüpfungen.
 
 ---
 
-## 10. Offline-Betrieb & Service Worker
+## 11. Mikrointeraktionen, Haptik & Skeletons
 
-`sw.js` (registriert in `enhancements.js`, Version `v4-2026-06`) macht die App vollständig
-offline-fähig.
+* **Skeletons**: Beim Start/Datenladen werden Platzhalter-Karten mit Shimmer angezeigt und beim ersten echten Render entfernt.
+* **Ripple-Effekt**: Pointerdown auf Karten, Buttons, Chips, Scope-/Filter-Buttons und Favoriten-Chips erzeugt eine materialtypische Welle.
+* **Stagger-Einblendung** der Karten über `--card-index`.
+* **Kopier-Erfolgs-Animation**: Grünes Aufleuchten + Partikel-artiger Effekt (`enhancedCopySuccess`) am Kopierort.
+* **Haptik-Brücken**: Kopieren, Favorisieren und Navigieren lösen abgestufte Vibration aus (sofern das Gerät sie unterstützt).
+* Sämtliche Bewegungen respektieren **`prefers-reduced-motion`**.
 
-### 10.1 Caching-Strategien
+---
+
+## 12. Offline-Betrieb & Service Worker
+
+`sw.js` (Version `v8-2026-07`) macht die App **echt offline-fähig** mit vier getrennten Caches und einer differenzierten Strategie-Matrix:
+
 | Ressource | Strategie |
-|-----------|-----------|
-| App-Shell (HTML/CSS/JS/Icons/Manifest, `templates.json`) | **Stale-While-Revalidate** |
-| Navigationen (Dokument) | **Network-First** → App-Shell-Fallback |
-| CDN-Bibliotheken & Modell-Dateien | **Cache-First** (mit Hintergrund-Refresh) |
-| `/api/templates` (GET) | **Network-First**; letzter Stand als Offline-Fallback, danach statische `templates.json` |
-| `/api/templates` (POST) | **niemals abgefangen** (immer Live-Netz) |
+|---|---|
+| **App-Shell** (HTML/CSS/JS/Icons/Manifest/`templates.json`) | **Stale-While-Revalidate** — sofortige Auslieferung aus dem Cache, Auffrischung im Hintergrund. |
+| **CDN-Bibliotheken** (GSAP, SortableJS, Vivus, Hugging-Face-Modelle) | **Cache-First** mit Hintergrund-Refresh. |
+| **`/api/templates`** | **Network-First**; der letzte erfolgreiche GET wird als Offline-Fallback vorgehalten (markiert per `X-Served-By`), letzter Ausweg ist die statische `templates.json`. POSTs werden nie abgefangen. |
+| **Navigationen** | Network-First mit **Navigation-Preload**, Rückfall auf die gecachte App-Shell. |
 
-### 10.2 Lebenszyklus
-* **Install:** Robustes Vor-Caching (`Promise.allSettled`), `skipWaiting`. Vorab gecacht
-  werden u. a. `script.js`, `enhancements.js`, `aurora-webgl.js`, `navigation.js`,
-  `style.css`, `enhancements.css`, `navigation.css`.
-* **Activate:** Aufräumen veralteter Cache-Generationen (`SW_VERSION` —
-  `pt-shell-*`/`pt-cdn-*`/`pt-runtime-*`/`pt-api-*`), optionale Navigation Preload,
-  `clients.claim`.
-* **Update:** Toast informiert über verfügbares Update; App kann `SKIP_WAITING` senden.
+Beim `install` werden alle Kern-Assets einzeln (fehlertolerant, `Promise.allSettled`) vorgeladen; beim `activate` werden veraltete Caches gelöscht und Clients übernommen. Ein **Update** wird erkannt und via Toast angekündigt („Update verfügbar – wird beim nächsten Start aktiv."); die App kann per `SKIP_WAITING`-Nachricht ein sofortiges Update anstoßen.
 
 ---
 
-## 11. Datenhaltung, Cloud-Sync & Datenmodell
+## 13. Datenhaltung, Cloud-Sync & Datenmodell
 
-### 11.1 Datenmodell
-Rekursive JSON-Baumstruktur ab Wurzelknoten `root`:
+### 13.1 Datenmodell
 
-```jsonc
-{
-  "id": "root",
-  "type": "folder",
-  "title": "Home",
-  "items": [
-    {
-      "id": "1",
-      "type": "folder",            // "folder" | "prompt" | "folder-link" | "prompt-link"
-      "title": "KI Steuerung",
-      "items": [
-        {
-          "id": "1-1",
-          "type": "prompt",
-          "title": "Allgemeine Anweisungen",
-          "content": "…",          // Prompt-Text (nur bei type=prompt)
-          "tags": ["rolle", "system"]  // optional
-        }
-      ]
-    },
-    { "id": "x", "type": "prompt-link", "title": "Alias", "targetId": "1-1" }
-  ]
-}
-```
+Die Bibliothek ist ein rekursiver Baum. Wurzel ist ein Ordner (`{ id: "root", type: "folder", title: "Home", items: [...] }`). Knotentypen:
 
-* **Felder:** `id`, `type`, `title`, `items` (Ordner), `content` (Prompts),
-  `targetId` (Links), `tags` (optional).
-* **Verknüpfungen:** `resolveLinkedNode` löst Links rekursionssicher auf. **Verwaiste
-  Verknüpfungen** (Ziel gelöscht) werden nach jedem Löschvorgang via `pruneDanglingLinks`
-  rekursiv entfernt.
+| Typ | Bedeutung | Wichtige Felder |
+|---|---|---|
+| `folder` | Ordner (enthält weitere Knoten) | `id`, `title`, `items[]`, optional `tags[]` |
+| `prompt` | Prompt-Vorlage | `id`, `title`, `content`, optional `tags[]` |
+| `folder-link` | Verknüpfung auf einen Ordner | `id`, `type`, `targetId` |
+| `prompt-link` | Verknüpfung auf einen Prompt | `id`, `type`, `targetId` |
 
-### 11.2 Hybrid-Sync (Cloudflare KV + LocalStorage)
-* **Worker** (`functions/api/templates.js`): `GET` liefert den KV-Stand bzw. initialisiert
-  ihn aus `templates.json`; `POST` speichert mit **Timestamp-Konfliktprüfung** (HTTP 409).
-  Alle Antworten setzen einheitlich `Content-Type: application/json`; Fehlerantworten geben
-  nur die **Fehlermeldung** zurück (keine internen Stacktraces — gehärtet gegen
-  Information-Disclosure).
-* **Client-Sync:** `syncFromCloud` (Polling alle 10 s, bei Fokus/Sichtbarkeit, via
-  `BroadcastChannel` geräteübergreifend) und `persistJsonData` (optimistisches Speichern).
-* **Offline-Fallback:** `localStorage` (`customTemplatesJsonCloud` + `syncTimestampCloud`);
-  der Service Worker liefert zusätzlich den letzten API-Stand bzw. die statische JSON.
+Zentrale Baum-Helfer: `findNodeById`, `findParentOfNode`, `resolveLinkedNode`, `pruneDanglingLinks`, `reorderCurrentNodeItemsFromDom`, `moveNode`, `combineIntoNewFolder`.
 
-### 11.3 Import / Export
-Download als `templates.json` oder Import per Drag & Drop / Dateiauswahl
-(`validateTemplateSchema`). Tags sind Teil des Exports.
+### 13.2 Hybrid-Sync (Cloudflare KV + LocalStorage + Cross-Tab)
 
-### 11.4 Lokale Zustände (localStorage-Schlüssel)
+* **Backend**: Eine Cloudflare-Pages-Function (`functions/api/templates.js`) bedient `GET`/`POST` auf `/api/templates` gegen einen **KV-Namespace `TEMPLATES_KV`** (Schlüssel `current_templates`). Fehlt der KV-Eintrag, lädt sie die statische `templates.json` als Fallback und legt sie initial im KV ab.
+* **Konfliktschutz**: `POST` vergleicht den Client-Zeitstempel mit dem Serverstand; ist der Client älter, antwortet der Server mit **409 Conflict** samt Serverdaten. Der Client lädt dann automatisch den Cloud-Stand nach.
+* **Optimistische UI**: Änderungen erscheinen sofort; `persistJsonData()` schreibt anschließend in die Cloud und aktualisiert den Zeitstempel.
+* **Polling & Cross-Tab**: Die App pollt periodisch (`syncFromCloud`) und synchronisiert parallel geöffnete Tabs über einen **`BroadcastChannel('templates-cloud-sync')`**.
+* **Pull-to-Refresh** erzwingt einen manuellen Cloud-Abgleich.
+
+### 13.3 Import / Export
+
+* **Download JSON**: Exportiert den aktuellen Baum als `templates.json`.
+* **Upload JSON**: Import per **Drag&Drop** in die Ablagezone oder per Dateiauswahl; das Schema wird geprüft (`validateTemplateSchema`), danach in die Cloud übernommen.
+* **Zurücksetzen**: Verwirft lokale Änderungen.
+
+### 13.4 Lokale Zustände (`localStorage`-Schlüssel)
+
 | Schlüssel | Inhalt |
-|-----------|--------|
-| `favoritePrompts` | IDs der favorisierten Knoten |
-| `user-color-scheme` | `light` / `dark` |
-| `customTemplatesJsonCloud` | Offline-Cache des Baums |
-| `syncTimestampCloud` | letzter bekannter Sync-Zeitstempel |
-| `pt-usage-stats-v1` | Nutzungs- & Recency-Statistik |
+|---|---|
+| `favoritePrompts` | Array der Favoriten-IDs (zugleich die Drag&Drop-Reihenfolge). |
+| `customTemplatesJsonCloud` | Lokaler Spiegel der Bibliotheksdaten. |
+| `user-color-scheme` | Gewähltes Theme (`dark`/`light`). |
+| (Zeitstempel-/Geräte-Keys) | Sync-Zeitstempel und Device-Orientation-Permission-Status. |
 
 ---
 
-## 12. Weitere Funktionen & Produktivität
+## 14. Theme-System & Vollbild
 
-* **Drag & Drop (SortableJS):** Organisier-Modus mit iOS-Jiggle; Verschieben, Umsortieren,
-  In-Ordner-Droppen und **Kombinieren zweier Elemente zu einem neuen Ordner**. Das
-  Datenmodell wird in Echtzeit aktualisiert; ein **Zyklus-Schutz** in `moveNode` verhindert,
-  einen Ordner in seinen eigenen Nachfahren zu verschieben.
-* **Mehrfachauswahl:** `Strg/Cmd`-Klick für Sammel-Löschen/-Verschieben.
-* **Verknüpfungen (Symlinks):** Prompts/Ordner mehrfach referenzieren ohne Duplikate.
-* **Umbenennen In-Place:** Direktes Editieren von Kartentiteln.
-* **Pull-to-Refresh** (Mobile) zum erzwungenen Cloud-Abgleich.
-* **Vollbildmodus** mit plattformübergreifender Fullscreen-API.
+* **Theme-Umschaltung** (`applyColorScheme`) wechselt Dark/Light, persistiert die Wahl, tauscht Favicon/Logo und färbt die WebGL-Aurora um. Das Inline-Head-Skript verhindert jedes „Flash of wrong theme".
+* **Vollbildmodus** (`#fullscreen-button`) nutzt die Fullscreen-API (mit Vendor-Präfix-Fallbacks) und passt Icon sowie Layout-Metriken an.
+* **Bewegungspräferenzen** werden global über `setupMotionPreferenceHandling` beobachtet und an Aurora, Stagger und Mikrointeraktionen weitergereicht.
 
 ---
 
-## 13. Tastaturkürzel & Gesten — Gesamtreferenz
+## 15. Tastaturkürzel & Gesten — Gesamtreferenz
 
 ### Tastatur (Desktop)
-| Eingabe | Aktion |
-|---------|--------|
-| **⌘K / Strg+K** | Suche öffnen/schließen |
-| **⌘N / Strg+N** | Neuer Prompt |
-| **⌘← / Strg+←** | Eine Ebene zurück |
-| **← → ↑ ↓** | Fokus im Karten-Grid bewegen |
-| **Home / End** | Erste/letzte Karte fokussieren |
-| **Enter** | Ordner öffnen / Prompt-Detail öffnen |
-| **Leertaste** | Prompt kopieren |
-| **f** | Favorisieren |
-| **e** | Umbenennen |
-| **Entf / Backspace** | Löschen |
-| **Escape** | Suche leeren/schließen · Modal schließen · Popover/„Mehr"-Menü schließen |
-| **Strg/Cmd + Klick** | Karte zur Mehrfachauswahl |
-| **Browser Zurück/Vor · Maus-Seitentasten** | Ordnerverlauf (Desktop) |
+
+| Taste(n) | Aktion |
+|---|---|
+| **1–9** | Favorit an Position 1–9 kopieren (bzw. Ordner öffnen). |
+| **0** | Favorit an Position 10 kopieren. |
+| **Pfeiltasten** | Kartenfokus bewegen. |
+| **Home / End** | Erste / letzte Karte fokussieren. |
+| **Enter** | Ordner öffnen / Prompt-Modal öffnen. |
+| **Leertaste** | Fokussierten Prompt kopieren. |
+| **f** | Favorisieren/Entfernen. |
+| **e** | Umbenennen. |
+| **Entf / Rücktaste** | Löschen. |
+| **Escape** | Kontextmenü / Rename / erweitertes Dock / Modale schließen. |
+| **Browser-Zurück/Vor, Maus-Seitentasten** | Durch Ordnerverlauf blättern. |
+
+> Alle Favoriten-Hotkeys sind inaktiv, während ein Textfeld fokussiert oder ein Dialog geöffnet ist, und ignorieren Modifier-Kombinationen (`Strg`/`Alt`/`Cmd`/`Shift`).
 
 ### Gesten (Touch / Maus)
-| Eingabe | Aktion |
-|---------|--------|
-| **Tap auf Prompt** | Kopieren |
-| **Tap auf Ordner** | Hineinnavigieren |
-| **Tap auf ⋯ (Mobile)** | „Mehr"-Menü mit Sekundäraktionen öffnen |
-| **Wisch rechts (Karte)** | Favorisieren (mit Flash) |
-| **Wisch links (Karte)** | Aktionstray (Bearbeiten/Verschieben/Löschen) |
-| **Wisch rechts (Edge, Mobile)** | Zurück-Navigation |
-| **Long-Press (Karte/Chip)** | Kontextmenü |
-| **Long-Press (Breadcrumb-Schritt)** | Sprung-Popover der Unterordner |
-| **Klick auf Breadcrumb-▾** | Sprung-Popover der Unterordner |
-| **Swipe hoch/runter (Dock)** | Favorites-Dock erweitern/einklappen |
-| **Pull-down** | Aktualisieren (Mobile) |
-| **Rechtsklick** | Kontextmenü |
-| **Deep-Link / Reload / Teilen** | Ansicht wird aus der URL rekonstruiert |
+
+| Geste | Aktion |
+|---|---|
+| **Tipp auf Favoriten-Chip** | Prompt kopieren / Ordner öffnen. |
+| **Halten & Ziehen eines Favoriten-Chips** | Favoriten-Reihenfolge per Drag&Drop sortieren. |
+| **Kurzer Wisch im Dock** | Favoritenleiste horizontal scrollen. |
+| **Vertikaler Wisch am Dock** | Favoriten-Dashboard auf-/zuklappen. |
+| **Karte nach rechts wischen** | Favorisieren. |
+| **Karte nach links wischen** | Aktions-Tray (Bearbeiten/Verschieben/Löschen). |
+| **Long-Press auf Karte/Chip** | Kontextmenü. |
+| **Long-Press auf Breadcrumb-Schritt** | Unterordner-Popover. |
+| **Pull-to-Refresh** | Cloud-Abgleich. |
+| **Drag im Organisieren-Modus** | Karten sortieren / kombinieren / in Ordner verschieben. |
 
 ---
 
-## 14. Barrierefreiheit
+## 16. Barrierefreiheit
 
-* Durchgängige **ARIA-Labels** und `role`-Attribute (Listen, Tabs/Scopes, Gruppen/Filter,
-  Menüs/Popover, „Mehr"-Menü mit `role="menu"`/`menuitem` und `aria-haspopup`/`aria-expanded`).
-* **Vollständige Tastaturbedienbarkeit** von Grid, Suche, Modals, Tag-Editor, Popover und
-  „Mehr"-Menü (Escape schließt, Fokus kehrt zum Auslöser zurück).
-* **`prefers-reduced-motion`** wird global respektiert (Aurora-Standbild, keine Ripples,
-  kein Shimmer, keine Wisch-/Fokus-Transitions).
-* **Fokus-Stile** mit deutlichem Glow; Touch-Targets ≥ 44 px.
-* **Kontrast** in beiden Themes auf Lesbarkeit ausgelegt; die Top-Bar-Icons nutzen vollen
-  Vordergrund-Kontrast (`--fg-1`).
+* Durchgängige **ARIA-Auszeichnung**: `aria-label`, `role`, `aria-expanded`, `aria-hidden`, `role="listitem"`, `sr-only`-Texte.
+* **Sichtbare Fokusringe** (`:focus-visible`) und ein Tastatur-Fokusring im Grid.
+* **Hotkey-Ankündigung**: Favoriten-Chips kommunizieren ihren Hotkey über `aria-label` und `title`; das Positions-Badge ist als rein visuell (`aria-hidden`) markiert, um Doppelvorlesen zu vermeiden.
+* **Reduced-Motion-Respekt** in allen Animationsschichten.
+* **Kontrast** und lesbare Typografie in beiden Themes; dynamische Schriftskalierung hält Titel/Vorschau lesbar.
 
 ---
 
-## 15. Performance-Architektur
+## 17. Performance-Architektur
 
-* **DOM-Caching** aller relevanten Knoten in `initApp`.
-* **Event-Delegation** für Karten-Events (Bubbling) — speicherschonend bei vielen Karten.
-* **RequestAnimationFrame** für layout-intensive Berechnungen (Dock-Footprint, Parallax,
-  Titel-Fit per Binärsuche).
-* **GPU-Auslagerung:** `translateZ(0)`, `contain`, hardwarebeschleunigte Aurora.
-* **Render-Budget:** max. 120 Karten pro Ansicht; Embeddings gecacht; neuronales Modell
-  **lazy** geladen; semantischer Query-Cache LRU-begrenzt (50 Einträge).
-* **Lazy & Defensive:** Schwergewichtige Pfade laufen erst bei Bedarf, gekapselt in
-  `try/catch`. Die Erweiterungs-Schichten patchen Kernfunktionen, ohne deren
-  Performance-Eigenschaften zu verlieren.
+* **`content-visibility: auto`** + `contain-intrinsic-size` für Karten und Favoriten-Chips überspringt Off-Screen-Rendering.
+* **`requestAnimationFrame`-gebündelte Layout-Frames** (Favoriten-Metriken, Footprint, Viewport) statt synchroner Layout-Thrash.
+* **`ResizeObserver`/`IntersectionObserver`** für bedarfsgesteuerte Neuberechnung und Aurora-Pause.
+* **Aurora**: 30-fps-Drossel, DPR-Deckel, Low-Power-GPU, Pause im Hintergrund-Tab.
+* **Debounced** Suche, Tag-Persistenz und semantische Läufe; **LRU-begrenzter** Embedding-/Query-Cache.
+* **Lazy Loading** aller CDN-Bibliotheken und des neuronalen Modells (nur bei tatsächlichem Bedarf).
+* **Activity-Detection** drosselt teure Effekte bei Inaktivität.
 
 ---
 
-## 16. Code-Architektur & Dateistruktur
-
-Die App ist **framework-frei**. Erweiterungen sind **additiv** umgesetzt: `script.js` bleibt
-der Kern; `enhancements.js` und `navigation.js` umhüllen definierte Hook-Funktionen
-(Monkey-Patching der globalen Funktionen) und ergänzen eigenständige Subsysteme.
+## 18. Code-Architektur & Dateistruktur
 
 ```
-/
-├── index.html              # Grundgerüst, SVG-Templates (<defs>), PWA-/Apple-Meta-Tags,
-│                           # Top-Bar inkl. "Mehr"-Menü-Container, Einbindung aller
-│                           # Styles & Skripte
-├── style.css               # Liquid-Glass-System, Themes, Grid, Top-Bar (inkl. mobiles
-│                           # Overflow-System), Favoritenbar-Docking, Animationen
-├── enhancements.css        # Styles für Suche, Tags, Smart Folders, Skeletons, Ripples
-├── navigation.css          # Styles für Breadcrumb-Popover, Tastatur-Fokus, Wischgesten
-├── script.js               # Kern: State, Rendering, Navigation, Sync, Modals, DnD,
-│                           #  "Mehr"-Menü-Aufbau + State-Bridge (window-Getter/Setter)
-├── enhancements.js         # Schicht 1: Suche (#4/#7), Tags & Smart Folders (#8),
-│                           # Deep-Links (#6), Mikrointeraktionen (#11), SW-Registrierung
-├── navigation.js           # Schicht 2: Desktop-Verlauf, Breadcrumb-Sprünge,
-│                           # Tastatursteuerung, Karten-Wischgesten
-├── aurora-webgl.js         # WebGL-Shader-Aurora
-├── sw.js                   # Service Worker (Offline-Caching)
-├── manifest.json           # PWA-Manifest
-├── browserconfig.xml       # Windows-Kachel-Konfiguration
-├── templates.json          # Statischer Daten-Fallback / Seed
-├── icons/                  # Favicons, Apple-Touch-Icon, Maskable-Icons
-└── functions/
-    └── api/
-        └── templates.js    # Cloudflare Pages Function: KV GET/POST mit Konfliktprüfung
+AITemplates/
+├── index.html            # Struktur, Top-Bar, Modale, Dock, SVG-Templates, Head-Theme-Skript
+├── style.css             # Liquid-Glass-Designsystem, Tokens, alle Komponenten (~112 KB)
+├── enhancements.css      # Suche, Tags, Skeletons, Ripples, Ergebnis-Banner, Popover
+├── navigation.css        # Breadcrumb-Popover, Wisch-Trays, Tastatur-Fokusring
+├── script.js             # Kernlogik: Rendering, Navigation, Favoriten+Hotkeys+Drag&Drop,
+│                         #   Modale, Persistenz/Sync, Kontextmenü, Vollbild, PWA, Haptik
+├── enhancements.js       # Additive Schicht: semantische Suche, Tags, Deep-Links,
+│                         #   Mikrointeraktionen, Service-Worker-Registrierung
+├── navigation.js         # Additive Schicht: Desktop-History, Breadcrumb-Sprünge,
+│                         #   Grid-Tastatursteuerung, Karten-Wischgesten
+├── aurora-webgl.js       # WebGL-Aurora-Engine (Fragment-Shader, FBM/Domain-Warping)
+├── sw.js                 # Service Worker (4 Caches, Strategie-Matrix, Offline-Fallbacks)
+├── manifest.json         # PWA-Manifest (Icons, Display, Theme)
+├── browserconfig.xml     # Microsoft-Tiles
+├── templates.json        # Standard-Bibliothek (12 Hauptordner, 25 Ordner, 97 Prompts)
+├── functions/
+│   └── api/templates.js  # Cloudflare-Pages-Function (KV-Backend, GET/POST, Konfliktschutz)
+└── icons/                # Animierte SVG-Icons (Dark/Light) + PNGs (192/512/maskable)
 ```
 
-### 16.1 State-Bridge (Integrationsmechanik)
-`script.js` deklariert seinen Zustand mit `let` (nicht auf `window` sichtbar). Am Ende von
-`script.js` spiegelt eine **State-Bridge** die relevanten Zustände (`jsonData`,
-`currentNode`, `pathStack`, `currentSearchQuery`, `favoritePrompts`) über
-`Object.defineProperties` als Getter/Setter auf `window`. So lesen **und** schreiben die
-Erweiterungs-Schichten diese Zustände, ohne die interne Logik anzufassen. Funktionen sind
-als Klassik-Skript-Deklarationen ohnehin global und werden gezielt umhüllt.
+### 18.1 Schichtenmodell & Lade-Reihenfolge
 
-### 16.2 Schichtenmodell & Lade-Reihenfolge
-`script.js` → `aurora-webgl.js` → `enhancements.js` → `navigation.js` (alle `defer`).
-Jede Schicht wartet bei Bedarf auf die vorherige (Boot-Polling) und stapelt ihre
-Funktions-Wrapper sauber übereinander (z. B. mehrfach umhülltes `renderView`).
+Die Skripte laden **`defer`** in dieser Reihenfolge: externe Bibliotheken (Vivus, SortableJS, GSAP, Flip) → **`script.js`** (Kern) → **`aurora-webgl.js`** → **`enhancements.js`** → **`navigation.js`**. Die Erweiterungsschichten warten per Poll-Boot, bis der Kern bereitsteht, und **umhüllen** dann gezielt globale Funktionen (`renderView`, `openPromptModal`, `navigateToNode`, `closeModal`, `applyColorScheme`, …), ohne die Kernlogik zu verändern. Kern-Zustand (`jsonData`, `currentNode`, `pathStack`, `favoritePrompts`, `currentSearchQuery`) und Kern-Funktionen sind als globale Bindungen für die Schichten zugänglich.
 
-### 16.3 Mobiles „Mehr"-Menü (Implementierungsdetail)
-Das Overflow-Menü ist Teil des Kerns (`script.js`) und folgt demselben bewährten Popover-
-Muster wie das Hinzufügen-/JSON-Menü:
+### 18.2 Externe Bibliotheken
 
-* **`buildMoreMenu()`** baut das Menü beim Öffnen kontextbewusst auf: Es prüft je
-  Sekundär-Button den Inline-`display`-Status (und `disabled`), klont dessen aktuell
-  sichtbares Icon, übernimmt das `aria-label` als Beschriftung und hinterlegt eine
-  Aktion, die den Klick an den Original-Button weiterleitet (bzw. bei JSON direkt
-  `downloadCustomJson()` / `openUploadJsonModal()` aufruft).
-* **`closeMoreMenu()`** schließt das Menü und setzt `aria-expanded`.
-* Außenklick und **Escape** schließen das Menü; ein leerer Zustand wird abgefangen.
-* Die Sichtbarkeitssteuerung (welche Buttons direkt erscheinen vs. im Menü landen) erfolgt
-  rein über CSS-Media-Queries — die Original-Buttons bleiben funktionsfähig im DOM.
+| Bibliothek | Zweck | Ohne sie |
+|---|---|---|
+| **SortableJS** | Drag&Drop (Favoriten-Reihenfolge **und** Karten-Organisieren) | Sortieren per Drag entfällt, sonst voll nutzbar. |
+| **GSAP + Flip** | View-Transitions & flüssige Layout-Animationen | Übergänge fallen auf einfache Umschaltung zurück. |
+| **Vivus** | SVG-Strichanimationen (Icons) | Icons erscheinen statisch. |
+| **Transformers.js** (lazy) | Neuronale semantische Suche | Heuristik-Suche übernimmt. |
 
-### 16.4 Externe Bibliotheken
-| Bibliothek | Zweck | Laden |
-|------------|-------|-------|
-| **GSAP + Flip** | Favorites-Dock-Animationen (F.L.I.P.) | `defer`, CDN |
-| **SortableJS** | Drag & Drop Reorganisation | `defer`, CDN (Version gepinnt) |
-| **Vivus** | SVG-„Zeichnen" (Icons, Leerzustände) | `defer`, CDN |
-| **@huggingface/transformers** | Neuronale Embeddings (semantische Suche) | **lazy** `import()` |
+Alle werden vom Service Worker Cache-First vorgehalten, sodass sie auch offline verfügbar bleiben.
 
 ---
 
-## 17. Betrieb, Deployment & Konfiguration
+## 19. Betrieb, Deployment & Konfiguration
 
-* **Plattform:** Cloudflare Pages mit **Pages Functions** (`functions/api/templates.js`).
-* **KV-Binding:** Erfordert den Namespace **`TEMPLATES_KV`** (Schlüssel `current_templates`).
-  Ohne Binding antwortet die Function mit klarer Fehlermeldung; die App fällt auf den
-  lokalen Cache/die statische `templates.json` zurück.
-* **Statischer Seed:** Fehlt der KV-Eintrag, initialisiert die Function ihn aus
-  `templates.json`.
-* **Service Worker:** Registriert unter `/sw.js` mit App-Scope `/`.
-* **Reines Frontend:** Außer der Pages Function ist kein Backend nötig.
+* **Lokal**: Statischen Server im Projektverzeichnis starten (z. B. `python3 -m http.server`) und `index.html` öffnen. Ohne `/api/templates`-Backend nutzt die App die statische `templates.json` bzw. die SW-Fallbacks.
+* **Produktion (Cloudflare Pages)**: Repository als Pages-Projekt deployen; die Function unter `functions/api/templates.js` wird automatisch als Route `/api/templates` bereitgestellt. **Voraussetzung**: Ein **KV-Namespace muss als `TEMPLATES_KV`** an das Projekt gebunden sein — andernfalls antwortet die Function mit einer klaren 500-Fehlermeldung.
+* **Erststart** ohne KV-Inhalt: Die Function zieht `templates.json` als Seed in den KV.
+* **Keine Umgebungs-Geheimnisse** im Client nötig; die App ist ein reines statisches Frontend plus eine schlanke KV-Function.
 
 ---
 
-## 18. Graceful Degradation & Fallback-Matrix
+## 20. Graceful Degradation & Fallback-Matrix
 
-| Fähigkeit | Optimalfall | Fallback |
-|-----------|-------------|----------|
-| **WebGL-Aurora** | Echtzeit-Shader | CSS-Aurora-Blobs |
-| **Reduced Motion** | volle Animation | Standbild, keine Ripples/Shimmer/Wischanimation |
-| **Semantische Suche** | neuronales Modell | heuristischer Token-/Synonym-/Fuzzy-Scorer |
-| **Deep-Links / Desktop-Verlauf** | View-Transitions + History | direkter DOM-Tausch |
-| **Cloud-Sync** | Cloudflare KV (Realtime) | `localStorage` + statische `templates.json` |
-| **Offline** | Service-Worker-Caches | Network-First-Live-Betrieb |
-| **Haptik** | `triggerHapticFeedback` | `navigator.vibrate` / lautlos |
-| **Clipboard** | `navigator.clipboard` | `execCommand('copy')`-Fallback |
-| **Suche allgemein** | gewichtetes Ranking | einfache `includes`-Filterung |
-| **Tastatur-Scroll** | `scrollIntoView` | übersprungen, Fokus bleibt gesetzt |
-| **Top-Bar mobil** | aufgeräumte Leiste + „Mehr"-Menü | Desktop: vollständige Buttonleiste |
-
----
-
-## 19. Qualitätssicherung & Tests
-
-Die JavaScript-Logik wird über eine **jsdom-Smoke-Test-Harness** verifiziert, die die App
-headless initialisiert (gemocktes `fetch`, Browser-API-Stubs), die Templates lädt und u. a.
-prüft: Boot aller Schichten, Rendering, State-Bridge, Such-/Semantik-Pfad,
-Kontextmenü-Robustheit, Zyklus-Schutz, Verwaiste-Link-Bereinigung, Deep-Link-Hash,
-Tastatur-Fokus, Desktop-Verlauf sowie Breadcrumb-Chevron und -Popover.
-
-Ergänzend werden **layout- und viewport-kritische Aspekte** (Safe-Area-Behandlung, Top-Bar-
-Höhe, mobiles „Mehr"-Menü inkl. Überlaufschutz, bündiges Favoritenbar-Docking) über eine
-**headless Chromium-Messung** (emulierter iPhone-14-Pro-Max-Viewport mit simulierten
-Safe-Area-Insets) abgesichert: Position und Abstände der Elemente werden numerisch gemessen
-und gegen die Erwartung geprüft. Das rein **visuelle** Feinverhalten (Liquid-Glass-Schichten,
-WebGL-Shader) erfordert naturgemäß weiterhin eine Abnahme im echten Browser.
+| Fehlende Fähigkeit | Verhalten |
+|---|---|
+| **Kein WebGL** | CSS-Aurora-Blobs bleiben sichtbar. |
+| **`prefers-reduced-motion`** | Aurora als Standbild; alle Animationen reduziert. |
+| **Kein SortableJS** (z. B. offline vor Cache) | Favoriten-Drag&Drop und Karten-Organisieren entfallen; alles andere funktioniert. |
+| **Kein GSAP/Flip** | Ansichtswechsel ohne animierte Transition. |
+| **Kein neuronales Modell / offline** | Heuristische semantische Suche. |
+| **Kein Clipboard-API / unsicherer Kontext** | `execCommand('copy')`-Fallback über ein verstecktes Textfeld. |
+| **Offline** | Service-Worker liefert App-Shell, Bibliotheken und letzten API-Stand; POSTs werden nicht abgefangen. |
+| **Kein KV gebunden** | Function nennt den Fehler klar; Client fällt (via SW) auf statische Daten zurück. |
+| **Keine Vibration-API** | Haptik wird still übersprungen. |
+| **Beschädigte `favoritePrompts`** | Werden beim Laden gefiltert; ungültige/hängende IDs beim Rendern entfernt. |
 
 ---
 
-## 🏁 Zusammenfassung
+### 🏁 Zusammenfassung
 
-**Prompt-Templates** ist weit mehr als ein JSON-Viewer: ein minutiös durchdachtes Stück
-Software, das native-ähnliche UX vollständig im Web realisiert. Über das Liquid-Glass-
-Fundament legt es eine **GPU-Aurora**, eine **neuronale Suche mit robustem Offline-Fallback**,
-**Tags & Smart Folders**, **teilbare Deep-Links mit echtem Desktop-Verlauf**, eine
-**vollständige Tastatur- und Wischgesten-Steuerung**, ein **aufgeräumtes, mobil
-optimiertes Bedien-Layout mit kontextbewusstem „Mehr"-Menü**, eine reichhaltige
-**Mikrointeraktions- und Haptik-Schicht** sowie **vollständigen Offline-Betrieb** — jeweils
-sauber additiv integriert, durchgängig mit Graceful Degradation und durch automatisierte
-Tests abgesichert. Das Ergebnis ist eine PWA, die sich auf jedem Gerät und über jede
-Eingabemethode schnell, edel und native anfühlt.
+**Prompt-Templates** verbindet die Schlichtheit einer Zero-Build-Vanilla-App mit der Anmutung und dem Bedienkomfort einer nativen, hochwertigen Anwendung: eine lebendige WebGL-Aurora hinter mehrschichtigem Liquid Glass, eine bis in Tastatur, Gesten und Haptik durchdachte Bedienung, eine neuronale Suche mit robustem Offline-Fallback und ein konfliktsicherer Hybrid-Sync. Das **Favorites-Dock** ist dabei das produktive Herzstück — mit **aufsteigend nummerierten Zifferntasten-Hotkeys** zum blitzschnellen Kopieren und **Drag&Drop-Sortierung**, deren Reihenfolge Nummerierung und Hotkeys automatisch neu vergibt. Jede Funktion existiert in einer Touch- und einer Desktop-Variante, und jede optionale Fähigkeit degradiert sauber — die App bleibt unter allen Umständen voll benutzbar.
